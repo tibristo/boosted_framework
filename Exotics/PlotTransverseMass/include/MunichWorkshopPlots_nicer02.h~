@@ -1,0 +1,237 @@
+///
+/// STILL TO DO: 
+/// 
+/// 
+/// * add other jet algorithms once available
+/// 
+
+#include <TH1F.h>
+#include <TH1I.h>
+#include "TH1.h"
+#include "TFile.h"
+#include "TTree.h"
+#include "TBranch.h"
+#include "Rtypes.h"
+#include <string>
+#include <vector>
+#include <iostream>
+#include <cstdlib>
+#include <map>
+#include <cmath>
+#include "TH1F.h"
+#include "TROOT.h"
+#include "TInterpreter.h"
+#include "TPostScript.h"
+#include "TCanvas.h"
+#include "TTreeIndex.h"
+#include "TMath.h"
+#include "AtlasStyle.C"
+#include "TLegend.h"
+#include "TAxis.h"
+#include "TLatex.h"
+#include "TLorentzVector.h"
+//FASTJET INCLUDES
+/*#include "fastjet/ClusterSequence.hh"
+#include "fastjet/PseudoJet.hh"
+#include "fastjet/PseudoJetStructureBase.hh"
+#include "fastjet/JetDefinition.hh"
+#include "fastjet/"
+#include "fastjet/"
+#include "fastjet/"*/
+
+#include "fastjet/AreaDefinition.hh"
+#include "fastjet/ClusterSequence.hh"
+#include "fastjet/ClusterSequence1GhostPassiveArea.hh"
+#include "fastjet/ClusterSequenceActiveArea.hh"
+#include "fastjet/ClusterSequenceActiveAreaExplicitGhosts.hh"
+#include "fastjet/ClusterSequenceArea.hh"
+#include "fastjet/ClusterSequenceAreaBase.hh"
+#include "fastjet/ClusterSequencePassiveArea.hh"
+#include "fastjet/ClusterSequenceStructure.hh"
+#include "fastjet/ClusterSequenceVoronoiArea.hh"
+#include "fastjet/CompositeJetStructure.hh"
+#include "fastjet/EECambridgePlugin.hh"
+#include "fastjet/Error.hh"
+#include "fastjet/FunctionOfPseudoJet.hh"
+#include "fastjet/GhostedAreaSpec.hh"
+#include "fastjet/GridJetPlugin.hh"
+#include "fastjet/JadePlugin.hh"
+#include "fastjet/JetDefinition.hh"
+#include "fastjet/LimitedWarning.hh"
+#include "fastjet/NNH.hh"
+#include "fastjet/NestedDefsPlugin.hh"
+#include "fastjet/PseudoJet.hh"
+#include "fastjet/PseudoJetStructureBase.hh"
+#include "fastjet/RangeDefinition.hh"
+#include "fastjet/SISConeBasePlugin.hh"
+#include "fastjet/SISConePlugin.hh"
+#include "fastjet/SISConeSphericalPlugin.hh"
+#include "fastjet/Selector.hh"
+#include "fastjet/SharedPtr.hh"
+#include "fastjet/WrappedStructure.hh"
+#include "fastjet/version.hh"
+
+
+
+//Declarations
+//bool CheckBranchExists( string BranchName );
+float DeltaR(float eta1,float phi1,float eta2,float phi2);
+double mpv(TH1F* histo);
+void Qw(double &minWidth, double &topEdge, TH1F* histo, double frac);
+
+//void cleanBranches();
+void defineStrings(TString *AlgoList, TString *binLabel, TString *pTbins, TString *finePtBins);
+void createHistos();
+void getMassHistograms(TTree *inputTree, TTree *inputTree1, TString groomAlgo, int groomAlgoIndex);
+void initializeVariables();
+//void getBranches(TTree *inputTree, TTree *inputTree1, TString groomAlgo, int groomAlgoIndex);
+void deleteVectors();
+void getNormSherpaW(TString inputTree, unsigned long & evnum, double & weight);
+//groomAlgo options:
+//TopoSplitFilteredMu67SmallR0YCut9   - 1
+//TopoSplitFilteredMu100SmallR30YCut4  - 2
+//TopoTrimmedPtFrac5SmallR30 - 3
+// TopoTrimmedPtFrac5SmallR20 - 4
+// TopoPrunedCaRcutFactor50Zcut10 - 5
+// TopoPrunedCaRcutFactor50Zcut20 - 6
+
+//AntiKt2LCTopo - 7
+//AntiKt3LCTopo - 8
+//AntiKt4LCTopo - 9
+
+//DECLARATIONS FOR RECLUSTERING FUNCTIONS
+
+vector<fastjet::PseudoJet> ObjsToPJ(vector<TLorentzVector> jets);
+vector<TLorentzVector> Recluster(vector<TLorentzVector> small_jets, double PTcut=15, double fcut=0.05, double jetRad=1.0);
+
+/////
+
+
+
+TFile *inputFile[20];
+TTree *inputTree[20];
+
+//get the branches we want to use
+
+//QCD split filtering with Y cut 9
+vector<float> * qcd_CA12_truth_pt = 0;
+vector<float> * qcd_CA12_truth_eta = 0;
+vector<float> * qcd_CA12_truth_phi = 0;
+vector<float> * qcd_CA12_truth_mass = 0;
+vector<float> * qcd_CA12_truth_E = 0;
+
+vector<float> * qcd_CA12_topo_pt = 0;
+vector<float> * qcd_CA12_topo_eta = 0;
+vector<float> * qcd_CA12_topo_phi = 0;
+vector<float> * qcd_CA12_topo_mass = 0;
+vector<float> * qcd_CA12_topo_E = 0;
+vector<float> * qcd_CA12_topo_emfrac = 0;
+
+vector<float> * qcd_CA12_groomed_pt = 0;
+vector<float> * qcd_CA12_groomed_eta = 0;
+vector<float> * qcd_CA12_groomed_phi = 0;
+vector<float> * qcd_CA12_groomed_mass = 0;
+vector<float> * qcd_CA12_groomed_E = 0;
+vector<float> * qcd_CA12_groomed_emfrac = 0;
+
+UInt_t qcd_mc_channel_number = 0; 
+Float_t qcd_mc_event_weight = 0; 
+
+
+
+//Wprime split filtering both cuts
+
+vector<float> * Wp_CA12_truth_pt = 0;
+vector<float> * Wp_CA12_truth_eta = 0;
+vector<float> * Wp_CA12_truth_phi = 0;
+vector<float> * Wp_CA12_truth_mass = 0;
+vector<float> * Wp_CA12_truth_E = 0;
+UInt_t Wp_mc_channel_number = 0; 
+//Float_t Wp_mc_event_weight = 0; 
+
+vector<float> * Wp_CA12_topo_pt = 0;
+vector<float> * Wp_CA12_topo_eta = 0;
+vector<float> * Wp_CA12_topo_phi = 0;
+vector<float> * Wp_CA12_topo_mass = 0;
+vector<float> * Wp_CA12_topo_E = 0;
+vector<float> * Wp_CA12_topo_emfrac = 0;
+
+vector<float> * Wp_CA12_groomed_pt = 0;
+vector<float> * Wp_CA12_groomed_eta = 0;
+vector<float> * Wp_CA12_groomed_phi = 0;
+vector<float> * Wp_CA12_groomed_mass = 0;
+vector<float> * Wp_CA12_groomed_E = 0;
+vector<float> * Wp_CA12_groomed_emfrac = 0;
+
+
+
+//counters for efficiency issues
+int nEvt_0=0; //total events
+int nEvt_1=0; // events with leading proper topo jet
+int nEvt_2=0; // events with matched truth to proper topo jet
+int nEvt_3=0; // events with split cut 9 matched to truth jet matches to proper topo jet
+int nEvt_4=0;
+
+//counters for efficiency issues
+int nEvt1_0=0; //total events
+int nEvt1_1=0; // events with leading proper topo jet
+int nEvt1_2=0; // events with matched truth to proper topo jet
+int nEvt1_3=0; // events with split cut 9 matched to truth jet matches to proper topo jet
+int nEvt1_4=0;
+
+
+const int nAlgos=12;
+TString AlgoList[nAlgos];
+TString binLabel[nAlgos-2];
+const int nPtBins=6;
+TString pTbins[nPtBins];
+const int nFineBins=12;
+TString finePtBins[nFineBins];
+
+
+TH1F *qcd_finePtBin_mass[nAlgos][nFineBins];
+TH1F *Wprime_finePtBin_mass[nAlgos][nFineBins];
+
+TH1F *qcd_Lead_CA12_mass[nAlgos][nPtBins]; 
+TH1F *Wprime_Lead_CA12_mass[nAlgos][nPtBins];
+TH1F *qcd_Lead_CA12_pt[nAlgos];
+TH1F *Wprime_Lead_CA12_pt[nAlgos];
+TH1F *Wprime_Lead_CA12_scaled_pt[nAlgos];
+TH1F *pTweights[nAlgos];
+TH1F *qcd_PtReweight[nAlgos];
+TH1F *Wp_PtReweight[nAlgos];
+TString AlgoListN[nAlgos];
+TString pTbinsN[nPtBins];
+TString pTFinebinsN[nFineBins];
+
+double myMPV[nAlgos][nPtBins];
+double WidthMassWindow[nAlgos][nPtBins];
+double TopEdgeMassWindow[nAlgos][nPtBins];
+double BottomEdgeMassWindow[nAlgos][nPtBins];
+double QCDfrac[nAlgos][nPtBins];
+
+double myMPV_finePt[nAlgos][nFineBins];
+double WidthMassWindow_finePt[nAlgos][nFineBins];
+double TopEdgeMassWindow_finePt[nAlgos][nFineBins];
+double BottomEdgeMassWindow_finePt[nAlgos][nFineBins];
+double QCDfrac_finePt[nAlgos][nFineBins];
+
+
+TH1F * hMassLow[nPtBins];
+TH1F * hMassHigh[nPtBins];
+TH1F * hMPV[nPtBins];
+TH1F * hWmass[nPtBins];
+TH1F * hQCDeff[nPtBins];
+
+TH1F * hQCDeff_finePt[nAlgos];
+
+
+TH1F * windowsVsPt[nAlgos];
+
+TCanvas * c1[nAlgos][nPtBins]; 
+TCanvas * c3[nAlgos][nFineBins];
+TCanvas * c2[nPtBins];
+TPad *pad1[nPtBins];
+TPad *pad2[nPtBins];
+
+
