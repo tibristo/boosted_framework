@@ -12,6 +12,9 @@
 ///
 
 #include "MunichWorkshopPlots_nicer02.h"
+#include <string>
+#include <utility>
+#include <fstream>
 
 using namespace std;
 
@@ -25,42 +28,80 @@ int main( int argc, char * argv[] ) {
   gInterpreter->GenerateDictionary("vector<vector<double> >", "vector");
   
   AtlasStyle();
+  bool filtering = false, trimmed = false, pruned = false, recluster = false, allsamples = false; // we may not want to run this for all at once, so I added these variables to indicate what we're running.  Currently this just looks at the file name, but it might be better to add an arg to the command line indicating which ones we're running, something like -f (split/filter), -t (trim), -ft (both). TODO
+  int filteridx = 0, trimidx = 0, pruneidx = 0, reclusteridx = 0; // continuing from the idea above, we set the InputFile[idx] based on the input files that we give the program
   
   //Make an array of TFiles with all the relevant inputs and add them to my array of trees
   for (int nArg=1; nArg < argc; nArg++) {
     //cout << nArg << " " << argv[nArg] << endl;
     inputFile[nArg-1] = new TFile(argv[nArg], "READ");
     inputTree[nArg-1] = ( TTree* ) inputFile[nArg-1]->Get( "physics" );    
+    std::string arg  = std::string(argv[nArg]);
+    std::transform(arg.begin(), arg.end(), arg.begin(), ::tolower);
+    if (arg.find("all")!=string::npos)
+      {
+	allsamples = true;
+	filteridx = trimidx = pruneidx = reclusteridx = 0;
+	cout << "all samples is true" << endl;
+      }
+    else if (arg.find("filter")!=string::npos || arg.find("split")!=string::npos)
+      {
+	if (!filtering)
+	  filteridx = nArg-1;
+	filtering = true;
+      }
+    else if (arg.find("trim")!=string::npos)
+      {
+	if(!trimmed)
+	  trimidx = nArg-1;
+	trimmed = true;
+      }
+    else if (arg.find("prune")!=string::npos)
+      {
+	if (!pruned)
+	  pruneidx = nArg-1;
+	pruned = true;
+      }
+    else if (arg.find("reclust")!=string::npos)
+      {
+	if (!recluster)
+	  reclusteridx = nArg -1;	
+	recluster = true;
+      }
+    
   }
 
   defineStrings(AlgoList, binLabel, pTbins, finePtBins);
   createHistos();
+  
 
- 
-  initializeVariables();
-  getMassHistograms(inputTree[0], inputTree[1], "TopoSplitFilteredMu67SmallR0YCut9", 0);
-  initializeVariables();
-  getMassHistograms(inputTree[0], inputTree[1], "TopoSplitFilteredMu67SmallR0YCut9", 1);
-  initializeVariables();
-  getMassHistograms(inputTree[0], inputTree[1], "TopoSplitFilteredMu100SmallR30YCut4", 2);
-  initializeVariables();
-  getMassHistograms(inputTree[2], inputTree[3], "TopoTrimmedPtFrac5SmallR30", 3);
-  initializeVariables();
-  getMassHistograms(inputTree[2], inputTree[3], "TopoTrimmedPtFrac5SmallR20", 4);
-  initializeVariables();
-  getMassHistograms(inputTree[4], inputTree[5], "TopoPrunedCaRcutFactor50Zcut10", 5);
-  initializeVariables();
-  getMassHistograms(inputTree[4], inputTree[5], "TopoPrunedCaRcutFactor50Zcut20", 6);
+  if (filtering || allsamples)
+    {
+      runAlgorithm(inputTree[filteridx], inputTree[filteridx+1], "TopoSplitFilteredMu67SmallR0YCut9", 0);
+      runAlgorithm(inputTree[filteridx], inputTree[filteridx+1], "TopoSplitFilteredMu67SmallR0YCut9", 1);
+      runAlgorithm(inputTree[filteridx], inputTree[filteridx+1], "TopoSplitFilteredMu100SmallR30YCut4", 2);
+    }
+  
+  if (trimmed || allsamples)
+    {
+      runAlgorithm(inputTree[trimidx], inputTree[trimidx+1], "TopoTrimmedPtFrac5SmallR30", 3);
+      runAlgorithm(inputTree[trimidx], inputTree[trimidx+1], "TopoTrimmedPtFrac5SmallR20", 4);
+    }
+  
+  if (pruned || allsamples)
+    {
+      runAlgorithm(inputTree[pruneidx], inputTree[pruneidx+1], "TopoPrunedCaRcutFactor50Zcut10", 5);
+      runAlgorithm(inputTree[pruneidx], inputTree[pruneidx+1], "TopoPrunedCaRcutFactor50Zcut20", 6);
+    }
+  
   //reclustering
-  initializeVariables();
-  getMassHistograms(inputTree[6], inputTree[7], "AntiKt2LCTopo", 7);
-  deleteVectors();
-  initializeVariables();
-  getMassHistograms(inputTree[6], inputTree[7], "AntiKt3LCTopo", 8);
-  deleteVectors();
-  initializeVariables();
-  getMassHistograms(inputTree[6], inputTree[7], "AntiKt4LCTopo", 9);
-  deleteVectors();
+
+  if (false)//recluster || allsamples)
+    {
+      runAlgorithm(inputTree[reclusteridx], inputTree[reclusteridx+1], "AntiKt2LCTopo", 7);
+      runAlgorithm(inputTree[reclusteridx], inputTree[reclusteridx+1], "AntiKt3LCTopo", 8);      
+      runAlgorithm(inputTree[reclusteridx], inputTree[reclusteridx+1], "AntiKt4LCTopo", 9);
+    }
   
 
   //Plot things
@@ -72,7 +113,8 @@ int main( int argc, char * argv[] ) {
   // Normalization = CrossSection(at NLO) * Luminosity / NEvents
 
 
-  for (int i=0; i<nAlgos-1; i++){
+  for (int ii=0; ii<nAlgos-1; ii++){
+    int i = algoMap[ii]; // this is here because we don't always run all algorithms, just a subsample...
     
     qcd_Lead_CA12_pt[i]->Scale(1.0/qcd_Lead_CA12_pt[i]->Integral());  
     Wprime_Lead_CA12_pt[i]->Scale(1.0/Wprime_Lead_CA12_pt[i]->Integral());
@@ -106,7 +148,8 @@ int main( int argc, char * argv[] ) {
 
   //1. Get the MPV
 
-  for (int i=0; i<nAlgos-1; i++){
+  for (int ii=0; ii<nAlgos-1; ii++){
+    int i = algoMap[ii];
     for (int j=0; j<nPtBins; j++){
       myMPV[i][j]=mpv(Wprime_Lead_CA12_mass[i][j]);
     }
@@ -118,12 +161,13 @@ int main( int argc, char * argv[] ) {
   
   //2. Get the mass window which gives 68% W mass efficiency 
 
-  for (int i=0; i<nAlgos-1; i++){
+  for (int ii=0; ii<nAlgos-1; ii++){
+    int i = algoMap[ii];
     for (int j=0; j<nPtBins; j++){
       Qw(WidthMassWindow[i][j],TopEdgeMassWindow[i][j],Wprime_Lead_CA12_mass[i][j], 0.68);
       //one and two are outputs, three and four are inputs
       BottomEdgeMassWindow[i][j]=TopEdgeMassWindow[i][j]-WidthMassWindow[i][j];    
-      cout << AlgoList[i] << ": top edge " << TopEdgeMassWindow[i][j] << " bottom edge " << BottomEdgeMassWindow[i][j] << " mass window " << WidthMassWindow[i][j] << endl;
+      //cout << AlgoList[i] << ": top edge " << TopEdgeMassWindow[i][j] << " bottom edge " << BottomEdgeMassWindow[i][j] << " mass window " << WidthMassWindow[i][j] << endl;
     }
 
     for (int j=0; j<nFineBins; j++){
@@ -137,10 +181,11 @@ int main( int argc, char * argv[] ) {
 
   //3. Check background fraction in this window
 
-  for (int i=0; i<nAlgos-1; i++){
+  for (int ii=0; ii<nAlgos-1; ii++){
+    int i = algoMap[ii];
     for (int j=0; j<nPtBins; j++){
       QCDfrac[i][j]=qcd_Lead_CA12_mass[i][j]->Integral(qcd_Lead_CA12_mass[i][j]->FindBin(BottomEdgeMassWindow[i][j]),qcd_Lead_CA12_mass[i][j]->FindBin(TopEdgeMassWindow[i][j]));
-      cout << "QCD fraction " << QCDfrac[i][j] << endl;
+      //cout << "QCD fraction " << QCDfrac[i][j] << endl;
     }
 
     for (int j=0; j<nFineBins; j++){
@@ -154,7 +199,12 @@ int main( int argc, char * argv[] ) {
   
   makePtPlots();
 
-
+  for (int ii = 0; ii < nAlgos-1; i++)
+    {
+      int groomIdx = algoMap[ii];
+      int fileIdx = fileMap[ii];
+      make68Plots(groomIdx, InputFile[fileIdx], InputFile[fileIdx]); // pass input file indices too?
+    }
   
 
   return 0;
@@ -183,7 +233,7 @@ double mpv(TH1F* histo){
          }
     }
    double mostprob = histo->GetBinCenter(bin_maxc);
-   cout<<"MPV: "<<mostprob<<endl;                    
+   //cout<<"MPV: "<<mostprob<<endl;                    
                                   
    return mostprob;
 }
@@ -195,22 +245,23 @@ void Qw(double &minWidth, double &topEdge, TH1F* histo, double frac){
   topEdge = 0.0;
   
   int Nbins = histo->GetNbinsX();
-  
+  double integral = histo->Integral();
+
   for(int i=0; i!=Nbins; i++){
     double tempFrac = 0;
     int imax = i;
     
     while(tempFrac<frac && imax != Nbins){
       //fraction in bin imax=0,1,2,...                                                                                       
-      tempFrac+=histo->GetBinContent(imax)/histo->Integral();
+      tempFrac+=histo->GetBinContent(imax)/integral;
       imax+=1;
     }                                          
     
-    double width = histo->GetBinCenter(imax) - histo->GetBinCenter(i);
+    double width = histo->GetBinCenter(imax) - histo->GetBinCenter(i); 
     
     double top_edge = histo->GetBinCenter(imax);
     
-    if(imax != Nbins and width<minWidth){
+    if(imax != Nbins and width<minWidth){ 
       minWidth = width;
       topEdge = top_edge;
     }
@@ -218,9 +269,20 @@ void Qw(double &minWidth, double &topEdge, TH1F* histo, double frac){
 }
 
 
+void runAlgorithm(TTree *inputTree, TTree *inputTree1, TString groomAlgo, int groomAlgoIndex)
+{
+  initializeVariables();
+  algoMap.push_back(groomAlgoIndex);
+  fileMap.push_back(fileidx);
+  getMassHistograms(inputTree, inputTree1, groomAlgo, groomAlgoIndex);
+  nAlgos++;
+  deleteVectors();
+}
+
 
 void getMassHistograms(TTree *inputTree, TTree *inputTree1, TString groomAlgo, int groomAlgoIndex){
   
+  cout<<"getBranches() for " << groomAlgo <<endl;
   getBranches(inputTree, inputTree1, groomAlgo, groomAlgoIndex);
 
   /////________________________________________________________________________
@@ -423,7 +485,7 @@ void getMassHistograms(TTree *inputTree, TTree *inputTree1, TString groomAlgo, i
   } // end loop over QCD events
   //end loop over QCD events
   
-  cout << "QCD efficiencies for " << groomAlgo << ": " << nEvt_0 << " " << nEvt_1 << " " << nEvt_2  << " " << nEvt_3  << " " << nEvt_4 << endl;
+  //cout << "QCD efficiencies for " << groomAlgo << ": " << nEvt_0 << " " << nEvt_1 << " " << nEvt_2  << " " << nEvt_3  << " " << nEvt_4 << endl;
   
   
   //NOW I NEED A LOOP OVER Wp SAMPLES TO GET THEIR WEIGHT
@@ -450,7 +512,7 @@ void getMassHistograms(TTree *inputTree, TTree *inputTree1, TString groomAlgo, i
       pTweights[groomAlgoIndex]->SetBinContent(j,weight);
     }
     else pTweights[groomAlgoIndex]->SetBinContent(j,0.0);
-    cout << weight << endl;
+    //cout << weight << endl;
   }
 
 
@@ -610,8 +672,8 @@ void getMassHistograms(TTree *inputTree, TTree *inputTree1, TString groomAlgo, i
 	Wprime_Lead_CA12_mass[groomAlgoIndex][4]->Fill((*Wp_CA12_groomed_mass)[chosenLeadGroomedIndex]/1000, weight);
       }
       if (((*Wp_CA12_truth_pt)[0]/1000)>2000.0){
-	if ((*Wp_CA12_groomed_pt)[chosenLeadGroomedIndex]/1000<500.00)
-	  cout << (*Wp_CA12_groomed_pt)[chosenLeadGroomedIndex]/1000 << endl;
+	//if ((*Wp_CA12_groomed_pt)[chosenLeadGroomedIndex]/1000<500.00)
+	//cout << (*Wp_CA12_groomed_pt)[chosenLeadGroomedIndex]/1000 << endl;
 	Wprime_Lead_CA12_mass[groomAlgoIndex][5]->Fill((*Wp_CA12_groomed_mass)[chosenLeadGroomedIndex]/1000, weight);
       }
 
@@ -644,12 +706,15 @@ void createHistos(){
 
   //create my histograms
   // make an array with histograms for all sorts of algorithms used
-  
-  for (int i=0; i<nAlgos-1; i++){
-    
+  int M = 100;
+  for (int i=0; i<nAlgosMax-1; i++){
+    //int i = algoMap[ii];
     for (int j=0; j<nFineBins; j++){
       qcd_finePtBin_mass[i][j] = new TH1F("qcd_finePtBin_mass_"+AlgoList[i]+finePtBins[j], "qcd_finePtBin_mass_"+AlgoList[i]+finePtBins[j], 150, 0.0, 300.0);
+      //qcd_finePtBin_mass_curve[i][j] = new TH1D("qcd_finePtBin_mass_"+AlgoList[i]+finePtBins[j]+"_ROC","qcd_finePtBin_mass_"+AlgoList[i]+finePtBins[j]+"_ROC",M,0,1);
       Wprime_finePtBin_mass[i][j] = new TH1F("Wprime_finePtBin_mass_"+AlgoList[i]+finePtBins[j], "Wprime_finePtBin_mass_"+AlgoList[i]+finePtBins[j], 150, 0.0, 300.0);
+      //finePtBin_mass_curve[i][j] = new TH1F("finePtBin_mass_"+AlgoList[i]+finePtBins[j]+"_ROC", "finePtBin_mass_"+AlgoList[i]+finePtBins[j]+"_ROC", M, 0, 1);
+      //finePtBin_mass_curve[i][j] = new TGraph(M, 0, 1);
       qcd_finePtBin_mass[i][j]->Sumw2();
       Wprime_finePtBin_mass[i][j]->Sumw2();
     }
@@ -657,8 +722,11 @@ void createHistos(){
 
     for (int j=0; j<nPtBins; j++){
       qcd_Lead_CA12_mass[i][j] = new TH1F("qcd_Lead_CA12_mass_"+AlgoList[i]+pTbins[j], "qcd_Lead_CA12_mass_"+AlgoList[i]+pTbins[j], 300, 0.0, 300.0);
+      //qcd_Lead_CA12_mass_curve[i][j] = new TH1F("qcd_Lead_CA12_mass_"+AlgoList[i]+pTbins[j]+"_ROC", "qcd_Lead_CA12_mass_"+AlgoList[i]+pTbins[j]+"_ROC", M, 0, 1);
       qcd_Lead_CA12_mass[i][j]->Sumw2();
       Wprime_Lead_CA12_mass[i][j] = new TH1F("Wprime_Lead_CA12_mass_"+AlgoList[i]+pTbins[j], "Wprime_Lead_CA12_mass_"+AlgoList[i]+pTbins[j], 300, 0.0, 300.0);
+      //Lead_CA12_mass_curve[i][j] = new TH1F("Lead_CA12_mass_"+AlgoList[i]+pTbins[j]+"_ROC", "Lead_CA12_mass_"+AlgoList[i]+pTbins[j]+"_ROC",M, 0, 1);
+      //Lead_CA12_mass_curve[i][j] = new TGraph(M, 0, 1);
       Wprime_Lead_CA12_mass[i][j]->Sumw2();
     }
 
@@ -668,6 +736,17 @@ void createHistos(){
     qcd_PtReweight[i] = new TH1F("qcd_ptreweight_"+AlgoList[i], "qcd_ptreweight_"+AlgoList[i], 20, 0.0, 3500.0);
     Wp_PtReweight[i] = new TH1F("Wp_ptreweight_"+AlgoList[i], "Wp_ptreweight_"+AlgoList[i], 20, 0.0, 3500.0);
     pTweights[i] = new TH1F("pT_weights_"+AlgoList[i], "pt weights_"+AlgoList[i], 20, 0.0, 3500.0);
+
+    // ROC curves
+    //qcd_Lead_CA12_pt_curve[i] = new TH1F("qcd_Lead_CA12_pt_"+AlgoList[i]+"_ROC", "qcd_Lead_CA12_pt_"+AlgoList[i]+"_ROC", M, 0, 1);
+    //Lead_CA12_pt_curve[i] = new TGraph(M,0,1);//TH1F("Lead_CA12_pt_"+AlgoList[i]+"_ROC", "Lead_CA12_pt_"+AlgoList[i]+"_ROC", M, 0, 1);
+    //Lead_CA12_scaled_pt_curve[i] = new TH1F("Lead_CA12_scaled_pt_"+AlgoList[i]+"_ROC", "Lead_CA12_scaled_pt_"+AlgoList[i]+"_ROC", M, 0, 1);
+    //Lead_CA12_scaled_pt_curve[i] = new TGraph(M, 0, 1);
+    //qcd_PtReweight_curve[i] = new TH1F("qcd_ptreweight_"+AlgoList[i]+"_ROC", "qcd_ptreweight_"+AlgoList[i]+"_ROC", M, 0, 1);
+    //PtReweight_curve[i] = new TH1F("ptreweight_"+AlgoList[i]+"_ROC", "ptreweight_"+AlgoList[i]+"_ROC", M, 0, 1);
+    //PtReweight_curve[i] = new TGraph(M, 0, 1);
+    //pTweights_curve[i] = new TH1F("pT_weights_"+AlgoList[i]+"_ROC", "pt weights_"+AlgoList[i]+"_ROC", M, 0, 1);
+    //pTweights_curve[i] = new TGraph( M, 0, 1);
       
   }
   
@@ -675,11 +754,20 @@ void createHistos(){
   qcd_Lead_CA12_mass[nAlgos-1][0]->Sumw2();
   Wprime_Lead_CA12_mass[nAlgos-1][0] = new TH1F("Wprime_Lead_CA12_mass_"+AlgoList[nAlgos-1], "Wprime_Lead_CA12_mass_"+AlgoList[nAlgos-1], 100, 0.0, 300.0);
   Wprime_Lead_CA12_mass[nAlgos-1][0]->Sumw2();
+
+  //qcd_Lead_CA12_mass_curve[nAlgos-1][0] = new TH1F("qcd_Lead_CA12_mass_"+AlgoList[nAlgos-1]+"_ROC", "qcd_Lead_CA12_mass_"+AlgoList[nAlgos-1]+"_ROC", M, 0, 1);
+  //Lead_CA12_mass_curve[nAlgos-1][0] = new TH1F("Lead_CA12_mass_"+AlgoList[nAlgos-1]+"_ROC", "Lead_CA12_mass_"+AlgoList[nAlgos-1]+"_ROC", M, 0, 1);
+  //Lead_CA12_mass_curve[nAlgos-1][0] = new TGraph( M, 0, 1);
   
   qcd_Lead_CA12_pt[nAlgos-1] = new TH1F("qcd_Lead_CA12_pt_"+AlgoList[nAlgos-1], "qcd_Lead_CA12_pt_"+AlgoList[nAlgos-1], 350, 0.0, 3500.0);
   Wprime_Lead_CA12_pt[nAlgos-1] = new TH1F("Wprime_Lead_CA12_pt_"+AlgoList[nAlgos-1], "Wprime_Lead_CA12_pt_"+AlgoList[nAlgos-1], 350, 0.0, 3500.0);
   Wprime_Lead_CA12_scaled_pt[nAlgos-1] = new TH1F("Wprime_Lead_CA12_scaled_pt_"+AlgoList[nAlgos-1], "Wprime_Lead_CA12_scaled_pt_"+AlgoList[nAlgos-1], 350, 0.0, 3500.0);
-  
+
+  //qcd_Lead_CA12_pt_curve[nAlgos-1] = new TH1F("qcd_Lead_CA12_pt_"+AlgoList[nAlgos-1]+"_ROC", "qcd_Lead_CA12_pt_"+AlgoList[nAlgos-1]+"_ROC", M, 0, 1);
+  //Lead_CA12_pt_curve[nAlgos-1] = new TH1F("Lead_CA12_pt_"+AlgoList[nAlgos-1]+"_ROC", "Lead_CA12_pt_"+AlgoList[nAlgos-1]+"_ROC", M, 0, 1);
+  //Lead_CA12_pt_curve[nAlgos-1] = new TGraph( M, 0, 1);
+  //Lead_CA12_scaled_pt_curve[nAlgos-1] = new TH1F("Lead_CA12_scaled_pt_"+AlgoList[nAlgos-1]+"_ROC", "Lead_CA12_scaled_pt_"+AlgoList[nAlgos-1]+"_ROC", M, 0, 1);
+  //Lead_CA12_scaled_pt_curve[nAlgos-1] = new TGraph( M, 0, 1);
 
 }
 
@@ -874,7 +962,7 @@ void getBranches(TTree *inputTree, TTree *inputTree1, TString groomAlgo, int gro
 
   //if not reclustering
   if (groomAlgoIndex<7){
-    inputTree->SetBranchAddress("mc_channel_number", &qcd_mc_channel_number);
+    inputTree->SetBranchAddress("mc_channel_number", &qcd_mc_channel_number); // segfaults for groomalgo = <incomplete type>, groomalgoindex = 3, TopoSplitFilteredMu100SmallR30YCut4
     inputTree->SetBranchAddress("mc_event_weight", &qcd_mc_event_weight);
     inputTree->SetBranchAddress("jet_CamKt12Truth_pt", &qcd_CA12_truth_pt);
     inputTree->SetBranchAddress("jet_CamKt12Truth_eta", &qcd_CA12_truth_eta);
@@ -998,7 +1086,7 @@ void getBranches(TTree *inputTree, TTree *inputTree1, TString groomAlgo, int gro
 }
 
 
-void makeROC(int type, TH1D *&S, TH1D *&B, TGraph &curve, TGraph &curve_up, TGraph &curve_do){
+void makeROC(int type, TH1F *&S, TH1F *&B, TGraph &curve, TString name, bool draw){//, TGraph &curve_up, TGraph &curve_do){
   //Usage:
   //TH1D *S = new TH1D();
   //TH1D *B = new TH1D();
@@ -1067,6 +1155,8 @@ void makeROC(int type, TH1D *&S, TH1D *&B, TGraph &curve, TGraph &curve_up, TGra
   TGraph gr(n);
   TGraph gr_up(n);
   TGraph gr_do(n);
+  ofstream log;
+  log.open(name+".txt");
   for (int i=0; i<n; i++){
     double myS = 0.;
     double myB = 0.;
@@ -1081,6 +1171,7 @@ void makeROC(int type, TH1D *&S, TH1D *&B, TGraph &curve, TGraph &curve_up, TGra
 
     }
     if(type==1){
+      log << myS << " , " << myB << endl;
       gr.SetPoint(i, myS, (1-myB));
       gr_up.SetPoint(i, myS+mySerr, (1-(myB-myBerr)));
       gr_do.SetPoint(i, myS-mySerr, (1-(myB+myBerr)));
@@ -1093,10 +1184,19 @@ void makeROC(int type, TH1D *&S, TH1D *&B, TGraph &curve, TGraph &curve_up, TGra
       }
     }
   }
+  log.close();
+  //curve=gr;
 
-  curve=gr;
-  curve_up=gr_up;
-  curve_do=gr_do;
+
+  if (draw==true)
+    {
+      TCanvas *c1 = new TCanvas();
+      gr.Draw("");
+      c1->SaveAs(name+".png");
+      delete c1;
+    }
+  //curve_up=gr_up;
+  //curve_do=gr_do;
 
   return;
 
@@ -1300,7 +1400,8 @@ void makePtPlots(){
 
   // for (int i=0; i<nAlgos-2; i++){
   //for now only the algos I already have: 0,1,2,3,4,5,6,7,8,9 
-  for (int i=0; i<nAlgos-2; i++){  
+  for (int ii=0; ii<nAlgos-2; ii++){  
+    int i = algoMap[ii];
     for (int j=0; j<nPtBins; j++){
       hMassLow[j]->SetBinContent(i+1,BottomEdgeMassWindow[i][j]);
       hMassHigh[j]->SetBinContent(i+1,TopEdgeMassWindow[i][j]);
@@ -1312,7 +1413,8 @@ void makePtPlots(){
   
   //NOW PLOT WINDOW WIDTH VS PT
   //Christo's plot
-  for (int i=0; i<nAlgos-2; i++){
+  for (int ii=0; ii<nAlgos-2; ii++){
+    int i = algoMap[ii];
     windowsVsPt[i] = new TH1F("windowVsPt_"+AlgoList[i], "windowVsPt_"+AlgoList[i], 10, 0.0, 2500.);
     windowsVsPt[i]->Sumw2();
     windowsVsPt[i]->SetBinContent(1,WidthMassWindow_finePt[i][0]);
@@ -1347,7 +1449,8 @@ void makePtPlots(){
   TPad *pad11[nAlgos-2];
   TPad *pad22[nAlgos-2];
 	     
-  for (int i=1; i<nAlgos-2; i++){
+  for (int ii=1; ii<nAlgos-2; ii++){
+    int i = algoMap[ii];
     wVsPt[i] = new TCanvas("wVsPt", "wVsPt", 700, 550);
     
     pad11[i] = new TPad("pad1","pad1",0,0.4,1,1);
@@ -1503,79 +1606,55 @@ void makePtPlots(){
   
   ///end of fine pT bins plots
   
-  /*
-  //christos #2 sort of plots - QCD eff superposition
-  
-  TCanvas * c4 = new TCanvas("canvas", "canvas", 700,550);
-  hQCDeff[1]->SetLineColor(1);
-  hQCDeff[4]->SetLineColor(2);
-  hQCDeff[6]->SetLineColor(3);
-  hQCDeff[7]->SetLineColor(4);
-  
-  hQCDeff[1]->Draw();
-  hQCDeff[4]->Draw("same");
-  hQCDeff[6]->Draw("same");
-  hQCDeff[7]->Draw("same");
-
-
-  TLatex texw;
-  texw.SetNDC();
-  texw.SetTextSize(0.1);
-  texw.SetTextFont(72);
-  texw.DrawLatex(0.52,0.85,"ATLAS");
-  
-  TLatex p;
-  p.SetNDC();
-  p.SetTextFont(42);
-  p.SetTextSize(0.1);
-  p.SetTextColor(kBlack);
-  p.DrawLatex(0.65,0.85,"Internal Simulation");
-  
-  TLegend *leg = new TLegend(0.65,0.88,0.93,0.97);
-  leg->SetBorderSize(0);
-  leg->SetFillColor(0);
-  leg->SetTextFont(42);
-  leg->SetTextSize(0.040);
-  leg->SetNColumns(2);
-  leg->AddEntry( hQCDeff[1] , binLabel[1] , "l" );
-  leg->AddEntry( hQCDeff[4] , binLabel[4] , "l" );
-  leg->AddEntry( hQCDeff[6] , binLabel[6] , "l" );
-  leg->AddEntry( hQCDeff[7] , binLabel[7] , "l" );
-  leg->Draw();
-  
-  
-  c4->SaveAs("QCDeff_comparisons.eps");
-
-  //end of christos plots #2
-  
-  */
 
   ///// SAVE THINGS TO HISTOGRAM FILE
   
   TFile f("MunichPlots.root","recreate");
+
+  //Usage:
+  //TH1D *S = new TH1D();
+  //TH1D *B = new TH1D();
+  //...Fill S and B with signal (S) and background (B)
+  //Need S and B to have the same number of bins!
+  //TH1D *curve = new TH1D("","",M,0,1); where M is however fine you want the ROC curve binning to be.
+  //ROC(S,B,curve);
+  int type = 1;
   
-  for (int i=0; i<nAlgos-2; i++){
+  for (int ii=0; ii<nAlgos-2; ii++){
+    int i = algoMap[ii];
     windowsVsPt[i]->Write();
   }
 
-  for (int i=0; i<nAlgos-1; i++){
+  for (int ii=0; ii<nAlgos-1; ii++){
+    int i = algoMap[ii];
+    
     qcd_Lead_CA12_pt[i]->Write();
     Wprime_Lead_CA12_pt[i]->Write();
-    
+    makeROC(type, Wprime_Lead_CA12_pt[i],qcd_Lead_CA12_pt[i],(*Lead_CA12_pt_curve)[i], Wprime_Lead_CA12_pt[i]->GetName(), true);
+    //Lead_CA12_pt_curve[i]->Write();
+
     pTweights[i]->Write();
     qcd_PtReweight[i]->Write();
     Wp_PtReweight[i]->Write();
+    makeROC(type, Wp_PtReweight[i], qcd_PtReweight[i], (*PtReweight_curve)[i], "PTReweight", true);
+    //PtReweight_curve[i]->Write();
     Wprime_Lead_CA12_scaled_pt[i]->Write();
+    makeROC(type, Wprime_Lead_CA12_scaled_pt[i], qcd_Lead_CA12_pt[i], (*Lead_CA12_scaled_pt_curve)[i], Wprime_Lead_CA12_scaled_pt[i]->GetName(), true);// Is his right?!
+    //Lead_CA12_scaled_pt_curve[i]->Write();
 
 
     for (int j=0; j<nPtBins; j++){
       qcd_Lead_CA12_mass[i][j]->Write();
       Wprime_Lead_CA12_mass[i][j]->Write();
+      makeROC(type, Wprime_Lead_CA12_mass[i][j], qcd_Lead_CA12_mass[i][j], (*Lead_CA12_mass_curve)[i][j], Wprime_Lead_CA12_mass[i][j]->GetName(), true);
+      //Lead_CA12_mass_curve[i][j]->Write();
     }
 
     for (int j=0; j<nFineBins; j++){
       qcd_finePtBin_mass[i][j]->Write();
       Wprime_finePtBin_mass[i][j]->Write();
+      makeROC(type, Wprime_finePtBin_mass[i][j], qcd_finePtBin_mass[i][j], (*finePtBin_mass_curve)[i][j], Wprime_finePtBin_mass[i][j]->GetName(), true);
+      //finePtBin_mass_curve[i][j]->Write();
     }
   }
   
@@ -1595,3 +1674,59 @@ void makePtPlots(){
 
 } // end makePtPlots()
 
+
+void make68Plots(int algidx, TTree * bkg, TTree * sig)
+{
+  double mass_max = 0.0;
+  double mass_min = 0.0;
+  TTree * currTree;
+  bool runbkg = false;
+  vector<std::string> branches;
+  for (int ii=0; ii<nAlgos-1; ii++){
+    int i = algoMap[ii];
+    branches = getListOfBranches(groomAlgo[i]);
+    for (int j=0; j<nPtBins; j++){
+
+      mass_max = TopEdgeMassWindow[i][j];
+      mass_min = BottomEdgeMassWindow[i][j];
+      currTree = runbkg ?  sig : bkg;
+      setBranches(currTree, branches); // need to do this for signal and bkg!!!  Do we want to plot on the same thing?  Separately?
+      TTree * outTree;
+      currTree->SetBranches("*",0);
+      currTree->SetBranches(branches,1);
+      outTree->Clone();
+      int entries = (int)currTree->GetEntries();
+      for (int n = 0; n < entries; n++)
+	{
+	  currTree->GetEntry(n);
+	  if (mass < mass_max && mass > mass_min)
+	    {
+	      currTree->CloneTree();
+	      plotVariables(currTree, branches);
+	    }
+	}
+    }
+
+    for (int j=0; j<nFineBins; j++){
+      mass_max = TopEdgeMassWindow_finePt[i][j];
+      mass_min = BottomEdgeMassWindow_finePt[i][j];
+    }
+   
+  }
+
+
+} // make68Plots()
+
+
+vector<std::string> getListOfBranches(std::string &algorithm)
+{
+
+
+}
+
+void plotVariables(TTree * tree, vector<std:string> branches)
+{
+  
+  
+  
+}
