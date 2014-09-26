@@ -1686,25 +1686,29 @@ void make68Plots(int algidx, TTree * bkg, TTree * sig)
     int i = algoMap[ii];
     branches = getListOfBranches(groomAlgo[i]);
     for (int j=0; j<nPtBins; j++){
-
+      TFile * outfile;
       mass_max = TopEdgeMassWindow[i][j];
       mass_min = BottomEdgeMassWindow[i][j];
       currTree = runbkg ?  sig : bkg;
       setBranches(currTree, branches); // need to do this for signal and bkg!!!  Do we want to plot on the same thing?  Separately?
       TTree * outTree;
       currTree->SetBranches("*",0);
-      currTree->SetBranches(branches,1);
-      outTree->Clone();
+      for (std::vector<string>::iterator it = branches.begin(); it != branches.end(); it++)
+	{
+	  currTree->SetBranchStatus(*it,1);
+	}
+      outTree = currTree->CloneTree();
       int entries = (int)currTree->GetEntries();
       for (int n = 0; n < entries; n++)
 	{
 	  currTree->GetEntry(n);
 	  if (mass < mass_max && mass > mass_min)
 	    {
-	      currTree->CloneTree();
-	      plotVariables(currTree, branches);
+	      outTree->Fill();
 	    }
 	}
+      plotVariables(currTree, branches);
+      outfile.Close();
     }
 
     for (int j=0; j<nFineBins; j++){
@@ -1720,11 +1724,13 @@ void make68Plots(int algidx, TTree * bkg, TTree * sig)
 
 vector<std::string> getListOfBranches(std::string &algorithm)
 {
+  vector<string> branches;
 
+  return branches;
 
 }
 
-void plotVariables(TTree * tree, vector<std:string> branches)
+void plotVariables(TTree * tree, vector<std:string> & branches)
 {
   
   
