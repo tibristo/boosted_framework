@@ -95,6 +95,8 @@ void setMassBranch(TTree * tree, std::string &algorithm);
 void plotVariables(TTree * tree, vector<std:string> & branches);
 std::vector<std::string> getListOfBranches(std::string &algorithm);
 void make68Plots(int algidx, TTree * bkg, TTree * sig);
+void addJets(TTree * tree, std::string & algorithm);
+void getBranchesSelection(TTree * tree, std::string & algorithm);
 
 enum class groomAlgo{groomZero, TopoSplitFilteredMu67SmallR0YCut9, TopoSplitFilteredMu100SmallR30YCut4, TopoTrimmedPtFrac5SmallR30, TopoTrimmedPtFrac5SmallR20, TopoPrunedCaRcutFactor50Zcut10, TopoPrunedCaRcutFactor50Zcut20, AntiKt2LCTopo, AntiKt3LCTopo, AntiKt4LCTopo};
 //groomAlgo options:
@@ -124,7 +126,13 @@ vector<TLorentzVector> Recluster(vector<TLorentzVector> small_jets, double PTcut
 TFile *inputFile[20];
 TTree *inputTree[20];
 
+
 //get the branches we want to use
+Int_t leadGroomedIndex = 0;
+Int_t leadTruthIndex = 0;
+Int_t leadTopoIndex = 0;
+Float_t pt_reweight = 1.0;
+Float_t normalisation = 1.0;
 
 //QCD split filtering with Y cut 9
 vector<float> * qcd_CA12_truth_pt = 0;
@@ -146,6 +154,23 @@ vector<float> * qcd_CA12_groomed_phi = 0;
 vector<float> * qcd_CA12_groomed_mass = 0;
 vector<float> * qcd_CA12_groomed_E = 0;
 vector<float> * qcd_CA12_groomed_emfrac = 0;
+
+
+vector<float> * jet_eta_truth = 0;
+vector<float> * jet_phi_truth = 0;
+vector<float> * jet_emfrac_truth = 0;
+vector<float> * jet_pt_truth = 0;
+
+vector<float> * jet_eta_topo = 0;
+vector<float> * jet_phi_topo = 0;
+vector<float> * jet_emfrac_topo = 0;
+vector<float> * jet_pt_topo = 0;
+
+vector<float> * jet_eta_groomed = 0;
+vector<float> * jet_phi_groomed = 0;
+vector<float> * jet_emfrac_groomed = 0;
+vector<float> * jet_pt_groomed = 0;
+
 
 UInt_t qcd_mc_channel_number = 0; 
 Float_t qcd_mc_event_weight = 0; 
@@ -203,7 +228,7 @@ const int nPtBins=6;
 TString pTbins[nPtBins];
 const int nFineBins=12;
 TString finePtBins[nFineBins];
-
+std::vector<pair<float,float> > ptrange;
 
 TH1F *qcd_finePtBin_mass[nAlgosMax][nFineBins];
 TH1F *Wprime_finePtBin_mass[nAlgosMax][nFineBins];
@@ -300,6 +325,12 @@ void defineStrings(TString *AlgoList, TString *binLabel, TString *pTbins, TStrin
   pTbins[3]="1000to1500";
   pTbins[4]="1500to2000";
   pTbins[5]="gtr2000";
+  ptrange.push_back(std::make_pair(0,10000));
+  ptrange.push_back(std::make_pair(1000,10000));
+  ptrange.push_back(std::make_pair(500,1000));
+  ptrange.push_back(std::make_pair(1000,1500));
+  ptrange.push_back(std::make_pair(1500,2000));
+  ptrange.push_back(std::make_pair(2000,10000));
   
   finePtBins[0]="0to250";
   finePtBins[1]="250to500";
