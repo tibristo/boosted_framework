@@ -38,35 +38,59 @@ int main( int argc, char * argv[] ) {
     inputTree[nArg-1] = ( TTree* ) inputFile[nArg-1]->Get( "physics" );    
     std::string arg  = std::string(argv[nArg]);
     std::transform(arg.begin(), arg.end(), arg.begin(), ::tolower);
+    vector<int> subset;
     if (arg.find("all")!=string::npos)
       {
 	allsamples = true;
 	filteridx = trimidx = pruneidx = reclusteridx = 0;
 	cout << "all samples is true" << endl;
+	subset = {0,1,2,3,4,5,6,7,8,9};
+	algoMap.insert(algoMap.end(),subset.begin(),subset.end());
       }
     else if (arg.find("filter")!=string::npos || arg.find("split")!=string::npos)
       {
 	if (!filtering)
-	  filteridx = nArg-1;
+	  {
+	    filteridx = nArg-1;
+	    subset = {1,2};//{0,1,2};
+	    algoMap.insert(algoMap.end(),subset.begin(),subset.end());
+	  }
 	filtering = true;
       }
     else if (arg.find("trim")!=string::npos)
       {
 	if(!trimmed)
-	  trimidx = nArg-1;
+	  {
+	    trimidx = nArg-1;
+	    subset = {0,3,4};
+	    algoMap.insert(algoMap.end(),subset.begin(),subset.end());
+	  }
 	trimmed = true;
       }
     else if (arg.find("prune")!=string::npos)
       {
 	if (!pruned)
-	  pruneidx = nArg-1;
+	  {
+	    pruneidx = nArg-1;
+	    subset = {0,5,6};
+	    algoMap.insert(algoMap.end(),subset.begin(),subset.end());
+	  }
 	pruned = true;
       }
     else if (arg.find("reclust")!=string::npos)
       {
 	if (!recluster)
-	  reclusteridx = nArg -1;	
+	  {
+	    reclusteridx = nArg -1;	
+	    subset = {0,7,8,9};
+	    algoMap.insert(algoMap.end(),subset.begin(),subset.end());
+	  }
 	recluster = true;
+      }
+    if (!subset.empty())
+      {
+	for (std::vector<int>::iterator it = subset.begin(); it != subset.end(); it++)
+	  fileMap[(*it)] = nArg-1; // what about index 0?  That might cause problems because we set it for ALL files!
       }
     
   }
@@ -78,8 +102,8 @@ int main( int argc, char * argv[] ) {
   if (filtering || allsamples)
     {
       runAlgorithm(inputTree[filteridx], inputTree[filteridx+1], "TopoSplitFilteredMu67SmallR0YCut9", 0);
-      runAlgorithm(inputTree[filteridx], inputTree[filteridx+1], "TopoSplitFilteredMu67SmallR0YCut9", 1);
-      runAlgorithm(inputTree[filteridx], inputTree[filteridx+1], "TopoSplitFilteredMu100SmallR30YCut4", 2);
+      //runAlgorithm(inputTree[filteridx], inputTree[filteridx+1], "TopoSplitFilteredMu67SmallR0YCut9", 1);
+      //runAlgorithm(inputTree[filteridx], inputTree[filteridx+1], "TopoSplitFilteredMu100SmallR30YCut4", 2);
     }
   
   if (trimmed || allsamples)
@@ -198,13 +222,13 @@ int main( int argc, char * argv[] ) {
   
   
   makePtPlots();
-
-  for (int ii = 0; ii < nAlgos-1; i++)
-    {
-      int groomIdx = algoMap[ii];
-      int fileIdx = fileMap[ii];
-      make68Plots(groomIdx, InputFile[fileIdx], InputFile[fileIdx]); // pass input file indices too?
-    }
+  
+  //for (int ii = 0; ii < nAlgos-1; ii++)
+  //{
+  //int groomIdx = algoMap[ii];
+  //int fileIdx = fileMap[ii]; // basically points to filteridx, reclusteridx, etc.
+  make68Plots();//inputTree[fileIdx], inputTree[fileIdx]); // pass input file indices too?
+  //  }
   
 
   return 0;
@@ -222,20 +246,20 @@ float DeltaR(float eta1,float phi1,float eta2,float phi2){
 
 
 double mpv(TH1F* histo){
-   double maxc=0.0001;
-   int bin_maxc=0;
-   int Nbins = histo->GetNbinsX(); 
-   for( int i=0; i!=Nbins; i++){
-      double tc = histo->GetBinContent(i);
-      if(tc > maxc){
-         maxc=tc;
-         bin_maxc=i;
-         }
+  double maxc=0.0001;
+  int bin_maxc=0;
+  int Nbins = histo->GetNbinsX(); 
+  for( int i=0; i!=Nbins; i++){
+    double tc = histo->GetBinContent(i);
+    if(tc > maxc){
+      maxc=tc;
+      bin_maxc=i;
     }
-   double mostprob = histo->GetBinCenter(bin_maxc);
-   //cout<<"MPV: "<<mostprob<<endl;                    
+  }
+  double mostprob = histo->GetBinCenter(bin_maxc);
+  //cout<<"MPV: "<<mostprob<<endl;                    
                                   
-   return mostprob;
+  return mostprob;
 }
 
 
@@ -269,11 +293,11 @@ void Qw(double &minWidth, double &topEdge, TH1F* histo, double frac){
 }
 
 
-void runAlgorithm(TTree *inputTree, TTree *inputTree1, TString groomAlgo, int groomAlgoIndex)
+void runAlgorithm(TTree *inputTree, TTree *inputTree1, TString groomAlgo, int groomAlgoIndex)//, int fileidx)
 {
   initializeVariables();
-  algoMap.push_back(groomAlgoIndex);
-  fileMap.push_back(fileidx);
+  //algoMap.push_back(groomAlgoIndex);
+  //fileMap.push_back(fileidx);
   getMassHistograms(inputTree, inputTree1, groomAlgo, groomAlgoIndex);
   nAlgos++;
   deleteVectors();
@@ -423,7 +447,7 @@ void getMassHistograms(TTree *inputTree, TTree *inputTree1, TString groomAlgo, i
     for (int i=0; i<(*qcd_CA12_groomed_pt).size(); i++){
 
       if (chosenLeadTruthJetIndex>=0 && chosenLeadGroomedIndex<0 && DeltaR((*qcd_CA12_truth_eta)[chosenLeadTruthJetIndex],(*qcd_CA12_truth_phi)[chosenLeadTruthJetIndex],(*qcd_CA12_groomed_eta)[i],(*qcd_CA12_groomed_phi)[i])<0.9 && (*qcd_CA12_groomed_emfrac)[i]<0.99 && fabs((*qcd_CA12_groomed_eta)[i])<1.2){
-	  // && (*qcd_CA12_groomed_pt)[i]/1000>100.0 ){ 
+	// && (*qcd_CA12_groomed_pt)[i]/1000>100.0 ){ 
 	
 	chosenLeadGroomedIndex=i;
 	//nEvt_3=nEvt_3+1;
@@ -575,7 +599,7 @@ void getMassHistograms(TTree *inputTree, TTree *inputTree1, TString groomAlgo, i
       Wp_CA12_groomed_E->push_back(reclus_jets[0].E());
       Wp_CA12_groomed_emfrac->push_back(0.5);
 	
-	// }
+      // }
       
     }
 
@@ -643,7 +667,7 @@ void getMassHistograms(TTree *inputTree, TTree *inputTree1, TString groomAlgo, i
     for (int i=0; i<(*Wp_CA12_groomed_pt).size(); i++){
 
       if (chosenLeadTruthJetIndex>=0 && chosenLeadGroomedIndex<0 && DeltaR((*Wp_CA12_truth_eta)[chosenLeadTruthJetIndex],(*Wp_CA12_truth_phi)[chosenLeadTruthJetIndex],(*Wp_CA12_groomed_eta)[i],(*Wp_CA12_groomed_phi)[i])<0.9 && (*Wp_CA12_groomed_emfrac)[i]<0.99 && fabs((*Wp_CA12_groomed_eta)[i])<1.2){
-	  //  && (*Wp_CA12_groomed_pt)[i]/1000>100.0 ){ 	
+	//  && (*Wp_CA12_groomed_pt)[i]/1000>100.0 ){ 	
 	chosenLeadGroomedIndex=i;
 	//nEvt1_3=nEvt1_3+1;
       }     
@@ -689,8 +713,8 @@ void getMassHistograms(TTree *inputTree, TTree *inputTree1, TString groomAlgo, i
     
     Wprime_Lead_CA12_scaled_pt[groomAlgoIndex]->Fill((*Wp_CA12_truth_pt)[0]/1000, weight);
     /*
-    Wprime_Lead_CA12_scaled_pt[8]->Fill((*Wp_CA12_truth_pt)[0]/1000, weight);
-    Wprime_Lead_CA12_mass[8][0]->Fill((*Wp_CA12_truth_mass)[0]/1000, weight);
+      Wprime_Lead_CA12_scaled_pt[8]->Fill((*Wp_CA12_truth_pt)[0]/1000, weight);
+      Wprime_Lead_CA12_mass[8][0]->Fill((*Wp_CA12_truth_mass)[0]/1000, weight);
     */
   }
   //end loop over Wprime events
@@ -905,58 +929,58 @@ vector<TLorentzVector> Recluster(vector<TLorentzVector> small_jets, double PTcut
 void deleteVectors(){
 
 
-      delete qcd_CA12_groomed_pt;
-      delete qcd_CA12_groomed_eta;
-      delete qcd_CA12_groomed_phi;
-      delete qcd_CA12_groomed_mass;
-      delete qcd_CA12_groomed_E;
-      delete qcd_CA12_groomed_emfrac;
+  delete qcd_CA12_groomed_pt;
+  delete qcd_CA12_groomed_eta;
+  delete qcd_CA12_groomed_phi;
+  delete qcd_CA12_groomed_mass;
+  delete qcd_CA12_groomed_E;
+  delete qcd_CA12_groomed_emfrac;
       
-      delete Wp_CA12_groomed_pt;
-      delete Wp_CA12_groomed_eta;
-      delete Wp_CA12_groomed_phi;
-      delete Wp_CA12_groomed_mass;
-      delete Wp_CA12_groomed_E;
-      delete Wp_CA12_groomed_emfrac;
+  delete Wp_CA12_groomed_pt;
+  delete Wp_CA12_groomed_eta;
+  delete Wp_CA12_groomed_phi;
+  delete Wp_CA12_groomed_mass;
+  delete Wp_CA12_groomed_E;
+  delete Wp_CA12_groomed_emfrac;
 
 
 }
 /*
-void getNormSherpaW(TString InputFile, unsigned long & evnum, double & weight)
-{
+  void getNormSherpaW(TString InputFile, unsigned long & evnum, double & weight)
+  {
   //Setup TChain that will access the proper metadata location in the TFile
   TChain *chCutFlow = new TChain("physicsMeta/CutFlowTree");
 
   //Load the desired TFile into the TChain
   //TString InputFile="path/to/file.root"
-      chCutFlow->Add(InputFile);
+  chCutFlow->Add(InputFile);
     
-    //Using the loaded TChain from the input file, you access the sum of the events and the sum of weighted events before the filter
-    if(chCutFlow!=0 && chCutFlow->GetEntries() != 0){
-      std::vector<unsigned long> *nAcceptedEvents = new std::vector<unsigned long>;
-      std::vector<double> *nWeightedAcceptedEvents = new std::vector<double>;
-      std::vector<std::string> *name = new std::vector<std::string>;
-      chCutFlow->SetBranchAddress("nAcceptedEvents", &nAcceptedEvents);
-      chCutFlow->SetBranchAddress("nWeightedAcceptedEvents", &nWeightedAcceptedEvents);
-      chCutFlow->SetBranchAddress("name", &name);
-      for(int i=0;i<chCutFlow->GetEntries();i++){
-	chCutFlow->GetEntry(i);
-	for(unsigned int j=0; j<name->size(); j++){
-	  if((*name)[j] == "AllExecutedEvents"){
-	    evnum+=(*nAcceptedEvents)[j];
-	    weight+=(*nWeightedAcceptedEvents)[j];
-	    break;
-	  }
-	}
-      }
-    }
-    else{
-      evnum=-1;
-      weight=-1;
-    }
-    cout<<"NTuple Count: "<<evnum<<"  "<<weight<<endl;
+  //Using the loaded TChain from the input file, you access the sum of the events and the sum of weighted events before the filter
+  if(chCutFlow!=0 && chCutFlow->GetEntries() != 0){
+  std::vector<unsigned long> *nAcceptedEvents = new std::vector<unsigned long>;
+  std::vector<double> *nWeightedAcceptedEvents = new std::vector<double>;
+  std::vector<std::string> *name = new std::vector<std::string>;
+  chCutFlow->SetBranchAddress("nAcceptedEvents", &nAcceptedEvents);
+  chCutFlow->SetBranchAddress("nWeightedAcceptedEvents", &nWeightedAcceptedEvents);
+  chCutFlow->SetBranchAddress("name", &name);
+  for(int i=0;i<chCutFlow->GetEntries();i++){
+  chCutFlow->GetEntry(i);
+  for(unsigned int j=0; j<name->size(); j++){
+  if((*name)[j] == "AllExecutedEvents"){
+  evnum+=(*nAcceptedEvents)[j];
+  weight+=(*nWeightedAcceptedEvents)[j];
+  break;
+  }
+  }
+  }
+  }
+  else{
+  evnum=-1;
+  weight=-1;
+  }
+  cout<<"NTuple Count: "<<evnum<<"  "<<weight<<endl;
 
-}
+  }
 */
 void getBranches(TTree *inputTree, TTree *inputTree1, TString groomAlgo, int groomAlgoIndex){
 
@@ -1023,12 +1047,12 @@ void getBranches(TTree *inputTree, TTree *inputTree1, TString groomAlgo, int gro
     inputTree->SetBranchAddress("jet_CamKt12Truth_E", &qcd_CA12_truth_E);
 
     /*  inputTree->SetBranchAddress("mc_channel_number", &qcd_mc_channel_number);
-    inputTree->SetBranchAddress("mc_event_weight", &qcd_mc_event_weight);
-    inputTree->SetBranchAddress("jet_AntiKt10Truth_pt", &qcd_CA12_truth_pt);
-    inputTree->SetBranchAddress("jet_AntiKt10Truth_eta", &qcd_CA12_truth_eta);
-    inputTree->SetBranchAddress("jet_AntiKt10Truth_phi", &qcd_CA12_truth_phi);
-    inputTree->SetBranchAddress("jet_AntiKt10Truth_m", &qcd_CA12_truth_mass);
-    inputTree->SetBranchAddress("jet_AntiKt10Truth_E", &qcd_CA12_truth_E);
+	inputTree->SetBranchAddress("mc_event_weight", &qcd_mc_event_weight);
+	inputTree->SetBranchAddress("jet_AntiKt10Truth_pt", &qcd_CA12_truth_pt);
+	inputTree->SetBranchAddress("jet_AntiKt10Truth_eta", &qcd_CA12_truth_eta);
+	inputTree->SetBranchAddress("jet_AntiKt10Truth_phi", &qcd_CA12_truth_phi);
+	inputTree->SetBranchAddress("jet_AntiKt10Truth_m", &qcd_CA12_truth_mass);
+	inputTree->SetBranchAddress("jet_AntiKt10Truth_E", &qcd_CA12_truth_E);
     */
     //AntiKt2LCTopo
 
@@ -1040,11 +1064,11 @@ void getBranches(TTree *inputTree, TTree *inputTree1, TString groomAlgo, int gro
     inputTree->SetBranchAddress("jet_"+groomAlgo+"_emfrac", &qcd_CA12_topo_emfrac);
     
     /*inputTree->SetBranchAddress("jet_CamKt12LC"+groomAlgo+"_pt", &qcd_CA12_groomed_pt);
-    inputTree->SetBranchAddress("jet_CamKt12LC"+groomAlgo+"_eta", &qcd_CA12_groomed_eta);
-    inputTree->SetBranchAddress("jet_CamKt12LC"+groomAlgo+"_phi", &qcd_CA12_groomed_phi);
-    inputTree->SetBranchAddress("jet_CamKt12LC"+groomAlgo+"_m", &qcd_CA12_groomed_mass);
-    inputTree->SetBranchAddress("jet_CamKt12LC"+groomAlgo+"_E", &qcd_CA12_groomed_E);
-    inputTree->SetBranchAddress("jet_CamKt12LC"+groomAlgo+"_emfrac", &qcd_CA12_groomed_emfrac);
+      inputTree->SetBranchAddress("jet_CamKt12LC"+groomAlgo+"_eta", &qcd_CA12_groomed_eta);
+      inputTree->SetBranchAddress("jet_CamKt12LC"+groomAlgo+"_phi", &qcd_CA12_groomed_phi);
+      inputTree->SetBranchAddress("jet_CamKt12LC"+groomAlgo+"_m", &qcd_CA12_groomed_mass);
+      inputTree->SetBranchAddress("jet_CamKt12LC"+groomAlgo+"_E", &qcd_CA12_groomed_E);
+      inputTree->SetBranchAddress("jet_CamKt12LC"+groomAlgo+"_emfrac", &qcd_CA12_groomed_emfrac);
     */
  
     inputTree1->SetBranchAddress("mc_channel_number", &Wp_mc_channel_number);
@@ -1055,14 +1079,14 @@ void getBranches(TTree *inputTree, TTree *inputTree1, TString groomAlgo, int gro
     inputTree1->SetBranchAddress("jet_CamKt12Truth_m", &Wp_CA12_truth_mass);
     inputTree1->SetBranchAddress("jet_CamKt12Truth_E", &Wp_CA12_truth_E);
     
-   /*
-    inputTree1->SetBranchAddress("mc_channel_number", &Wp_mc_channel_number);
-    //inputTree1->SetBranchAddress("mc_event_weight", &Wp_mc_event_weight);
-    inputTree1->SetBranchAddress("jet_AntiKt10Truth_pt", &Wp_CA12_truth_pt);
-    inputTree1->SetBranchAddress("jet_AntiKt10Truth_eta", &Wp_CA12_truth_eta);
-    inputTree1->SetBranchAddress("jet_AntiKt10Truth_phi", &Wp_CA12_truth_phi);
-    inputTree1->SetBranchAddress("jet_AntiKt10Truth_m", &Wp_CA12_truth_mass);
-    inputTree1->SetBranchAddress("jet_AntiKt10Truth_E", &Wp_CA12_truth_E);
+    /*
+      inputTree1->SetBranchAddress("mc_channel_number", &Wp_mc_channel_number);
+      //inputTree1->SetBranchAddress("mc_event_weight", &Wp_mc_event_weight);
+      inputTree1->SetBranchAddress("jet_AntiKt10Truth_pt", &Wp_CA12_truth_pt);
+      inputTree1->SetBranchAddress("jet_AntiKt10Truth_eta", &Wp_CA12_truth_eta);
+      inputTree1->SetBranchAddress("jet_AntiKt10Truth_phi", &Wp_CA12_truth_phi);
+      inputTree1->SetBranchAddress("jet_AntiKt10Truth_m", &Wp_CA12_truth_mass);
+      inputTree1->SetBranchAddress("jet_AntiKt10Truth_E", &Wp_CA12_truth_E);
     */
     inputTree1->SetBranchAddress("jet_"+groomAlgo+"_pt", &Wp_CA12_topo_pt);
     inputTree1->SetBranchAddress("jet_"+groomAlgo+"_eta", &Wp_CA12_topo_eta);
@@ -1071,12 +1095,12 @@ void getBranches(TTree *inputTree, TTree *inputTree1, TString groomAlgo, int gro
     inputTree1->SetBranchAddress("jet_"+groomAlgo+"_E", &Wp_CA12_topo_E);
     inputTree1->SetBranchAddress("jet_"+groomAlgo+"_emfrac", &Wp_CA12_topo_emfrac);
     /*
-    inputTree1->SetBranchAddress("jet_CamKt12LC"+groomAlgo+"_pt", &Wp_CA12_groomed_pt);
-    inputTree1->SetBranchAddress("jet_CamKt12LC"+groomAlgo+"_eta", &Wp_CA12_groomed_eta);
-    inputTree1->SetBranchAddress("jet_CamKt12LC"+groomAlgo+"_phi", &Wp_CA12_groomed_phi);
-    inputTree1->SetBranchAddress("jet_CamKt12LC"+groomAlgo+"_m", &Wp_CA12_groomed_mass);
-    inputTree1->SetBranchAddress("jet_CamKt12LC"+groomAlgo+"_E", &Wp_CA12_groomed_E);
-    inputTree1->SetBranchAddress("jet_CamKt12LC"+groomAlgo+"_emfrac", &Wp_CA12_groomed_emfrac);
+      inputTree1->SetBranchAddress("jet_CamKt12LC"+groomAlgo+"_pt", &Wp_CA12_groomed_pt);
+      inputTree1->SetBranchAddress("jet_CamKt12LC"+groomAlgo+"_eta", &Wp_CA12_groomed_eta);
+      inputTree1->SetBranchAddress("jet_CamKt12LC"+groomAlgo+"_phi", &Wp_CA12_groomed_phi);
+      inputTree1->SetBranchAddress("jet_CamKt12LC"+groomAlgo+"_m", &Wp_CA12_groomed_mass);
+      inputTree1->SetBranchAddress("jet_CamKt12LC"+groomAlgo+"_E", &Wp_CA12_groomed_E);
+      inputTree1->SetBranchAddress("jet_CamKt12LC"+groomAlgo+"_emfrac", &Wp_CA12_groomed_emfrac);
     */
 
   }
@@ -1544,7 +1568,7 @@ void makePtPlots(){
     hMassLow[i]->SetLineColor(2);
     hMassLow[i]->Draw("same");
 
-     //Now for all labels and shit
+    //Now for all labels and shit
     TLatex texw;
     texw.SetNDC();
     texw.SetTextSize(0.1);
@@ -1675,130 +1699,168 @@ void makePtPlots(){
 } // end makePtPlots()
 
 
-void make68Plots(int algidx, TTree * bkg, TTree * sig)
+void make68Plots()//TTree * bkg, TTree * sig)
 {
+  std::cout << "starting make mass window output files " << std::endl;
   double mass_max = 0.0;
   double mass_min = 0.0;
-  TTree * currTree;
+
   bool runbkg = false;
   // need branches for specific algorithms because otherwise we end up with a million branches that we don't need
   vector<std::string> branches;
-  for (int ii=0; ii<nAlgos-1; ii++){
+  std::cout << "number of algorithms" << nAlgos<< std::endl;
+  for (int ii=0; ii<nAlgos; ii++){
+
     int i = algoMap[ii];
+    std::cout << " doing mass eff plots for " << AlgoNames[i] << std::endl;
     int groomAlgoIndex = i;
-    branches = getListOfBranches(groomAlgo[i]);
+    std::string prefix = "";
+    branches = getListOfJetBranches(AlgoNames[i]);
     for (int j=0; j<nPtBins; j++){
       runbkg = false;
       for (int k = 0; k < 2; k++)
 	{
 	  runbkg = k == 0 ? false : true;
-      currTree = runbkg ?  sig : bkg;
-      //setBranches(currTree, branches); // need to do this for signal and bkg!!!  Do we want to plot on the same thing?  Separately?  Can we not just do this once if all_samples = true?
-      // Need to be able to read the variables for the selection... If we do SetBranchAddress() will the CloneTree(0) + Fill() still work?
-      currTree->SetBranches("*",0);
-      setMassBranch(currTree, groomAlgo[i]);
-      for (std::vector<string>::iterator it = branches.begin(); it != branches.end(); it++)
-      {
-        currTree->SetBranchStatus(*it,1);
-      }
-      getBranchesSelection(currTree, groomAlgo[i]);
-      std::stringstream ss; // store the name of the output file and include the i and j indices!
-      std::string bkg = runbkg ? "sig": "bkg";
-      ss << groomAlgo[i] << "_" << i << "_" << j << "_" << bkg << ".root";
-      TFile * outfile = new TFile(ss.str(),"RECREATE");
-      TTree * outTree;
-      outTree = currTree->CloneTree();
-      bool addJetIndices = true;
-      addJets(outTree, groomAlgo[i], addJetIndices); //set all of the branches for the output tree for the jets
-      
-      mass_max = TopEdgeMassWindow[i][j];
-      mass_min = BottomEdgeMassWindow[i][j];
+	  initVectors();
+	  int fileIdx = runbkg ? fileMap[ii] : fileMap[ii]+1;
+	  std::cout << "fileIdx " << fileIdx << endl;
+	  //TTree * currTree;
+	  //currTree = runbkg ?  inputTree[fileMap[ii]] : inputTree[fileMap[ii]+1];
+	  //setBranches(currTree, branches); // need to do this for signal and bkg!!!  Do we want to plot on the same thing?  Separately?  Can we not just do this once if all_samples = true?
+	  // Need to be able to read the variables for the selection... If we do SetBranchAddress() will the CloneTree(0) + Fill() still work?
+	  //std::cout << currTree->GetName() << std::endl;
+	  //currTree->SetBranchStatus("*",0);
+	  TTree * intree = (TTree*) inputFile[fileIdx]->Get("physics");
+	  intree->SetBranchStatus("*",0);
+	  //setMassBranch(currTree, AlgoNames[i]);
 
-      int entries = (int)currTree->GetEntries();
-      double mass = 0;
-      for (int n = 0; n < entries; n++)
-	{
-	  currTree->GetEntry(n);
-	  mass = currTree_mass;
-	  pt_reweight = runbkg ? qcd_PtReweight[i] : Wp_PtReweight[i];
-	  // check pt bins? check if it should be passing, find leading jets, truth index, set weight
-	  // what about reclustered jets?! argggg
-	  if (groomAlgoIndex != 0) // check the pt is in the correct bin
+	  for (std::vector<string>::iterator it = branches.begin(); it != branches.end(); it++)
 	    {
-	      if ((*jet_pt_truth)[0]/1000.0 > ptrange[j][0] || (*jet_pt_truth)[0]/1000.0 < ptrange[j][1])
+	      intree->SetBranchStatus((*it).c_str(),1);
+	      if(!intree->GetListOfBranches()->FindObject((*it).c_str())) {
+		std::cout << "could not find branch: " << (*it) << std::endl;
+	      }
+	    }
+	  setMassBranch(intree, AlgoNames[i]);
+	  //getBranchesSelection(intree, AlgoNames[i]);
+	  std::cout << "done set branchstatus" << std::endl;
+	  //getBranchesSelection(currTree, AlgoNames[i]);
+	  std::cout << "done getbranchesselection" << std::endl;
+	  std::stringstream ss; // store the name of the output file and include the i and j indices!
+	  std::string bkg = runbkg ? "sig": "bkg";
+	  ss << AlgoNames[i] << "_" << i << "_" << j << "_" << bkg << ".root";
+	  TFile * outfile = new TFile(ss.str().c_str(),"RECREATE");	  
+	  TTree * outTree;
+	  //outTree = currTree->CloneTree(0);
+
+	  bool addJetIndices = true;
+	  std::cout << "clonedtree" << std::endl;
+	  // addJets(outTree) changed to intree....
+	  addJets(intree, AlgoNames[i], runbkg);//, addJetIndices); //set all of the branches for the output tree for the jets
+	  outTree = intree->CloneTree(0);
+	  std::cout << "done addjets()" << std::endl;
+	  mass_max = TopEdgeMassWindow[i][j];
+	  mass_min = BottomEdgeMassWindow[i][j];
+
+	  //int entries = (int)currTree->GetEntries();
+	  int entries = (int)intree->GetEntries();
+	  cout << "n entries: " << entries << endl;
+	  double mass = 0;
+	  for (int n = 0; n < entries; n++)
+	    {
+	      //currTree->GetEntry(n);
+	      intree->GetEntry(n);
+	      pt_reweight = runbkg ? qcd_PtReweight[i]->GetBinContent(j) : Wp_PtReweight[i]->GetBinContent(j);
+	      // check pt bins? check if it should be passing, find leading jets, truth index, set weight
+	      // what about reclustered jets?! argggg
+	      int chosenLeadTruthJetIndex=-99;
+	      int chosenLeadTopoJetIndex=-99;
+	      setSelectionVectors(runbkg, AlgoNames[i]);
+	      if (groomAlgoIndex != 0) // check the pt is in the correct bin
+		{
+		  //std::cout << "ptrange.first " << ptrange[j].first << std::endl;
+		  //std::cout << "ptrange.second " << ptrange[j].second << std::endl;
+		  if ((*jet_pt_truth)[0]/1000.0 < ptrange[j].first || (*jet_pt_truth)[0]/1000.0 > ptrange[j].second)
+		    continue;
+		  //std::cout << "passed truth pt cut " << std::endl;
+		}
+	      if (groomAlgoIndex == 0){
+		//check which is my CA12 ungroomed reco jet with EMfrac<0.99 and |eta|<1.2
+		//loop over all topo jets and get the leading with cuts
+		bool hasTopoJet=false;
+		
+		for (int jet_i=0; jet_i<(*jet_pt_topo).size(); jet_i++){
+		  if (!hasTopoJet && (*jet_emfrac_topo)[jet_i]<0.99 && fabs((*jet_eta_topo)[jet_i])<1.2) {
+		    chosenLeadTopoJetIndex=jet_i;
+		    hasTopoJet=true;
+		  } 
+		} // end loop over jet_pt_topo
+		
+		//now match my truth jet with the chosen topo jet
+		
+		if (hasTopoJet){
+		  for (int jet_i=0; jet_i<(*jet_pt_truth).size(); jet_i++){
+		    if (chosenLeadTruthJetIndex<0 && DeltaR((*jet_eta_topo)[chosenLeadTopoJetIndex],(*jet_phi_topo)[chosenLeadTopoJetIndex],(*jet_eta_truth)[jet_i],(*jet_phi_truth)[jet_i])<0.9){ 
+		      chosenLeadTruthJetIndex=jet_i;
+		    }	  
+		  }	// end loop over jet_pt_truth
+		} // end if(hasTopoJet)
+		if ((*jet_pt_truth)[chosenLeadTruthJetIndex]/1000.0 > ptrange[j].first || (*jet_pt_truth)[chosenLeadTruthJetIndex]/1000.0 < ptrange[j].second)
+		  continue;
+	      } // end if(groomAlgoIndex==0)
+	      
+	      chosenLeadTruthJetIndex = groomAlgoIndex == 0 ? chosenLeadTruthJetIndex : 0;
+	      
+	      //Now I have which events to make my pt reweight with, and to match to, etc
+	      int chosenLeadGroomedIndex=-99;
+	      for (int jet_i=0; jet_i<(*jet_pt_groomed).size(); jet_i++){
+		
+		if (chosenLeadTruthJetIndex>=0 && chosenLeadGroomedIndex<0 && DeltaR((*jet_eta_truth)[chosenLeadTruthJetIndex],(*jet_phi_truth)[chosenLeadTruthJetIndex],(*jet_eta_groomed)[jet_i],(*jet_phi_groomed)[jet_i])<0.9 && (*jet_emfrac_groomed)[jet_i]<0.99 && fabs((*jet_eta_groomed)[jet_i])<1.2){
+		  chosenLeadGroomedIndex=jet_i;
+		}     
+	      } // end loop over jet_pt_groomed
+	      
+	      if (chosenLeadTruthJetIndex < 0 && chosenLeadGroomedIndex == -99) // failed selection
 		continue;
-	    }
-	  if (groomAlgoIndex == 0){
-	    //check which is my CA12 ungroomed reco jet with EMfrac<0.99 and |eta|<1.2
-	    //loop over all topo jets and get the leading with cuts
-	    bool hasTopoJet=false;
-	    int chosenTopoJetIndex=-99;
-	    for (int jet_i=0; jet_i<(*jet_pt_topo).size(); jet_i++){
-	      if (!hasTopoJet && (*jet_emfrac_topo)[jet_i]<0.99 && fabs((*jet_eta_topo)[jet_i])<1.2) {
-		chosenTopoJetIndex=jet_i;
-		hasTopoJet=true;
-	      } 
-	    } // end loop over jet_pt_topo
-	    
-	    //now match my truth jet with the chosen topo jet
-	    int chosenLeadTruthJetIndex=-99;
-	    if (hasTopoJet){
-	      for (int jet_i=0; jet_i<(*jet_pt_truth).size(); jet_i++){
-		if (chosenLeadTruthJetIndex<0 && DeltaR((*jet_eta_topo)[chosenTopoJetIndex],(*jet_phi_topo)[chosenTopoJetIndex],(*jet_eta_truth)[jet_i],(*jet_phi_truth)[jet_i])<0.9){ 
-		  chosenLeadTruthJetIndex=jet_i;
-		}	  
-	      }	// end loop over jet_pt_truth
-	    } // end if(hasTopoJet)
-	    if ((*jet_pt_truth)[chosenLeadTruthJetIndex]/1000.0 > ptrange[j][0] || (*jet_pt_truth)[chosenLeadTruthJetIndex]/1000.0 < ptrange[j][1])
-	      continue;
-	  } // end if(groomAlgoIndex==0)
-	  
-	  chosenLeadTruthJetIndex = groomAlgoIndex == 0 ? chosenLeadTruthJetIndex : 0;
-    
-	  //Now I have which events to make my pt reweight with, and to match to, etc
-	  int chosenLeadGroomedIndex=-99;
-	  for (int jet_i=0; jet_i<(*jet_pt_groomed).size(); jet_i++){
-	    
-	    if (chosenLeadTruthJetIndex>=0 && chosenLeadGroomedIndex<0 && DeltaR((*jet_eta_truth)[chosenLeadTruthJetIndex],(*jet_phi_truth)[chosenLeadTruthJetIndex],(*jet_eta_groomed)[jet_i],(*jet_phi_groomed)[jet_i])<0.9 && (*jet_emfrac_groomed)[jet_i]<0.99 && fabs((*jet_eta_groomed)[jet_i])<1.2){
-	      chosenLeadGroomedIndex=jet_i;
-	    }     
-	  } // end loop over jet_pt_groomed
 
-	  if (chosenLeadTruthJetIndex < 0 && chosenLeadGroomedIndex == -99) // failed selection
-	    continue;
-
-	  leadGroomedIndex = chosenLeadGroomedIndex;
-	  leadTruthIndex = chosenLeadTruthIndex;
-	  leadTopoIndex = chosenLeadTopoIndex;
- 
-	  if (mass < mass_max && mass > mass_min)
-	    {
-	      outTree->Fill();
+	      
+	    leadGroomedIndex = chosenLeadGroomedIndex;
+	    leadTruthIndex = chosenLeadTruthJetIndex;
+	    leadTopoIndex = chosenLeadTopoJetIndex;
+	    mass = runbkg ? (*signal_m_vec[2])[leadGroomedIndex]/1000.0 : (*bkg_m_vec[2])[leadGroomedIndex]/1000.0;
+	      //mass = (*currTree_mass)[leadGroomedIndex];
+	    std::cout << "mass: " << mass << std::endl;
+	    std::cout << mass_max << std::endl;
+	    std::cout << mass_min << std::endl;
+	    if (mass < mass_max && mass > mass_min)
+	      {
+		outTree->Fill();
+	      }
 	    }
+	  //plotVariables(currTree, branches);
+	  outTree->GetCurrentFile()->Write();
+	  outTree->GetCurrentFile()->Print();
+	  outTree->GetCurrentFile()->Close();
+	  delete outfile;
 	}
-      //plotVariables(currTree, branches);
-      outfile->Close();
-      outTree->GetCurrentFile().Write();
-      outTree->GetCurrentFile().Close();
-    }
     }
     // not doing this yet.... TODO
     /*for (int j=0; j<nFineBins; j++){
       mass_max = TopEdgeMassWindow_finePt[i][j];
       mass_min = BottomEdgeMassWindow_finePt[i][j];
       }*/
-   
+    
   }
 
 
 } // make68Plots()
 
 
-vector<std::string> getListOfBranches(std::string &algorithm)
+vector<std::string> getListOfJetBranches(std::string &algorithm)
 {
   // Ideally we want this stored in an XML file, but for now it'll have to be a standard text file because I'm short on time!
   vector<string> branches;
-  ifstream in(algorithm+"branches.txt");
+  ifstream in(algorithm+"_branches.txt");
   string line;
   // what to do about branches that have * in them?
   while (getline(in, line))
@@ -1810,130 +1872,236 @@ vector<std::string> getListOfBranches(std::string &algorithm)
 } // getListOfBranches()
 
 /*void plotVariables(TTree * tree, vector<std:string> & branches)
-{
+  {
   
   
   
-} // plotVariables()*/
+  } // plotVariables()*/
 
 
 void setMassBranch(TTree * tree, std::string &algorithm)
 {
-  tree->SetBranchAddress("jet_"+algorithm+"_mass", &currTree_mass);
+  tree->SetBranchAddress(std::string("jet_CamKt12LC"+algorithm+"_m").c_str(), &currTree_mass);
+  tree->SetBranchStatus(std::string("jet_CamKt12LC"+algorithm+"_m").c_str(), 1);
 } // setMassBranch()
 
-void addJets(TTree * tree, std::string &groomalgo, bool addJetIndex)
+
+
+void addJets(TTree * tree, std::string &groomalgo, bool signal)
 {
-  if (addJetIndex)
-    {
-      tree->Branch("leadTruthIndex",&leadTruthIndex, "leadTruthIndex/I");
-      tree->Branch("leadTopoIndex",&leadTopoIndex, "leadTopoIndex/I");
-      tree->Branch("leadGroomedIndex",&leadGroomedIndex, "leadGroomedIndex/I");
-      tree->Branch("pt_reweight",&pt_reweight, "pt_reweight/F");
-      tree->Branch("normalisation",&normalisation, "normalisation/F");
-    }
+  //if (addJetIndex)
+  //{
+  tree->Branch("leadTruthIndex",&leadTruthIndex, "leadTruthIndex/I");
+  tree->Branch("leadTopoIndex",&leadTopoIndex, "leadTopoIndex/I");
+  tree->Branch("leadGroomedIndex",&leadGroomedIndex, "leadGroomedIndex/I");
+  tree->Branch("pt_reweight",&pt_reweight, "pt_reweight/F");
+  tree->Branch("normalisation",&normalisation, "normalisation/F");
+  //}
   for (int i = 0; i < 3; i++) // truth, topo, groomed
     {
       
-     std::string jetType = ""; //set to truth/ topo/ groomed
-     switch (i)
-       {
-       case 0: // truth
-	 jetType="jet_CamKt12Truth_";
-       case 1: // topo
-	 jetType="jet_CamKt12LCTopo_";
-       case 2: // groomed
-	 jetType="jet_"+groomalgo+"_";
-       }
-tree->SetBranchAddress(jetType+"E",&signal_E_vec->at(i));
-tree->SetBranchAddress(jetType+"pt",&signal_pt_vec->at(i));
-tree->SetBranchAddress(jetType+"m",&signal_m_vec->at(i));
-tree->SetBranchAddress(jetType+"eta",&signal_eta_vec->at(i));
-tree->SetBranchAddress(jetType+"phi",&signal_phi_vec->at(i));
-tree->SetBranchAddress(jetType+"emfrac",&signal_emfrac_vec->at(i));
-tree->SetBranchAddress(jetType+"Tau1",&signal_Tau1_vec->at(i));
-tree->SetBranchAddress(jetType+"Tau2",&signal_Tau2_vec->at(i));
-tree->SetBranchAddress(jetType+"Tau3",&signal_Tau3_vec->at(i));
-tree->SetBranchAddress(jetType+"WIDTH",&signal_WIDTH_vec->at(i));
-tree->SetBranchAddress(jetType+"SPLIT12",&signal_SPLIT12_vec->at(i));
-tree->SetBranchAddress(jetType+"SPLIT23",&signal_SPLIT23_vec->at(i));
-tree->SetBranchAddress(jetType+"SPLIT34",&signal_SPLIT34_vec->at(i));
-tree->SetBranchAddress(jetType+"Dip12",&signal_Dip12_vec->at(i));
-tree->SetBranchAddress(jetType+"Dip13",&signal_Dip13_vec->at(i));
-tree->SetBranchAddress(jetType+"Dip23",&signal_Dip23_vec->at(i));
-tree->SetBranchAddress(jetType+"DipExcl12",&signal_DipExcl12_vec->at(i));
-tree->SetBranchAddress(jetType+"PlanarFlow",&signal_PlanarFlow_vec->at(i));
-tree->SetBranchAddress(jetType+"Angularity",&signal_Angularity_vec->at(i));
-tree->SetBranchAddress(jetType+"QW",&signal_QW_vec->at(i));
-tree->SetBranchAddress(jetType+"PullMag",&signal_PullMag_vec->at(i));
-tree->SetBranchAddress(jetType+"PullPhi",&signal_PullPhi_vec->at(i));
-tree->SetBranchAddress(jetType+"Pull_C00",&signal_Pull_C00_vec->at(i));
-tree->SetBranchAddress(jetType+"Pull_C01",&signal_Pull_C01_vec->at(i));
-tree->SetBranchAddress(jetType+"Pull_C10",&signal_Pull_C10_vec->at(i));
-tree->SetBranchAddress(jetType+"Pull_C11",&signal_Pull_C11_vec->at(i));
-
-tree->SetBranchAddress(jetType+"E",&bkg_E_vec->at(i));
-tree->SetBranchAddress(jetType+"pt",&bkg_pt_vec->at(i));
-tree->SetBranchAddress(jetType+"m",&bkg_m_vec->at(i));
-tree->SetBranchAddress(jetType+"eta",&bkg_eta_vec->at(i));
-tree->SetBranchAddress(jetType+"phi",&bkg_phi_vec->at(i));
-tree->SetBranchAddress(jetType+"emfrac",&bkg_emfrac_vec->at(i));
-tree->SetBranchAddress(jetType+"Tau1",&bkg_Tau1_vec->at(i));
-tree->SetBranchAddress(jetType+"Tau2",&bkg_Tau2_vec->at(i));
-tree->SetBranchAddress(jetType+"Tau3",&bkg_Tau3_vec->at(i));
-tree->SetBranchAddress(jetType+"WIDTH",&bkg_WIDTH_vec->at(i));
-tree->SetBranchAddress(jetType+"SPLIT12",&bkg_SPLIT12_vec->at(i));
-tree->SetBranchAddress(jetType+"SPLIT23",&bkg_SPLIT23_vec->at(i));
-tree->SetBranchAddress(jetType+"SPLIT34",&bkg_SPLIT34_vec->at(i));
-tree->SetBranchAddress(jetType+"Dip12",&bkg_Dip12_vec->at(i));
-tree->SetBranchAddress(jetType+"Dip13",&bkg_Dip13_vec->at(i));
-tree->SetBranchAddress(jetType+"Dip23",&bkg_Dip23_vec->at(i));
-tree->SetBranchAddress(jetType+"DipExcl12",&bkg_DipExcl12_vec->at(i));
-tree->SetBranchAddress(jetType+"PlanarFlow",&bkg_PlanarFlow_vec->at(i));
-tree->SetBranchAddress(jetType+"Angularity",&bkg_Angularity_vec->at(i));
-tree->SetBranchAddress(jetType+"QW",&bkg_QW_vec->at(i));
-tree->SetBranchAddress(jetType+"PullMag",&bkg_PullMag_vec->at(i));
-tree->SetBranchAddress(jetType+"PullPhi",&bkg_PullPhi_vec->at(i));
-tree->SetBranchAddress(jetType+"Pull_C00",&bkg_Pull_C00_vec->at(i));
-tree->SetBranchAddress(jetType+"Pull_C01",&bkg_Pull_C01_vec->at(i));
-tree->SetBranchAddress(jetType+"Pull_C10",&bkg_Pull_C10_vec->at(i));
-tree->SetBranchAddress(jetType+"Pull_C11",&bkg_Pull_C11_vec->at(i));
+      std::string jetType = ""; //set to truth/ topo/ groomed
+      switch (i)
+	{
+	case 0: // truth
+	  jetType="jet_CamKt12Truth_";
+	  break;
+	case 1: // topo
+	  jetType="jet_CamKt12LCTopo_";
+	  break;
+	default: // groomed
+	  jetType="jet_CamKt12LC"+groomalgo+"_";
+	}
+      if (signal)
+	{
+	  std::cout << "setE " << jetType << std::endl;
+      tree->SetBranchAddress(std::string(jetType+"E").c_str(),&signal_E_vec[i]);
+      tree->SetBranchAddress(std::string(jetType+"pt").c_str(),&signal_pt_vec.at(i));
+      tree->SetBranchAddress(std::string(jetType+"m").c_str(),&signal_m_vec.at(i));
+      tree->SetBranchAddress(std::string(jetType+"eta").c_str(),&signal_eta_vec.at(i));
+      tree->SetBranchAddress(std::string(jetType+"phi").c_str(),&signal_phi_vec.at(i));
+      if (i!= 0)
+	tree->SetBranchAddress(std::string(jetType+"emfrac").c_str(),&signal_emfrac_vec.at(i));
+      tree->SetBranchAddress(std::string(jetType+"Tau1").c_str(),&signal_Tau1_vec.at(i));
+      tree->SetBranchAddress(std::string(jetType+"Tau2").c_str(),&signal_Tau2_vec.at(i));
+      tree->SetBranchAddress(std::string(jetType+"Tau3").c_str(),&signal_Tau3_vec.at(i));
+      tree->SetBranchAddress(std::string(jetType+"WIDTH").c_str(),&signal_WIDTH_vec.at(i));
+      tree->SetBranchAddress(std::string(jetType+"SPLIT12").c_str(),&signal_SPLIT12_vec.at(i));
+      tree->SetBranchAddress(std::string(jetType+"SPLIT23").c_str(),&signal_SPLIT23_vec.at(i));
+      tree->SetBranchAddress(std::string(jetType+"SPLIT34").c_str(),&signal_SPLIT34_vec.at(i));
+      tree->SetBranchAddress(std::string(jetType+"Dip12").c_str(),&signal_Dip12_vec.at(i));
+      tree->SetBranchAddress(std::string(jetType+"Dip13").c_str(),&signal_Dip13_vec.at(i));
+      tree->SetBranchAddress(std::string(jetType+"Dip23").c_str(),&signal_Dip23_vec.at(i));
+      tree->SetBranchAddress(std::string(jetType+"DipExcl12").c_str(),&signal_DipExcl12_vec.at(i));
+      tree->SetBranchAddress(std::string(jetType+"PlanarFlow").c_str(),&signal_PlanarFlow_vec.at(i));
+      tree->SetBranchAddress(std::string(jetType+"Angularity").c_str(),&signal_Angularity_vec.at(i));
+      tree->SetBranchAddress(std::string(jetType+"QW").c_str(),&signal_QW_vec.at(i));
+      tree->SetBranchAddress(std::string(jetType+"PullMag").c_str(),&signal_PullMag_vec.at(i));
+      tree->SetBranchAddress(std::string(jetType+"PullPhi").c_str(),&signal_PullPhi_vec.at(i));
+      tree->SetBranchAddress(std::string(jetType+"Pull_C00").c_str(),&signal_Pull_C00_vec.at(i));
+      tree->SetBranchAddress(std::string(jetType+"Pull_C01").c_str(),&signal_Pull_C01_vec.at(i));
+      tree->SetBranchAddress(std::string(jetType+"Pull_C10").c_str(),&signal_Pull_C10_vec.at(i));
+      tree->SetBranchAddress(std::string(jetType+"Pull_C11").c_str(),&signal_Pull_C11_vec.at(i));
+	}
+      else
+	{
+	  std::cout << "jetType: " << jetType << std::endl;
+	  tree->SetBranchAddress(std::string(jetType+"E").c_str(),&bkg_E_vec.at(i));
+	  tree->SetBranchAddress(std::string(jetType+"pt").c_str(),&bkg_pt_vec.at(i));
+	  tree->SetBranchAddress(std::string(jetType+"m").c_str(),&bkg_m_vec.at(i));
+	  tree->SetBranchAddress(std::string(jetType+"eta").c_str(),&bkg_eta_vec.at(i));
+	  tree->SetBranchAddress(std::string(jetType+"phi").c_str(),&bkg_phi_vec.at(i));
+	  if (bkg_emfrac_vec.find(i) == bkg_emfrac_vec.end())
+	    std::cout << "missing vector entry emfrac" << std::endl;
+	  if (i != 0)
+	    tree->SetBranchAddress(std::string(jetType+"emfrac").c_str(),&bkg_emfrac_vec.at(i));
+	  if (bkg_Tau1_vec.find(i) == bkg_Tau1_vec.end())
+	    std::cout << "missing vector entry Tau1" << std::endl;
+      tree->SetBranchAddress(std::string(jetType+"Tau1").c_str(),&bkg_Tau1_vec.at(i));
+      tree->SetBranchAddress(std::string(jetType+"Tau2").c_str(),&bkg_Tau2_vec.at(i));
+      tree->SetBranchAddress(std::string(jetType+"Tau3").c_str(),&bkg_Tau3_vec.at(i));
+      tree->SetBranchAddress(std::string(jetType+"WIDTH").c_str(),&bkg_WIDTH_vec.at(i));
+      if (bkg_WIDTH_vec.find(i) == bkg_WIDTH_vec.end())
+	    std::cout << "missing vector entry WIDTH" << std::endl;
+      tree->SetBranchAddress(std::string(jetType+"SPLIT12").c_str(),&bkg_SPLIT12_vec.at(i));
+      tree->SetBranchAddress(std::string(jetType+"SPLIT23").c_str(),&bkg_SPLIT23_vec.at(i));
+      tree->SetBranchAddress(std::string(jetType+"SPLIT34").c_str(),&bkg_SPLIT34_vec.at(i));
+      if (bkg_Dip12_vec.find(i) == bkg_Dip12_vec.end())
+	std::cout << "missing vector entry WIDTH" << std::endl;
+      tree->SetBranchAddress(std::string(jetType+"Dip12").c_str(),&bkg_Dip12_vec.at(i));
+      tree->SetBranchAddress(std::string(jetType+"Dip13").c_str(),&bkg_Dip13_vec.at(i));
+      tree->SetBranchAddress(std::string(jetType+"Dip23").c_str(),&bkg_Dip23_vec.at(i));
+      tree->SetBranchAddress(std::string(jetType+"DipExcl12").c_str(),&bkg_DipExcl12_vec.at(i));
+      tree->SetBranchAddress(std::string(jetType+"PlanarFlow").c_str(),&bkg_PlanarFlow_vec.at(i));
+      if (bkg_Angularity_vec.find(i) == bkg_Angularity_vec.end())
+	    std::cout << "missing vector entry WIDTH" << std::endl;
+      tree->SetBranchAddress(std::string(jetType+"Angularity").c_str(),&bkg_Angularity_vec.at(i));
+      tree->SetBranchAddress(std::string(jetType+"QW").c_str(),&bkg_QW_vec.at(i));
+      tree->SetBranchAddress(std::string(jetType+"PullMag").c_str(),&bkg_PullMag_vec.at(i));
+      tree->SetBranchAddress(std::string(jetType+"PullPhi").c_str(),&bkg_PullPhi_vec.at(i));
+      tree->SetBranchAddress(std::string(jetType+"Pull_C00").c_str(),&bkg_Pull_C00_vec.at(i));
+      tree->SetBranchAddress(std::string(jetType+"Pull_C01").c_str(),&bkg_Pull_C01_vec.at(i));
+      tree->SetBranchAddress(std::string(jetType+"Pull_C10").c_str(),&bkg_Pull_C10_vec.at(i));
+      tree->SetBranchAddress(std::string(jetType+"Pull_C11").c_str(),&bkg_Pull_C11_vec.at(i));
+      std::cout << "end loop thingy " << i << endl;
+	}
     } // end for loop over topo/truth/groom
-} //addJetIndices()
+} //addJets()
 
 
-void getBranchesSelection(TTree * tree, std::string & algorithm)
+//void getBranchesSelection(TTree * tree, std::string & algorithm)
+void setSelectionVectors(bool signal, std::string & algorithm)
 {
-  std::string alg_prefix = algorithm.find("LCTopo")!=string::npos? "jet_CamKt12LC" : "jet_CamKt12"; // if we are running on lctopo(recluster) we have no LC in the prefix
-  //for (int i = 0; i < 3; i++) // truth, topo, groomed
-      //{
-      
-      /*std::string jetType = ""; //set to truth/ topo/ groomed
-     switch (i)
-       {
-	 // this doesn't yet work for reclustering :/ TODO
-       case 0: // truth
-	 jetType="jet_CamKt12Truth_";
-       case 1: // topo
-	 jetType="jet_CamKt12LCTopo_";
-       case 2: // groomed
-	 jetType=alg_prefix+algorithm+"_";
-	 }*/  
-     // This is stupid - I don't need the jetType thing above
-     tree->SetBranchAddress("jet_CamKt12Truth_eta",&jet_eta_truth);
-     tree->SetBranchAddress("jet_CamKt12Truth_phi",&jet_phi_truth);
-     tree->SetBranchAddress("jet_CamKt12Truth_emfrac",&jet_emfrac_truth);
-     tree->SetBranchAddress("jet_CamKt12Truth_pt",&jet_ept_truth);
-
-     tree->SetBranchAddress("jet_CamKt12LCTopo_eta",&jet_eta_topo);
-     tree->SetBranchAddress("jet_CamKt12LCTopo_phi",&jet_phi_topo);
-     tree->SetBranchAddress("jet_CamKt12LCTopo_emfrac",&jet_emfrac_topo);
-     tree->SetBranchAddress("jet_CamKt12LCTopo_pt",&jet_ept_topo);
-
-     tree->SetBranchAddress(alg_prefix+algorithm+"_eta",&jet_eta_groomed);
-     tree->SetBranchAddress(alg_prefix+algorithm+"_phi",&jet_phi_groomed);
-     tree->SetBranchAddress(alg_prefix+algorithm+"_emfrac",&jet_emfrac_groomed);
-     tree->SetBranchAddress(alg_prefix+algorithm+"_pt",&jet_ept_groomed);
-     //}
+  std::string alg_prefix = algorithm.find("LCTopo")==string::npos? "jet_CamKt12LC" : "jet_CamKt12"; // if we are running on lctopo(recluster) we have no LC in the prefix
   
-}// getBranchesSelection()
+  // This is stupid - I don't need the jetType thing above
+  if (signal)
+    {
+      jet_eta_truth = signal_eta_vec[0];
+      jet_phi_truth = signal_phi_vec[0];
+      jet_pt_truth = signal_pt_vec[0];
+
+      jet_eta_topo = signal_eta_vec[1];
+      jet_phi_topo = signal_phi_vec[1];
+      jet_pt_topo = signal_pt_vec[1];
+      jet_emfrac_topo = signal_emfrac_vec[1];
+      
+      jet_eta_groomed = signal_eta_vec[2];
+      jet_phi_groomed = signal_phi_vec[2];
+      jet_pt_groomed = signal_pt_vec[2];
+      jet_emfrac_groomed = signal_emfrac_vec[2];
+    }
+  else
+    {
+      jet_eta_truth = bkg_eta_vec[0];
+      jet_phi_truth = bkg_phi_vec[0];
+      jet_pt_truth = bkg_pt_vec[0];
+
+      jet_eta_topo = bkg_eta_vec[1];
+      jet_phi_topo = bkg_phi_vec[1];
+      jet_pt_topo = bkg_pt_vec[1];
+      jet_emfrac_topo = bkg_emfrac_vec[1];
+      
+      jet_eta_groomed = bkg_eta_vec[2];
+      jet_phi_groomed = bkg_phi_vec[2];
+      jet_pt_groomed = bkg_pt_vec[2];
+      jet_emfrac_groomed = bkg_emfrac_vec[2];
+    }
+  
+}// setSelectionVectors()
+
+  void initVectors()
+  {
+
+    // have the vectors for the above histograms so we can do the reading in stuff from the TTree
+    jet_eta_truth = 0;
+    jet_phi_truth = 0;
+    jet_pt_truth = 0;
+    jet_eta_topo = 0;
+    jet_phi_topo = 0;
+    jet_pt_topo = 0;
+    jet_emfrac_topo = 0;
+    jet_eta_groomed = 0;
+    jet_phi_groomed = 0;
+    jet_pt_groomed = 0;
+    jet_emfrac_groomed = 0;
+    for (int i = 0; i < 3; i++) // for jetType::TRUTH/TOPO/GROOMED
+      {
+	signal_E_vec[i] = 0;
+	signal_pt_vec[i] = 0;
+	signal_m_vec[i] = 0;
+	signal_eta_vec[i] = 0;
+	signal_phi_vec[i] = 0;
+	signal_emfrac_vec[i] = 0;
+	signal_Tau1_vec[i] = 0;
+	signal_Tau2_vec[i] = 0;
+	signal_Tau3_vec[i] = 0;
+	signal_WIDTH_vec[i] = 0;
+	signal_SPLIT12_vec[i] = 0;
+	signal_SPLIT23_vec[i] = 0;
+	signal_SPLIT34_vec[i] = 0;
+	signal_Dip12_vec[i] = 0;
+	signal_Dip13_vec[i] = 0;
+	signal_Dip23_vec[i] = 0;
+	signal_DipExcl12_vec[i] = 0;
+	signal_PlanarFlow_vec[i] = 0;
+	signal_Angularity_vec[i] = 0;
+	signal_QW_vec[i] = 0;
+	signal_PullMag_vec[i] = 0;
+	signal_PullPhi_vec[i] = 0;
+	signal_Pull_C00_vec[i] = 0;
+	signal_Pull_C01_vec[i] = 0;
+	signal_Pull_C10_vec[i] = 0;
+	signal_Pull_C11_vec[i] = 0;
+
+
+
+	bkg_E_vec[i] = 0;
+	bkg_pt_vec[i] = 0;
+	bkg_m_vec[i] = 0;
+	bkg_eta_vec[i] = 0;
+	bkg_phi_vec[i] = 0;
+	bkg_emfrac_vec[i] = 0;
+	bkg_Tau1_vec[i] = 0;
+	bkg_Tau2_vec[i] = 0;
+	bkg_Tau3_vec[i] = 0;
+	bkg_WIDTH_vec[i] = 0;
+	bkg_SPLIT12_vec[i] = 0;
+	bkg_SPLIT23_vec[i] = 0;
+	bkg_SPLIT34_vec[i] = 0;
+	bkg_Dip12_vec[i] = 0;
+	bkg_Dip13_vec[i] = 0;
+	bkg_Dip23_vec[i] = 0;
+	bkg_DipExcl12_vec[i] = 0;
+	bkg_PlanarFlow_vec[i] = 0;
+	bkg_Angularity_vec[i] = 0;
+	bkg_QW_vec[i] = 0;
+	bkg_PullMag_vec[i] = 0;
+	bkg_PullPhi_vec[i] = 0;
+	bkg_Pull_C00_vec[i] = 0;
+	bkg_Pull_C01_vec[i] = 0;
+	bkg_Pull_C10_vec[i] = 0;
+	bkg_Pull_C11_vec[i]= 0;//std::map<i, 0>;
+  
+      }  
+  }
