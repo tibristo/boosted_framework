@@ -15,16 +15,16 @@ AR           = ar cru
 ##Flags
 CXXFLAGS     = -O0 -g -fPIC -funroll-loops -std=c++11 #-Wall 
 
-EXENAME		= PlotsMunichWorkshop
+EXENAME		= plotter
 SRCEXT   	= cpp
 SRCDIR  	= src
 INCDIR   	= include
 OBJDIR   	= build
 EXEDIR  	= bin
-SRCS    	:= $(shell find $(SRCDIR) -name '*.$(SRCEXT)')
-OBJS    	:= $(patsubst $(SRCDIR)/%.$(SRCEXT),$(OBJDIR)/%.o,$(SRCS))
+SRCS    	:= src/plotter.cpp
+OBJS    	:= build/plotter.o
 
-GARBAGE  = $(OBJDIR)/*.o $(EXEDIR)/$(EXENAME)
+GARBAGE  = $(OBJDIR)/plotter.o $(EXEDIR)/$(EXENAME)
 INCDIR+=-I/home/tim/Programs/fastjet-install/include
 #################
 ##Dependencies
@@ -53,7 +53,7 @@ all : $(EXEDIR)/$(EXENAME)
 $(EXEDIR)/$(EXENAME) : $(OBJS)
 	$(CXX) -o $@ $(OBJS) $(LINKFLAGS) $(LIBS)
 
-$(OBJDIR)/%.o : $(SRCDIR)/%.$(SRCEXT)
+$(OBJDIR)/plotter.o : $(SRCDIR)/plotter.cpp
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 clean   :
