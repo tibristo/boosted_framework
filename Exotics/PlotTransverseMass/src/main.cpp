@@ -157,8 +157,8 @@ int main( int argc, char * argv[] ) {
       Wprime_finePtBin_mass[i][j]->Scale(1.0/Wprime_finePtBin_mass[i][j]->Integral());
     }
 
-    qcd_PtReweight[i]->Scale(1.0/qcd_PtReweight[i]->Integral());
-    Wp_PtReweight[i]->Scale(1.0/Wp_PtReweight[i]->Integral());
+    //qcd_PtReweight[i]->Scale(1.0/qcd_PtReweight[i]->Integral());
+    //Wp_PtReweight[i]->Scale(1.0/Wp_PtReweight[i]->Integral());
     Wprime_Lead_CA12_scaled_pt[i]->Scale(1.0/Wprime_Lead_CA12_scaled_pt[i]->Integral());
 
 
