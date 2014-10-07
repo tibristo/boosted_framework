@@ -38,14 +38,14 @@ endif
 # OS X
 ifeq "$(UNAME)" "Darwin"
 RANLIB       = ranlib
-CXXFLAGS    += -I$(INCDIR) $(ROOTCFLAGS) `/home/tim/Programs/fastjet-install/bin/fastjet-config --cxxflags`
+CXXFLAGS    += -I$(INCDIR) $(ROOTCFLAGS) `/home/tim/Programs/fastjet-install/bin/fastjet-config --cxxflags` -I/usr/local/include
 #
 #-I$(GSLINC)
 LINKFLAGS    =
 endif
 
 ##Libraries
-LIBS       += $(ROOTLIBS) -lThread `/home/tim/Programs/fastjet-install/bin/fastjet-config --libs`
+LIBS       += $(ROOTLIBS) -lThread `/home/tim/Programs/fastjet-install/bin/fastjet-config --libs` -L/usr/local/lib -lboost_filesystem -lboost_system
 
 ##Targets
 all : $(EXEDIR)/$(EXENAME)

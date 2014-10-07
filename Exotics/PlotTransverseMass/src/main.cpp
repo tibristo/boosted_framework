@@ -15,6 +15,8 @@
 #include <string>
 #include <utility>
 #include <fstream>
+#include <boost/filesystem.hpp>
+
 
 using namespace std;
 
@@ -224,12 +226,14 @@ int main( int argc, char * argv[] ) {
   
   
   makePtPlots();
-  
+
+
+  bool applyMassWindow = false; // should be read in from a command line option!
   //for (int ii = 0; ii < nAlgos-1; ii++)
   //{
   //int groomIdx = algoMap[ii];
   //int fileIdx = fileMap[ii]; // basically points to filteridx, reclusteridx, etc.
-  make68Plots();//inputTree[fileIdx], inputTree[fileIdx]); // pass input file indices too?
+  makeMassWindowFile(applyMassWindow);//inputTree[fileIdx], inputTree[fileIdx]); // pass input file indices too?
   //  }
   
 
@@ -1744,7 +1748,7 @@ void makePtPlots(){
 } // end makePtPlots()
 
 
-void make68Plots()//TTree * bkg, TTree * sig)
+void makeMassWindowFile(bool applyMassWindow)
 {
   std::cout << "starting make mass window output files " << std::endl;
   double mass_max = 0.0;
@@ -1767,7 +1771,7 @@ void make68Plots()//TTree * bkg, TTree * sig)
 	{
 	  signal = k == 0 ? false : true;
 	  initVectors();
-	  int fileIdx = signal ? fileMap[ii] : fileMap[ii]+1;
+	  int fileIdx = signal ? fileMap[ii]+1 : fileMap[ii];
 	  //std::cout << "fileIdx " << fileIdx << endl;
 	  TTree * intree = (TTree*) inputFile[fileIdx]->Get("physics");
 	  intree->SetBranchStatus("*",0);
@@ -1785,7 +1789,9 @@ void make68Plots()//TTree * bkg, TTree * sig)
 	  std::stringstream ss; // store the name of the output file and include the i and j indices!
 	  std::string bkg = signal ? "sig": "bkg";
 	  ss << AlgoNames[i] << "_" << i << "_" << pTbins[j] << "_" << bkg << ".root";
-	  TFile * outfile = new TFile(ss.str().c_str(),"RECREATE");	  
+	  boost::filesystem::path dir(AlgoNames[i]);
+	  boost::filesystem::create_directory(dir);
+	  TFile * outfile = new TFile(std::string(AlgoNames[i]+"/"+ss.str()).c_str(),"RECREATE");	  
 	  TTree * outTree;
 
 
@@ -1794,7 +1800,7 @@ void make68Plots()//TTree * bkg, TTree * sig)
 	  mass_max = TopEdgeMassWindow[i][j];
 	  mass_min = BottomEdgeMassWindow[i][j];
 
-	  int entries = (int)intree->GetEntries();
+	  long entries = (long)intree->GetEntries();
 
 	  // these numbers are chosen somewhat arb - they come from the settings I use
 	  // in the config files for the plotter() code... such bad coding :(
@@ -1802,15 +1808,21 @@ void make68Plots()//TTree * bkg, TTree * sig)
 	  
 	  double mass = 0;
 	  NEvents = entries;
-	  NEvents_weighted = 0;
-	  for (int n = 0; n < entries; n++)
+	  NEvents_weighted.clear();
+	  //NEvents_weighted = 0;
+	  for (long n = 0; n < entries; n++)
 	    {
 	      intree->GetEntry(n);
-	      NEvents_weighted += mc_event_weight;
+	      if (NEvents_weighted.find(mc_channel_number) != NEvents_weighted.end())
+		NEvents_weighted[mc_channel_number] += mc_event_weight;
+	      else
+		NEvents_weighted[mc_channel_number] = mc_event_weight;
 	      // what about reclustered jets?! argggg
 	      int chosenLeadTruthJetIndex=-99;
 	      int chosenLeadTopoJetIndex=-99;
 	      setSelectionVectors(signal, AlgoNames[i]);
+	      if ((*jet_pt_truth)[0] / 1000.0 < 100) 
+		continue;
 	      if (groomAlgoIndex != 0) // check the pt is in the correct bin
 		{
 		  if ((*jet_pt_truth)[0]/1000.0 < ptrange[j].first || (*jet_pt_truth)[0]/1000.0 > ptrange[j].second)
@@ -1837,8 +1849,8 @@ void make68Plots()//TTree * bkg, TTree * sig)
 		    }	  
 		  }	// end loop over jet_pt_truth
 		} // end if(hasTopoJet)
-		if ((*jet_pt_truth)[chosenLeadTruthJetIndex]/1000.0 > ptrange[j].first || (*jet_pt_truth)[chosenLeadTruthJetIndex]/1000.0 < ptrange[j].second)
-		  continue;
+		//if ((*jet_pt_truth)[chosenLeadTruthJetIndex]/1000.0 > ptrange[j].first || (*jet_pt_truth)[chosenLeadTruthJetIndex]/1000.0 < ptrange[j].second)
+		//continue;
 	      } // end if(groomAlgoIndex==0)
 	      
 	      chosenLeadTruthJetIndex = groomAlgoIndex == 0 ? chosenLeadTruthJetIndex : 0;
@@ -1853,7 +1865,7 @@ void make68Plots()//TTree * bkg, TTree * sig)
 	      } // end loop over jet_pt_groomed
 	      
 	      if (chosenLeadTruthJetIndex < 0 && chosenLeadGroomedIndex == -99) // failed selection
-		continue;
+		  continue;
 
 	      
 	    leadGroomedIndex = chosenLeadGroomedIndex;
@@ -1861,11 +1873,13 @@ void make68Plots()//TTree * bkg, TTree * sig)
 	    leadTopoIndex = chosenLeadTopoJetIndex;
 	    mass = signal ? (*signal_m_vec[2])[leadGroomedIndex]/1000.0 : (*bkg_m_vec[2])[leadGroomedIndex]/1000.0;
 
-	    if (mass < mass_max && mass > mass_min)
+	    if (applyMassWindow && (mass > mass_max && mass < mass_min))
 	      {
-		outTree->Fill();
-		pt_reweight->Fill((*jet_pt_truth)[chosenLeadTruthJetIndex]/1000.0);
+		continue;
 	      }
+	    outTree->Fill();
+	    pt_reweight->Fill((*jet_pt_truth)[chosenLeadTruthJetIndex]/1000.0);
+
 	    }
 	  // write the rweight th1f things to the outfile...
 	  // calculate the new reweight with a new histogram!
@@ -1882,6 +1896,14 @@ void make68Plots()//TTree * bkg, TTree * sig)
 	    }
 	  outTree->GetCurrentFile()->Print();
 	  outTree->GetCurrentFile()->Close();
+
+	  std::stringstream ss2; // store the name of the output file and include the i and j indices!
+	  std::string bkg2 = signal ? "sig": "bkg";
+	  ss2 << AlgoNames[i] << "_" << i << "_" << pTbins[j] << "_" << bkg << ".nevents";
+	  ofstream ev_out(ss2.str());
+	  for (std::map<int,float>::iterator it = NEvents_weighted.begin(); it!= NEvents_weighted.end(); it++)
+	    ev_out << it->first << "," << NEvents_weighted[it->first] << std::endl;
+	  ev_out.close();
 	  delete outfile;
 	}
     }
@@ -1894,7 +1916,7 @@ void make68Plots()//TTree * bkg, TTree * sig)
   }
 
 
-} // make68Plots()
+} // makeMassWindowFile()
 
 
 vector<std::string> getListOfJetBranches(std::string &algorithm)
@@ -1951,8 +1973,10 @@ void addJets(TTree * tree, std::string &groomalgo, bool signal)
   //tree->Branch("pt_reweight",&pt_reweight, "pt_reweight/F");
   tree->Branch("normalisation",&normalisation, "normalisation/F");
   tree->Branch("NEvents",&NEvents,"NEvents/I");
-  tree->Branch("NEvents_weighted",&NEvents_weighted,"NEvents_weighted/F");
+  //tree->Branch("NEvents_weighted",&NEvents_weighted,"NEvents_weighted/F");
+  //tree->Branch("NEvents_weighted",&NEvents_weighted,"NEvents_weighted/F");
   tree->SetBranchAddress("mc_event_weight",&mc_event_weight);
+  tree->SetBranchAddress("mc_channel_number", &mc_channel_number);
   //}
   std::string samplePrefix = "";
   bool addLC = false;
