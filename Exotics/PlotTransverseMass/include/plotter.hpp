@@ -39,8 +39,10 @@ public:
   void clearHists();
   void initHists();
   void produceAllROCs(std::string alg);
-  void getWeights();
+  void getWeights(std::string & algorithm, std::string & params);
   void compareHistograms(TH1F * hist1, TH1F * hist2, std::string file_name);
+
+  float getPtWeight(double & pt);
 
   std::string algorithm;
   std::string algorithm_params;
@@ -72,12 +74,14 @@ public:
   Float_t bkg_mc_event_number = 0;
   Float_t signal_mc_event_weight = 1.0;
   Float_t bkg_mc_event_weight = 1.0;
-  Float_t signal_NEvents_weighted = 1.0;
-  Float_t bkg_NEvents_weighted = 1.0;
+  //Float_t signal_NEvents_weighted = 1.0;
+  //Float_t bkg_NEvents_weighted = 1.0;
   Int_t signal_NEvents = 1.0;
   Int_t bkg_NEvents = 1.0;
   UInt_t signal_RunNumber = 0;
   UInt_t bkg_RunNumber = 0;
+  std::map<int,float> events;
+
 
   TH1F * Wp_PtReweight;
   TH1F * qcd_PtReweight;
