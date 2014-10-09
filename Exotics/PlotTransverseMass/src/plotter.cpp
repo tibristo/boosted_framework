@@ -56,7 +56,7 @@ int main(int argc, char * argv[])
 	  TTree * bkg = (TTree *)f_bkg->Get("physics");
 	  plotter * p;
 	  std::string name_suffix = algIdx[(*it)]+"_"+(*it2);
-	  bool applyPt = true, applyEta = false;
+	  bool applyPt = false, applyEta = false;
 	  p = new plotter((*it), bkg, sig, name_suffix, working_dir, qcd_PtReweight, Wp_PtReweight, applyPt, applyEta);
 	  p->runPlotter();
 	  delete sig;
@@ -823,7 +823,7 @@ void plotter::fillHistograms(TTree * tree, bool signal)
 	  }
 
 	
-
+	//double pt = (*signal_pt_vec[jet_type::TRUTH])[signal_truth_index]/1000.0;
 	double pt = (*signal_pt_vec[jet_type::TRUTH])[signal_truth_index]/1000.0;
 	
 	if (applyPtCut &&  (pt < 200 || pt > 350))
