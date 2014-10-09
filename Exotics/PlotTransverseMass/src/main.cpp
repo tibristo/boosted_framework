@@ -1922,7 +1922,7 @@ void makeMassWindowFile(bool applyMassWindow)
 	      {
 		// Need another loop here
 		if (signal)
-		  (*signal_Tau21_vec[tr]).push_back((*signal_Tau2_vec[tr][leadGroomedIndex])/(*signal_Tau1_vec[tr][leadGroomedIndex]));
+		  (*signal_Tau21_vec[tr]).push_back((*signal_Tau2_vec[tr])[leadGroomedIndex]/(*signal_Tau1_vec[tr])[leadGroomedIndex]);
 		else
 		  (*bkg_Tau21_vec[tr]).push_back((*bkg_Tau2_vec[tr])[leadGroomedIndex]/(*bkg_Tau1_vec[tr])[leadGroomedIndex]);
 	      }
