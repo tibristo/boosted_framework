@@ -6,7 +6,7 @@ axisvalues = [[0,1700],[0,1200],[0,300],[-5,5],[-4,4],[-2,2],[0,1],[0,100],[0,1]
 var_type = ['E','pt','m','eta','phi','emfrac','Tau1','Tau2','Tau3','WIDTH','SPLIT12','SPLIT23','SPLIT34','Dip12','Dip13','Dip23','DipExcl12','PlanarFlow','Angularity','QW','PullMag','PullPhi','Pull_C00','Pull_C01','Pull_C10','Pull_C11','constit_index']
 
 subjet_alg = {'TopoTrimmedPtFrac5SmallR30':'TopoTrimmedSubjetsPtFrac5SmallR30','TopoSplitFilteredMu67SmallR0YCut9':'TopoSplitFiltSubjetsMu67SmallR0YCut9','TopoSplitFilteredMu100SmallR0YCut4':'TopoSplitFiltSubjetsMu100SmallR0YCut4'}
-
+alg_prefix = {'TopoSplitFilteredMu67SmallR0YCut9':'CamKt12','TopoSplitFilteredMu100SmallR30YCut4':'CamKt12','TopoTrimmedPtFrac5SmallR30':'AntiKt10','TopoTrimmedPtFrac5SmallR20':'AntiKt10','TopoPrunedCaRcutFactor50Zcut10':'AntiKt10','TopoPrunedCaRcutFactor50Zcut20':'AntiKt10','AntiKt2LCTopo':'','AntiKt3LCTopo':'','AntiKt4LCTopo':''}
 subjet_axes = [[0,1700],[0,1200],[0,300],[-5,5],[-4,4],[0,1],[0,0.3]]
 subjet_vars = ['E','pt','m','eta','phi','constit_index','WIDTH']
 
@@ -14,7 +14,7 @@ for alg in algorithms:
     f = open(alg+'.config','w')
     f2 = open(alg+'_branches.txt','w')
     tcount = 0
-    prefix = 'jet_CamKt12'
+    prefix = 'jet_' + alg_prefix[alg]
     if alg.find('LCTopo') == -1:
         prefix+='LC'
     for t in var_type:
@@ -25,12 +25,15 @@ for alg in algorithms:
             #f.write('truth_'+t+','+'jet_CamKt12Truth'+alg[4:]+'_'+t+','+str(20) + ',' + str(axisvalues[tcount][0]) + ','+str(axisvalues[tcount][1])+',\n')
             f2.write('jet_CamKt12Truth_'+t+'\n')
             #f2.write('jet_CamKt12Truth'+alg[4:]+'_'+t+'\n')
-        f.write('topo_'+t+','+'jet_CamKt12LCTopo_'+t+','+str(20) + ',' + str(axisvalues[tcount][0]) + ','+str(axisvalues[tcount][1])+',\n')        
+        #f.write('topo_'+t+','+'jet_CamKt12LCTopo_'+t+','+str(20) + ',' + str(axisvalues[tcount][0]) + ','+str(axisvalues[tcount][1])+',\n')        
+        f.write('topo_'+t+','+prefix+'Topo_'+t+','+str(20) + ',' + str(axisvalues[tcount][0]) + ','+str(axisvalues[tcount][1])+',\n')        
         f.write('groomed_'+t+','+prefix+alg+'_'+t+','+str(20) + ',' + str(axisvalues[tcount][0]) + ','+str(axisvalues[tcount][1])+',\n')
         
 
 
-        f2.write('jet_CamKt12LCTopo_'+t+'\n')
+        #f2.write('jet_CamKt12LCTopo_'+t+'\n')
+        f2.write(prefix+'Topo_'+t+'\n')
+        #f2.write(prefix+'_'+t+'\n')
         f2.write(prefix+alg+'_'+t+'\n')
         tcount+=1
     ecount = 0
