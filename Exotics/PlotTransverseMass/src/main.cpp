@@ -26,7 +26,7 @@ bool ComparePt(TLorentzVector a, TLorentzVector b) { return a.Pt() > b.Pt(); }
 int main( int argc, char * argv[] ) {
   subjets = true; // should be set from command line argument TODO
   gROOT->ProcessLine("#include <vector>");
-  gInterpreter->GenerateDictionary("vector<vector<int> >", "vector");
+  gInterpreter->GenerateDictionary("std::vector<std::vector<int> >", "vector");
   gInterpreter->GenerateDictionary("vector<vector<double> >", "vector");
   
   AtlasStyle();
@@ -1821,6 +1821,7 @@ void makeMassWindowFile(bool applyMassWindow)
 	  TTree * outTree;
 
 	  addJets(intree, AlgoNames[i], signal, i);//, addJetIndices); //set all of the branches for the output tree for the jets
+	  addSubJets(intree, AlgoNames[i], signal, i);
 	  outTree = intree->CloneTree(0);
 	  mass_max = TopEdgeMassWindow[i][j];
 	  mass_min = BottomEdgeMassWindow[i][j];
@@ -1837,8 +1838,8 @@ void makeMassWindowFile(bool applyMassWindow)
 	  //NEvents_weighted = 0;
 	  for (long n = 0; n < entries; n++)
 	    {
-	      clearVectors();
 	      intree->GetEntry(n);
+	      clearVectors();
 	      if (n%1000==0)
 		std::cout << "Entry: "<< n << std::endl;
 	      if (NEvents_weighted.find(mc_channel_number) != NEvents_weighted.end())
@@ -1911,23 +1912,39 @@ void makeMassWindowFile(bool applyMassWindow)
 	    //std::cout << "getting subjet variables" << std::endl;
 	    for (int jj = 0 ; jj < (*jet_pt_groomed).size() ; jj++)
 	      {
-		std::vector<int> subjet_idx = signal ? (*signal_constit_index[2]).at(jj) : (*bkg_constit_index[2]).at(jj); // only groomed ones.....
+		//std::vector<int> subjet_idx = signal ? (*signal_constit_index[2]).at(jj) : (*bkg_constit_index[2]).at(jj); // only groomed ones.....
+		//std::cout << "getting subjet_index" << std::endl;
+
+		//std::cout << subjet_index << std::endl;
+		//std::cout << subjet_index->size() << std::endl;
+		//std::cout << subjet_index->at(jj).size() << std::endl;
+		std::vector<int> subjet_idx = (*subjet_index).at(jj); // only groomed ones.....
 		//std::cout << "calculating two leading subjets" << std::endl;
 		std::pair<int,int> subjet_leading = signal ? getTwoLeadingSubjets(subjet_idx,signal_subjets_pt_vec) : getTwoLeadingSubjets(subjet_idx,bkg_subjets_pt_vec) ;
 	    // calculate the mass drop
 		if (subjet_leading.first == subjet_leading.second)
 		  {
-		    std::cout << "COULD NOT FIND SUBJETS PROPERLY" << std::endl;
+		    /*std::cout << "COULD NOT FIND SUBJETS PROPERLY" << std::endl;
 		    std::cout << subjet_leading.first << std::endl;
 		    std::cout << subjet_leading.second << std::endl;
-		    std::cout << "num subjets: " << subjet_idx.size() << std::endl;
-		    return;
+		    std::cout << "num subjets: " << subjet_idx.size() << std::endl;*/
+		    if (signal)
+		      {
+			signal_massdrop_vec.push_back(1);
+			signal_yt_vec.push_back(0);
+		      }
+		    else
+		      {
+			bkg_yt_vec.push_back(0);
+			bkg_massdrop_vec.push_back(1);
+		      }
+		    continue;
 		  }
 		double subjet_mass = signal ? (*signal_subjets_m_vec)[subjet_leading.first] : (*bkg_subjets_m_vec)[subjet_leading.first];
-		std::cout << "s_mass: " << subjet_mass << std::endl;
+		//std::cout << "s_mass: " << subjet_mass << std::endl;
 		Float_t mu12 = subjet_mass/(mass*1000);
-		std::cout << "mass: " << mass << std::endl;
-		std::cout <<"mu12: " << mu12 << std::endl;
+		//std::cout << "mass: " << mass << std::endl;
+		//std::cout <<"mu12: " << mu12 << std::endl;
 		if (signal)
 		  signal_massdrop_vec.push_back(mu12);
 		else
@@ -1935,18 +1952,18 @@ void makeMassWindowFile(bool applyMassWindow)
 		// momentum balance
 		double pt2 = signal ? (*signal_subjets_pt_vec)[subjet_leading.second] : (*bkg_subjets_pt_vec)[subjet_leading.second];
 		double eta_1 = signal ? (*signal_subjets_eta_vec)[subjet_leading.first] : (*bkg_subjets_eta_vec)[subjet_leading.first];
-		std::cout << "eta1: " << eta_1 << std::endl;
+		//std::cout << "eta1: " << eta_1 << std::endl;
 		double eta_2 = signal ? (*signal_subjets_eta_vec)[subjet_leading.second] : (*bkg_subjets_eta_vec)[subjet_leading.second];
-		std::cout << "eta2: " << eta_2 << std::endl;
+		//std::cout << "eta2: " << eta_2 << std::endl;
 		double phi_1 = signal ? (*signal_subjets_phi_vec)[subjet_leading.first] : (*bkg_subjets_phi_vec)[subjet_leading.first];
-		std::cout << "phi1: " << phi_1 << std::endl;
+		//std::cout << "phi1: " << phi_1 << std::endl;
 		double phi_2 = signal ? (*signal_subjets_phi_vec)[subjet_leading.second] : (*bkg_subjets_phi_vec)[subjet_leading.second];
-		std::cout << "phi2: " << phi_2 << std::endl;
+		//std::cout << "phi2: " << phi_2 << std::endl;
 		double dRsub12 = DeltaR (eta_1, phi_1, eta_2, phi_2);
-		std::cout << "pt2: " << pt2 << std::endl;
-		std::cout << "dr: " << dRsub12 << std::endl;
+		//std::cout << "pt2: " << pt2 << std::endl;
+		//std::cout << "dr: " << dRsub12 << std::endl;
 		Float_t yt = (pt2*dRsub12)/(mass*1000);
-		std::cout << "yt: " << yt << std::endl;
+		//std::cout << "yt: " << yt << std::endl;
 		yt*=yt;
 		//std::cout << "yt: " << yt << std::endl;
 		if (signal)
@@ -2012,7 +2029,6 @@ std::pair<int,int> getTwoLeadingSubjets(std::vector<int> & jet_idx, std::vector<
     for (int i = 0; i < jet_idx.size(); i++)
     {
       int idx = jet_idx[i];
-      std::cout << "Pt for idx: " << idx << " " << (*subjet_pt)[idx] << std::endl;
       if (max_pt < (*subjet_pt)[idx])
 	{
 	  sec_pt = max_pt;
@@ -2116,20 +2132,20 @@ void clearVectors()
 {
 
   // clear the vectors that we are using to add new derived variables
-  if (!signal_massdrop_vec.empty())
-    signal_massdrop_vec.clear();
-  if (!bkg_massdrop_vec.empty())
-    bkg_massdrop_vec.clear();
-  if (!signal_yt_vec.empty())
-    signal_yt_vec.clear();
-  if (!bkg_yt_vec.empty())
-    bkg_yt_vec.clear();
+  //if (!signal_massdrop_vec.empty())
+  signal_massdrop_vec.clear();
+    //if (!bkg_massdrop_vec.empty())
+  bkg_massdrop_vec.clear();
+  //if (!signal_yt_vec.empty())
+  signal_yt_vec.clear();
+  //if (!bkg_yt_vec.empty())
+  bkg_yt_vec.clear();
   for (int j = 0; j < 3; j++)
     {
-      if (!signal_Tau21_vec[j].empty())
+      //if (!signal_Tau21_vec[j].empty())
 	signal_Tau21_vec[j].clear();
 
-      if (!bkg_Tau21_vec[j].empty())
+	//if (!bkg_Tau21_vec[j].empty())
 	bkg_Tau21_vec[j].clear();
     }
 
@@ -2241,12 +2257,18 @@ void addJets(TTree * tree, std::string &groomalgo, bool signal, int groomIdx)
 	}
     } // end for loop over topo/truth/groom
 
-  if (!subjets)
-    return;
-  // Subjets
+  //if (!subjets)
+  //return;
+
   std::string jetType = returnJetType( samplePrefix, groomalgo, addLC, 2); //set to truth/ topo/ groomed
   std::string subjetType = returnSubJetType(samplePrefix, groomalgo, addLC);
-
+  
+  tree->SetBranchStatus(std::string(subjetIndex[groomalgo]).c_str(),1);
+  tree->SetBranchAddress(std::string(subjetIndex[groomalgo]).c_str(),&subjet_index);
+  std::cout << subjetIndex[groomalgo] << std::endl;
+  if(!tree->GetListOfBranches()->FindObject(std::string(subjetIndex[groomalgo]).c_str())) {
+    std::cout << "subjet branch is not here" << std::endl;}
+  
   if (signal)
     {
       tree->SetBranchAddress(std::string(subjetType+"E").c_str(),&signal_subjets_E_vec);
@@ -2254,13 +2276,6 @@ void addJets(TTree * tree, std::string &groomalgo, bool signal, int groomIdx)
       tree->SetBranchAddress(std::string(subjetType+"m").c_str(),&signal_subjets_m_vec);
       tree->SetBranchAddress(std::string(subjetType+"eta").c_str(),&signal_subjets_eta_vec);
       tree->SetBranchAddress(std::string(subjetType+"phi").c_str(),&signal_subjets_phi_vec);
-      tree->Branch(std::string(jetType+"massdrop").c_str(),&signal_massdrop_vec,std::string(jetType+"massdrop"+"/F").c_str());
-      tree->Branch(std::string(jetType+"yt").c_str(),&signal_yt_vec,std::string(jetType+"yt"+"/F").c_str());
-      tree->Branch(std::string(returnJetType(samplePrefix, groomalgo, addLC,0)+"Tau21").c_str(),&signal_Tau21_vec.at(0),std::string(jetType+"Tau21"+"/F").c_str());
-      tree->Branch(std::string(returnJetType(samplePrefix, groomalgo, addLC,1)+"Tau21").c_str(),&signal_Tau21_vec.at(1),std::string(jetType+"Tau21"+"/F").c_str());
-      tree->Branch(std::string(jetType+"Tau21").c_str(),&signal_Tau21_vec.at(2), std::string(jetType+"Tau21"+"/F").c_str());
-
-
     }
   else
     {
@@ -2269,18 +2284,50 @@ void addJets(TTree * tree, std::string &groomalgo, bool signal, int groomIdx)
       tree->SetBranchAddress(std::string(subjetType+"m").c_str(),&bkg_subjets_m_vec);
       tree->SetBranchAddress(std::string(subjetType+"eta").c_str(),&bkg_subjets_eta_vec);
       tree->SetBranchAddress(std::string(subjetType+"phi").c_str(),&bkg_subjets_phi_vec);
-      tree->Branch(std::string(jetType+"massdrop").c_str(),&bkg_massdrop_vec, std::string(jetType+"massdrop"+"/F").c_str());
-      tree->Branch(std::string(jetType+"yt").c_str(),&bkg_yt_vec,std::string(jetType+"yt"+"/F").c_str());
-      tree->Branch(std::string(returnJetType(samplePrefix, groomalgo, addLC,0)+"Tau21").c_str(),&bkg_Tau21_vec.at(0),std::string(jetType+"Tau21"+"/F").c_str());
-      tree->Branch(std::string(returnJetType(samplePrefix, groomalgo, addLC,1)+"Tau21").c_str(),&bkg_Tau21_vec.at(1),std::string(jetType+"Tau21"+"/F").c_str());
-      tree->Branch(std::string(jetType+"Tau21").c_str(),&bkg_Tau21_vec.at(2),std::string(jetType+"Tau21"+"/F").c_str());
     }
+
+}//addJets
+void addSubJets(TTree * tree, std::string & groomalgo, bool signal, int groomIdx)
+{
+
+  std::string samplePrefix = "";
+  bool addLC = false;
+  samplePrefix = AlgoPrefix[groomIdx];
+
+  if (groomIdx <= 6) // we're doing reclustering
+    addLC = true; // just add the LC to the name
+
+
+  std::string jetType = returnJetType( samplePrefix, groomalgo, addLC, 2); //set to truth/ topo/ groomed
+  std::string subjetType = returnSubJetType(samplePrefix, groomalgo, addLC);
+  
+
+  if (signal)
+    {
+
+      tree->Branch(std::string(jetType+"massdrop").c_str(),&signal_massdrop_vec);//,std::string(jetType+"massdrop"+"/F").c_str());
+      tree->Branch(std::string(jetType+"yt").c_str(),&signal_yt_vec);//,std::string(jetType+"yt"+"/F").c_str());
+      tree->Branch(std::string(returnJetType(samplePrefix, groomalgo, addLC,0)+"Tau21").c_str(),&signal_Tau21_vec.at(0));//,std::string(jetType+"Tau21"+"/F").c_str());
+      tree->Branch(std::string(returnJetType(samplePrefix, groomalgo, addLC,1)+"Tau21").c_str(),&signal_Tau21_vec.at(1));//,std::string(jetType+"Tau21"+"/F").c_str());
+      tree->Branch(std::string(jetType+"Tau21").c_str(),&signal_Tau21_vec.at(2));//, std::string(jetType+"Tau21"+"/F").c_str());
+      
+
+    }
+  else
+    {
+
+      tree->Branch(std::string(jetType+"massdrop").c_str(),&bkg_massdrop_vec);//, std::string(jetType+"massdrop"+"/F").c_str());
+      tree->Branch(std::string(jetType+"yt").c_str(),&bkg_yt_vec);//,std::string(jetType+"yt"+"/F").c_str());
+      tree->Branch(std::string(returnJetType(samplePrefix, groomalgo, addLC,0)+"Tau21").c_str(),&bkg_Tau21_vec.at(0));//,std::string(jetType+"Tau21"+"/F").c_str());
+      tree->Branch(std::string(returnJetType(samplePrefix, groomalgo, addLC,1)+"Tau21").c_str(),&bkg_Tau21_vec.at(1));//,std::string(jetType+"Tau21"+"/F").c_str());
+      tree->Branch(std::string(jetType+"Tau21").c_str(),&bkg_Tau21_vec.at(2));//,std::string(jetType+"Tau21"+"/F").c_str());
+    }
+
   tree->SetBranchStatus(std::string(jetType+"massdrop").c_str(),1);
   tree->SetBranchStatus(std::string(jetType+"yt").c_str(),1);
   tree->SetBranchStatus(std::string(returnJetType(samplePrefix, groomalgo, addLC,0)+"Tau21").c_str(),1);
   tree->SetBranchStatus(std::string(returnJetType(samplePrefix, groomalgo, addLC,1)+"Tau21").c_str(),1);
   tree->SetBranchStatus(std::string(jetType+"Tau21").c_str(),1);
-
 
 } //addJets()
 
@@ -2401,6 +2448,8 @@ void setSelectionVectors(bool signal, std::string & algorithm)
   
       }  
 
+
+    subjet_index = 0;
 
     signal_subjets_E_vec = 0;
     signal_subjets_pt_vec = 0;
