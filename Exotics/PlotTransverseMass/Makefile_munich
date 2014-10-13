@@ -45,7 +45,7 @@ LINKFLAGS    =
 endif
 
 ##Libraries
-LIBS       += $(ROOTLIBS) -lThread `/home/tim/Programs/fastjet-install/bin/fastjet-config --libs` -L/usr/local/lib -lboost_filesystem -lboost_system
+LIBS       += $(ROOTLIBS) -lThread `/home/tim/Programs/fastjet-install/bin/fastjet-config --libs` -L/usr/local/lib -lboost_filesystem -lboost_system -lboost_program_options
 
 ##Targets
 all : $(EXEDIR)/$(EXENAME)
