@@ -2023,6 +2023,7 @@ void makeMassWindowFile(bool applyMassWindow, std::vector<std::string> & inputBk
 	  outTree = (TTree*)intree->CloneTree(0);
 	  if (subjets)
 	    addSubJets(outTree, AlgoNames[i], signal, i);
+	  addJetsBranches(outTree, AlgoNames[i], signal, i);
 	  long entries = (long)inputTChain[tchainIdx]->GetEntries();
 
 	  // these numbers are chosen somewhat arb - they come from the settings I use
