@@ -42,153 +42,139 @@ int main( int argc, char * argv[] ) {
   
   bool makePtPlotsFlag = false;
   bool extendedVars = false;
-  bool scaleHists = false;  
+  bool scaleHistsFlag = false;  
   bool makePlotsFlag = false;
   bool getMPVFlag = false;
   bool checkBkgFrac = false;
   bool applyMassWindowFlag = false;
   std::string fileid = "";
-        po::variables_map vm;
-    try {
-        int opt;
-        vector<string> config_file;
+  po::variables_map vm;
+  // set up the argument management
+  try {
+    int opt;
+    vector<string> config_file;
     
-        // Declare a group of options that will be 
-        // allowed only on command line
-        po::options_description generic("Generic options");
-        generic.add_options()
-            ("help", "produce help message")
-	  ("config,c", po::value<vector<string> >()->multitoken(),
-                  "name of a file of a configuration.")
-            ;
+    // Declare a group of options that will be 
+    // allowed only on command line
+    po::options_description generic("Generic options");
+    generic.add_options()
+      ("help", "produce help message")
+      ("config,c", po::value<vector<string> >()->multitoken(),
+       "name of a file of a configuration.")
+      ;
     
-        // Declare a group of options that will be 
-        // allowed both on command line and in
-        // config file
-	std::cout << " setting configuration" << std::endl;
-        po::options_description config("Configuration");
-        config.add_options()
-	  ("signal-file", po::value<vector<string> >()->multitoken(), 
-                  "signal input files")
-	  ("background-file", po::value<vector<string> >()->multitoken(), 
-	   "background input files")
-            ("algorithm", 
-	     po::value< string>(), 
-                 "algorithm type")
-	  ("subjets", po::value<bool>(&subjets)->default_value(true),"run subjets")
-	  ("extendedvars", po::value<bool>(&extendedVars)->default_value(false),"add extra variables - TauWTA1/2 and ZCUT12")
-	  ("mass-window", po::value<bool>(&applyMassWindowFlag)->default_value(false),"apply mass window cuts")
-	  ("make-plots", po::value<bool>(&makePlotsFlag)->default_value(false),"create plots")
-	  ("make-ptplots", po::value<bool>(&makePtPlotsFlag)->default_value(false),"create pT plots")
-	  ("scale-hists", po::value<bool>(&scaleHists)->default_value(false),"scale mass/ pt histograms")
-	  ("mpv", po::value<bool>(&getMPVFlag)->default_value(false),"Find the MPV")
-	  ("fileid", po::value<string>(&fileid)->default_value(""),"Add an identifier to the output folder/ file names")
-	  ("bkg-frac", po::value<bool>(&checkBkgFrac)->default_value(false),"Check the background fraction in the signal")
-            ;
-
-        // Hidden options, will be allowed both on command line and
-        // in config file, but will not be shown to the user.
-        /*po::options_description hidden("Hidden options");
-        hidden.add_options()
-            ("signal-file", po::value< vector<string> >(), "signal input file")
-            ("background-file", po::value< vector<string> >(), "background input file")
-            ;*/
-
+    // Declare a group of options that will be 
+    // allowed both on command line and in
+    // config file
+    std::cout << " setting configuration" << std::endl;
+    po::options_description config("Configuration");
+    config.add_options()
+      ("signal-file", po::value<vector<string> >()->multitoken(), 
+       "signal input files")
+      ("background-file", po::value<vector<string> >()->multitoken(), 
+       "background input files")
+      ("algorithm", 
+       po::value< string>(), 
+       "algorithm type")
+      ("subjets", po::value<bool>(&subjets)->default_value(true),"run subjets")
+      ("extendedvars", po::value<bool>(&extendedVars)->default_value(false),"add extra variables - TauWTA1/2 and ZCUT12")
+      ("mass-window", po::value<bool>(&applyMassWindowFlag)->default_value(false),"apply mass window cuts")
+      ("make-plots", po::value<bool>(&makePlotsFlag)->default_value(false),"create plots")
+      ("make-ptplots", po::value<bool>(&makePtPlotsFlag)->default_value(false),"create pT plots")
+      ("scale-hists", po::value<bool>(&scaleHistsFlag)->default_value(false),"scale mass/ pt histograms")
+      ("mpv", po::value<bool>(&getMPVFlag)->default_value(false),"Find the MPV")
+      ("fileid", po::value<string>(&fileid)->default_value(""),"Add an identifier to the output folder/ file names")
+      ("bkg-frac", po::value<bool>(&checkBkgFrac)->default_value(false),"Check the background fraction in the signal")
+      ;
         
-        po::options_description cmdline_options;
-        cmdline_options.add(generic).add(config);//.add(hidden);
+    po::options_description cmdline_options;
+    cmdline_options.add(generic).add(config);//.add(hidden);
 
-        po::options_description config_file_options;
-        config_file_options.add(config);//.add(hidden);
+    po::options_description config_file_options;
+    config_file_options.add(config);//.add(hidden);
 
-        po::options_description visible("Allowed options");
-        visible.add(generic).add(config);
+    po::options_description visible("Allowed options");
+    visible.add(generic).add(config);
 
-        po::positional_options_description p;
-        p.add("background-file", 1);
-        p.add("signal-file", 1);
-	p.add("algorithm",1);
+    po::positional_options_description p;
+    p.add("background-file", 1);
+    p.add("signal-file", 1);
+    p.add("algorithm",1);
 
+    store(po::command_line_parser(argc, argv).
+	  options(cmdline_options).positional(p).run(), vm);
+    notify(vm);
 
-        store(po::command_line_parser(argc, argv).
-              options(cmdline_options).positional(p).run(), vm);
-        notify(vm);
-
-        if (vm.count("help")) {
-            cout << visible << "\n";
-            return 0;
-        }
-
-
-
-
-	// need to check what happens if we don't actually add anything here!
-	std::cout << "check config files" << std::endl;
-	if (vm.count("config"))
-	  {
-	    config_file = vm["config"].as<vector<string> >();
-	    for (vector<std::string>::iterator it = config_file.begin(); it!= config_file.end(); it++)
-	      {
-		ifstream ifs((*it).c_str());
-		if (!ifs)
-		  {
-		    cout << "can not open config file: " << config_file << "\n";
-		    return 0;
-		  }
-		else
-		  {
-		    store(parse_config_file(ifs, config_file_options), vm);
-		    notify(vm);
-		  }	    
-		
-	      }
-	  }
-
-    
-
-        if (vm.count("signal-file"))
-        {
-            cout << "Signal files are: " 
-                 << vm["signal-file"].as< vector<string> >() << "\n";
-        }
-	else
-	  {
-	    cout << "No signal files!" << std::endl;
-	    return 0;
-	  }
-
-        if (vm.count("background-file"))
-        {
-            cout << "Background files are: " 
-                 << vm["background-file"].as< vector<string> >() << "\n";
-        }
-	else
-	  {
-	    cout << "No background files!" << std::endl;
-	    return 0;
-	  }
-	
-	if (vm.count("algorithm"))
-        {
-            cout << "algorithm is: " 
-                 << vm["algorithm"].as< string >() << "\n";
-        }
-	else
-	  {
-	    cout << "No algorithm specified!" << std::endl;
-	    return 0;
-	  }
-
-        if (vm.count("subjets"))
-        {
-	  cout << "Subjets option is: " << subjets << std::endl;
-        }
-
+    if (vm.count("help")) {
+      cout << visible << "\n";
+      return 0;
     }
-    catch(exception& e)
+
+    // need to check what happens if we don't actually add anything here!
+
+    if (vm.count("config"))
+      {
+	config_file = vm["config"].as<vector<string> >();
+	for (vector<std::string>::iterator it = config_file.begin(); it!= config_file.end(); it++)
+	  {
+	    ifstream ifs((*it).c_str());
+	    if (!ifs)
+	      {
+		cout << "can not open config file: " << config_file << "\n";
+		return 0;
+	      }
+	    else
+	      {
+		store(parse_config_file(ifs, config_file_options), vm);
+		notify(vm);
+	      }	    
+		
+	  }
+      }    
+
+    if (vm.count("signal-file"))
+      {
+	cout << "Signal files are: " 
+	     << vm["signal-file"].as< vector<string> >() << "\n";
+      }
+    else
+      {
+	cout << "No signal files!" << std::endl;
+	return 0;
+      }
+
+    if (vm.count("background-file"))
+      {
+	cout << "Background files are: " 
+	     << vm["background-file"].as< vector<string> >() << "\n";
+      }
+    else
+      {
+	cout << "No background files!" << std::endl;
+	return 0;
+      }
+	
+    if (vm.count("algorithm"))
+      {
+	cout << "algorithm is: " 
+	     << vm["algorithm"].as< string >() << "\n";
+      }
+    else
+      {
+	cout << "No algorithm specified!" << std::endl;
+	return 0;
+      }
+
+    if (vm.count("subjets"))
+      {
+	cout << "Subjets option is: " << subjets << std::endl;
+      }
+
+  }
+  catch(exception& e)
     {
-        cout << e.what() << "\n";
-        return 1;
+      cout << e.what() << "\n";
+      return 1;
     }    
 
     bool massHistos = applyMassWindowFlag;
@@ -199,30 +185,28 @@ int main( int argc, char * argv[] ) {
     vector<string> inputSigFiles = vm["signal-file"].as<vector<string> > ();
 
     string alg_in = vm["algorithm"].as<string>();
-  //Make an array of TFiles with all the relevant inputs and add them to my array of trees
-  //for (int nArg=1; nArg < argc; nArg++) {
-    //cout << nArg << " " << argv[nArg] << endl;
-    //inputFile[nArg-1] = new TFile(argv[nArg], "READ");
-    //inputTree[nArg-1] = ( TTree* ) inputFile[nArg-1]->Get( "physics" );    
-    inputTChain[sampleType::BACKGROUND] = new TChain("physics");
 
+    inputTChain[sampleType::BACKGROUND] = new TChain("physics");
     for (vector<string>::iterator it = inputBkgFiles.begin(); it != inputBkgFiles.end(); it++)
       {
 	inputTChain[sampleType::BACKGROUND]->Add((*it).c_str());
 	std::cout << "bkg file added: " << (*it) << std::endl;
       }
+
     inputTChain[sampleType::SIGNAL] = new TChain("physics");
     for (vector<string>::iterator it = inputSigFiles.begin(); it != inputSigFiles.end(); it++)
       {
 	inputTChain[sampleType::SIGNAL]->Add((*it).c_str());
 	std::cout << "sig file added: " << (*it) << std::endl;
       }
-    //std::string arg  = std::string(argv[nArg]);
-    //std::transform(arg.begin(), arg.end(), arg.begin(), ::tolower);
+
     std::transform(alg_in.begin(), alg_in.end(), alg_in.begin(), ::tolower);
     vector<int> subset;
-    //if (arg.find("all")!=string::npos)
+
     int nArg = 1; // TODO: this will need to be changed when moving from a system where only one algorithm is run at once
+
+    // right now the idea of filteridx, Xidx is not fully complete... The code as it stands runs on one type of algorithm at once, but 
+    // I would like it to run on a number of types.  This is why this is here.  It used to do this in fact, before switching stuff around
     if (alg_in.find("all")!=string::npos)
       {
 	allsamples = true;
@@ -286,22 +270,17 @@ int main( int argc, char * argv[] ) {
 
   defineStrings(AlgoList, binLabel, pTbins, finePtBins);
   createHistos();
-
-
   
 
   if (filtering || allsamples)
     {
-      //runAlgorithm(inputTChain[filteridx], inputTChain[filteridx+1], "TopoSplitFilteredMu67SmallR0YCut9", 0, massHistos);
       runAlgorithm(inputTChain[filteridx], inputTChain[filteridx+1], "TopoSplitFilteredMu67SmallR0YCut9", 1, massHistos);
       runAlgorithm(inputTChain[filteridx], inputTChain[filteridx+1], "TopoSplitFilteredMu100SmallR30YCut4", 2, massHistos);
-      //runAlgorithm(inputTChain[filteridx], inputTChain[filteridx+1], "TrimmedPtFrac5SmallR30", 2, massHistos);
     }
   
   if (trimmed || allsamples)
     {
       runAlgorithm(inputTChain[trimidx], inputTChain[trimidx+1], "TopoTrimmedPtFrac5SmallR30", 3, massHistos);
-      //runAlgorithm(inputTChain[trimidx], inputTChain[trimidx+1], "TopoTrimmedPtFrac5SmallR20", 4, massHistos);
     }
   
   if (pruned || allsamples)
@@ -329,34 +308,9 @@ int main( int argc, char * argv[] ) {
   // Normalization = CrossSection(at NLO) * Luminosity / NEvents
 
 
-  if (scaleHists)
+  if (scaleHistsFlag)
     {
-      
-      for (int ii=0; ii<nAlgos; ii++){//-1; ii++){
-	int i = algoMap[ii]; // this is here because we don't always run all algorithms, just a subsample...
-	
-	qcd_Lead_CA12_pt[i]->Scale(1.0/qcd_Lead_CA12_pt[i]->Integral());  
-	Wprime_Lead_CA12_pt[i]->Scale(1.0/Wprime_Lead_CA12_pt[i]->Integral());
-	Wprime_Lead_CA12_scaled_pt[i]->Scale(1.0/Wprime_Lead_CA12_scaled_pt[i]->Integral());
-	
-	for (int j=0; j<nPtBins; j++){
-	  
-	  qcd_Lead_CA12_mass[i][j]->Scale(1.0/qcd_Lead_CA12_mass[i][j]->Integral());
-	  Wprime_Lead_CA12_mass[i][j]->Scale(1.0/Wprime_Lead_CA12_mass[i][j]->Integral());
-	}
-	
-	for (int j=0; j<nFineBins; j++){
-	  
-	  qcd_finePtBin_mass[i][j]->Scale(1.0/qcd_finePtBin_mass[i][j]->Integral());
-	  Wprime_finePtBin_mass[i][j]->Scale(1.0/Wprime_finePtBin_mass[i][j]->Integral());
-	}
-	
-	//qcd_PtReweight[i]->Scale(1.0/qcd_PtReweight[i]->Integral());
-	//Wp_PtReweight[i]->Scale(1.0/Wp_PtReweight[i]->Integral());
-	Wprime_Lead_CA12_scaled_pt[i]->Scale(1.0/Wprime_Lead_CA12_scaled_pt[i]->Integral());
-	
-	
-      }
+      scaleHists();
     } // end scaleHists if
   
 
@@ -365,26 +319,12 @@ int main( int argc, char * argv[] ) {
     {
       makePlots();
     }
-  //NOW THAT I HAVE ALL MY MASS PLOTS NORMALISED, I WANT TO GET THE MPV AND MASS WINDOW ANALYSIS RIGHT
-
-  // QCD VECTOR: qcd_Lead_CA12_mass[i][j]
-  // WPRIME VECTOR: Wprime_Lead_CA12_mass[i][j]
 
   //1. Get the MPV
 
   if (getMPVFlag)
     {
-
-      for (int ii=0; ii<nAlgos; ii++){//-1; ii++){
-	int i = algoMap[ii];
-	for (int j=0; j<nPtBins; j++){
-	  myMPV[i][j]=mpv(Wprime_Lead_CA12_mass[i][j]);
-	}
-	
-	for (int j=0; j<nFineBins; j++){
-	  myMPV_finePt[i][j]=mpv(Wprime_finePtBin_mass[i][j]);
-	}
-      }
+      getMPV();
     }
   
   //2. Get the mass window which gives 68% W mass efficiency 
@@ -407,13 +347,10 @@ int main( int argc, char * argv[] ) {
 	  BottomEdgeMassWindow_finePt[i][j]=TopEdgeMassWindow_finePt[i][j]-WidthMassWindow_finePt[i][j];    
 	  //cout << AlgoList[i] << ": top edge " << TopEdgeMassWindow[i][j] << " bottom edge " << BottomEdgeMassWindow[i][j] << " mass window " << WidthMassWindow[i][j] << endl;
 	}
-	
       }
     }
 
-  //3. Check background fraction in this window
-
-  
+  //3. Check background fraction in this window  
   if (checkBkgFrac)
     {
       for (int ii=0; ii<nAlgos; ii++){//-1; ii++){
@@ -425,10 +362,8 @@ int main( int argc, char * argv[] ) {
 	
 	for (int j=0; j<nFineBins; j++){
 	  QCDfrac_finePt[i][j]=qcd_finePtBin_mass[i][j]->Integral(qcd_finePtBin_mass[i][j]->FindBin(BottomEdgeMassWindow_finePt[i][j]),qcd_finePtBin_mass[i][j]->FindBin(TopEdgeMassWindow_finePt[i][j]));
-	  //cout << "QCD fraction " << QCDfrac[i][j] << endl;
-	  
+	  //cout << "QCD fraction " << QCDfrac[i][j] << endl;	  
 	}
-    
       }
     }
 
@@ -437,22 +372,15 @@ int main( int argc, char * argv[] ) {
   if (makePtPlotsFlag)
     makePtPlots();
 
-
-
-  //for (int ii = 0; ii < nAlgos-1; ii++)
-  //{
-  //int groomIdx = algoMap[ii];
-  //int fileIdx = fileMap[ii]; // basically points to filteridx, reclusteridx, etc.
-  makeMassWindowFile(applyMassWindowFlag, extendedVars);//inputTree[fileIdx], inputTree[fileIdx]); // pass input file indices too?
-  //  }
-  
+  makeMassWindowFile(applyMassWindowFlag, extendedVars);
 
   return 0;
 }
 
 
 
-float DeltaR(float eta1,float phi1,float eta2,float phi2){
+float DeltaR(float eta1,float phi1,float eta2,float phi2){ 
+  // we could actually inline this function
   float deltaPhi = TMath::Abs(phi1-phi2);
   float deltaEta = eta1-eta2;
   if(deltaPhi > TMath::Pi())
@@ -1969,37 +1897,44 @@ void makeMassWindowFile(bool applyMassWindow,bool extendedVars)
   double mass_min = 0.0;
 
   bool signal = false;
+
   // need branches for specific algorithms because otherwise we end up with a million branches that we don't need
   vector<std::string> branches;
-  std::cout << "number of algorithms" << nAlgos<< std::endl;
+
+  // loop through different algorithms
   for (int ii=0; ii<nAlgos; ii++){
 
     int i = algoMap[ii];
-    std::cout << " doing mass eff plots for " << AlgoNames[i] << std::endl;
+    std::cout << "Doing mass window plots for " << AlgoNames[i] << std::endl;
+
     int groomAlgoIndex = i;
     std::string prefix = "";
+
     branches = getListOfJetBranches(AlgoNames[i]);
+    // loop through the different pt bins. j == 0 is the inclusive one
     for (int j=0; j<1; j++){//nPtBins; j++){
+
       signal = false;
+
+      // loop through background and signal
       for (int k = 0; k < 2; k++)
 	{
 	  signal = k == 0 ? false : true;
+	  // Initialise all the vectors to.. something 
 	  initVectors();
 	  
-	  int tchainIdx = signal ? sampleType::SIGNAL : sampleType::BACKGROUND;//fileMap[ii]+1 : fileMap[ii];
+	  int tchainIdx = signal ? sampleType::SIGNAL : sampleType::BACKGROUND;
 	  std::stringstream ss; // store the name of the output file and include the i and j indices!
 	  std::string bkg = signal ? "sig": "bkg";
 	  ss << AlgoNames[i] << "_" << i << "_" << pTbins[j] << "_" << bkg << ".root";
 	  boost::filesystem::path dir(std::string(AlgoNames[i]+fileid_global));
 	  boost::filesystem::create_directory(dir);
-	  std::cout << AlgoNames[i] << "/" << ss.str() << std::endl;
-	  //std::cout << "fileIdx " << fileIdx << endl;
-	  //TTree * intree = (TTree*) inputTChain[tchainIdx]->GetTree();//("physics");
-	  //TChain * intree = new TChain("physics");//inputTChain[tchainIdx];
-	  //inputTChain[tchainIdx]->LoadTree(0);
+
 	  inputTChain[tchainIdx]->GetEntries();
 	  TTree * intree = (TTree*)inputTChain[tchainIdx]->GetTree();
 
+
+	  // I can't remember if I need intree anymore... it was for debugging something
 	  inputTChain[tchainIdx]->SetBranchStatus("*",0);
 	  intree->SetBranchStatus("*",0);
 	  // turn on the branches we're interested in
@@ -2011,33 +1946,22 @@ void makeMassWindowFile(bool applyMassWindow,bool extendedVars)
 		std::cout << "could not find branch: " << (*it) << std::endl;
 	      }
 	    }
-	  //setMassBranch(intree, AlgoNames[i], i);
-	  //setMassBranch(intree, AlgoNames[i], i);
 
-	  addJets(inputTChain[tchainIdx], AlgoNames[i], signal, i, extendedVars); //set all of the branches for the output tree for the jets
-	  
+	  addJets(inputTChain[tchainIdx], AlgoNames[i], signal, i, extendedVars); //set all of the branches for the output tree for the jets	  
 	  mass_max = TopEdgeMassWindow[i][j];
 	  mass_min = BottomEdgeMassWindow[i][j];
 
 	  TFile * outfile = new TFile(std::string(AlgoNames[i]+fileid_global+"/"+ss.str()).c_str(),"RECREATE");	  
 	  TTree * outTree = new TTree("physics","physics");
-	  //intree->LoadTree(0);
-	  //TTree * newtc = (TTree*)intree->GetTree();
-	  std::cout << "created ttree" << std::endl;
-	  outfile->cd();
-	  //outTree = (TTree*)intree->CloneTree(0);
+
 	  resetOutputVariables();
 	  setOutputBranches(outTree, AlgoNames[i], i, extendedVars);
-	  std::cout << "added branches" << std::endl;
-	  addJetsBranches(outTree, AlgoNames[i], signal, i);
-	  std::cout << "added jets branches" << std::endl;
+	  //addJetsBranches(outTree, AlgoNames[i], signal, i);
+
 	  if (subjets)
 	    addSubJets(outTree, AlgoNames[i], signal, i);
-<<<<<<< HEAD
 	  addJetsBranches(outTree, AlgoNames[i], signal, i);
-=======
-	  std::cout << "added subjets" << std::endl;
->>>>>>> single
+
 	  long entries = (long)inputTChain[tchainIdx]->GetEntries();
 
 	  // these numbers are chosen somewhat arb - they come from the settings I use
@@ -2049,24 +1973,26 @@ void makeMassWindowFile(bool applyMassWindow,bool extendedVars)
 	  NEvents = entries;
 	  NEvents_weighted.clear();
 
-	  //int negative = 0;
-
 	  for (long n = 0; n < entries; n++)
 	    {
-	      //intree->GetEntry(n);
 	      inputTChain[tchainIdx]->GetEntry(n);
-	      clearVectors();
+
+	      setSelectionVectors(signal, AlgoNames[i]); // again reading from tree, but just setting jet_pt_x whatever
+	      // which makes it easier to use later on.
+	      resetOutputVariables(); 
+
 	      if (n%1000==0)
 		std::cout << "Entry: "<< n << std::endl;
+
 	      if (NEvents_weighted.find(mc_channel_number) != NEvents_weighted.end())
 		NEvents_weighted[mc_channel_number] += mc_event_weight;
 	      else
 		NEvents_weighted[mc_channel_number] = mc_event_weight;
+
 	      // what about reclustered jets?! argggg
 	      int chosenLeadTruthJetIndex=-99;
 	      int chosenLeadTopoJetIndex=-99;
-	      setSelectionVectors(signal, AlgoNames[i]);
-	      resetOutputVariables();
+
 
 	      if ((*jet_pt_truth)[0] / 1000.0 < 100)// || (*jet_m_truth)[0]/1000.0 < 100) 
 		continue;
@@ -2076,55 +2002,64 @@ void makeMassWindowFile(bool applyMassWindow,bool extendedVars)
 		  if ((*jet_pt_truth)[0]/1000.0 < ptrange[j].first || (*jet_pt_truth)[0]/1000.0 > ptrange[j].second)
 		    continue;
 		}
-	      if (groomAlgoIndex == 0){
-		//check which is my CA12 ungroomed reco jet with EMfrac<0.99 and |eta|<1.2
-		//loop over all topo jets and get the leading with cuts
-		bool hasTopoJet=false;
+	      
+	      if (groomAlgoIndex == 0)
+		{
+		  //check which is my CA12 ungroomed reco jet with EMfrac<0.99 and |eta|<1.2
+		  //loop over all topo jets and get the leading with cuts
+		  bool hasTopoJet=false;
 		
-		for (int jet_i=0; jet_i<(*jet_pt_topo).size(); jet_i++){
-		  if (!hasTopoJet && (*jet_emfrac_topo)[jet_i]<0.99 && fabs((*jet_eta_topo)[jet_i])<1.2) {
-		    chosenLeadTopoJetIndex=jet_i;
-		    hasTopoJet=true;
-		  } 
-		} // end loop over jet_pt_topo
-		
-		//now match my truth jet with the chosen topo jet
-		
-		if (hasTopoJet){
-		  for (int jet_i=0; jet_i<(*jet_pt_truth).size(); jet_i++){
-		    if (chosenLeadTruthJetIndex<0 && DeltaR((*jet_eta_topo)[chosenLeadTopoJetIndex],(*jet_phi_topo)[chosenLeadTopoJetIndex],(*jet_eta_truth)[jet_i],(*jet_phi_truth)[jet_i])<0.9){ 
-		      chosenLeadTruthJetIndex=jet_i;
-		    }	  
-		  }	// end loop over jet_pt_truth
-		} // end if(hasTopoJet)
-		//if ((*jet_pt_truth)[chosenLeadTruthJetIndex]/1000.0 > ptrange[j].first || (*jet_pt_truth)[chosenLeadTruthJetIndex]/1000.0 < ptrange[j].second)
-		//continue;
-	      } // end if(groomAlgoIndex==0)
+		  for (int jet_i=0; jet_i<(*jet_pt_topo).size(); jet_i++)
+		    {
+		      if (!hasTopoJet && (*jet_emfrac_topo)[jet_i]<0.99 && fabs((*jet_eta_topo)[jet_i])<1.2) 
+		      {
+			chosenLeadTopoJetIndex=jet_i;
+			hasTopoJet=true;
+		      } 
+		    } // end loop over jet_pt_topo
+		  
+		  //now match truth jet with the chosen topo jet
+		  if (hasTopoJet)
+		    {
+		      for (int jet_i=0; jet_i<(*jet_pt_truth).size(); jet_i++)
+			{
+			  if (chosenLeadTruthJetIndex<0 && DeltaR((*jet_eta_topo)[chosenLeadTopoJetIndex],(*jet_phi_topo)[chosenLeadTopoJetIndex],(*jet_eta_truth)[jet_i],(*jet_phi_truth)[jet_i])<0.9)
+			    { 
+			      chosenLeadTruthJetIndex=jet_i;
+			    }	  
+			}	// end loop over jet_pt_truth
+		    } // end if(hasTopoJet)
+		} // end if(groomAlgoIndex==0)
 	      
 	      chosenLeadTruthJetIndex = groomAlgoIndex == 0 ? chosenLeadTruthJetIndex : 0;
-	      
+
+	      if (chosenLeadTruthJetIndex < 0)
+		continue;
 	      //Now I have which events to make my pt reweight with, and to match to, etc
 	      int chosenLeadGroomedIndex=-99;
 
-	      for (int jet_i=0; jet_i<(*jet_pt_groomed).size(); jet_i++){
+	      for (int jet_i=0; jet_i<(*jet_pt_groomed).size(); jet_i++)
+		{
 		
-		if (chosenLeadTruthJetIndex>=0 && chosenLeadGroomedIndex<0 && DeltaR((*jet_eta_truth)[chosenLeadTruthJetIndex],(*jet_phi_truth)[chosenLeadTruthJetIndex],(*jet_eta_groomed)[jet_i],(*jet_phi_groomed)[jet_i])<0.9 && (*jet_emfrac_groomed)[jet_i]<0.99 && fabs((*jet_eta_groomed)[jet_i])<1.2){
-		  chosenLeadGroomedIndex=jet_i;
-		}     
-	      } // end loop over jet_pt_groomed
+		  if (chosenLeadGroomedIndex<0 && DeltaR((*jet_eta_truth)[chosenLeadTruthJetIndex],(*jet_phi_truth)[chosenLeadTruthJetIndex],(*jet_eta_groomed)[jet_i],(*jet_phi_groomed)[jet_i])<0.9 && (*jet_emfrac_groomed)[jet_i]<0.99 && fabs((*jet_eta_groomed)[jet_i])<1.2)
+		    {
+		      chosenLeadGroomedIndex=jet_i;
+		      continue;
+		    }     
+		} // end loop over jet_pt_groomed
 	      
-	      if (chosenLeadTruthJetIndex < 0 || chosenLeadGroomedIndex == -99) // failed selection
+	      if (chosenLeadGroomedIndex == -99) // failed selection
 		  continue;	      
 	      
-	    leadGroomedIndex = chosenLeadGroomedIndex;
-	    leadTruthIndex = chosenLeadTruthJetIndex;
-	    leadTopoIndex = chosenLeadTopoJetIndex;
-	    mass = (*var_m_vec[2])[leadGroomedIndex]/1000.0 ;
+	      leadGroomedIndex = chosenLeadGroomedIndex;
+	      leadTruthIndex = chosenLeadTruthJetIndex;
+	      leadTopoIndex = chosenLeadTopoJetIndex;
+	      mass = (*var_m_vec[2])[leadGroomedIndex]/1000.0 ;
 
-	    if (applyMassWindow && (mass > mass_max && mass < mass_min))
-	      {
-		continue;
-	      }
+	      if (applyMassWindow && (mass > mass_max && mass < mass_min))
+		{
+		  continue;
+		}
 
 	    int lead_subjet = 0;
 
@@ -2132,41 +2067,38 @@ void makeMassWindowFile(bool applyMassWindow,bool extendedVars)
 	      {
 
 		std::vector<int> subjet_idx = (*subjet_index).at(leadGroomedIndex); // only groomed ones.....
-		    
 		std::pair<int,int> subjet_leading = getTwoLeadingSubjets(subjet_idx,var_subjets_pt_vec);
 
 		// calculate the mass drop
 		if (subjet_idx.size() <= 1)
 		  {
-
 		    var_massdrop = -999;
 		    var_yt = -999;
-			
-		    continue;
+		    //break;
 		  }
-		lead_subjet = subjet_leading.first;
-
-		double pt1 =  (*var_subjets_pt_vec)[subjet_leading.first];
-		double pt2 =  (*var_subjets_pt_vec)[subjet_leading.second];
-		double eta_1 =  (*var_subjets_eta_vec)[subjet_leading.first];
-		double eta_2 =  (*var_subjets_eta_vec)[subjet_leading.second];
-		double phi_1 = (*var_subjets_phi_vec)[subjet_leading.first];
-		double phi_2 = (*var_subjets_phi_vec)[subjet_leading.second];
-		double e1 = (*var_subjets_E_vec)[subjet_leading.first];
-
-		double subjet_mass =  (*var_subjets_m_vec)[subjet_leading.first];
-
-		double mu12 = subjet_mass/(mass*1000);
-		var_massdrop = mu12;
-
-		// momentum balance
-		double dRsub12 = DeltaR (eta_1, phi_1, eta_2, phi_2);
-		Float_t yt = (pt2*dRsub12)/(mass*1000);		    
-		yt*=yt;
-		/*if (yt > 100000)
-		  std::cout << "yt: " << yt << std::endl;*/
-		var_yt = yt;
-
+		else
+		  {
+		    lead_subjet = subjet_leading.first;
+		    
+		    double pt1 =  (*var_subjets_pt_vec)[subjet_leading.first];
+		    double pt2 =  (*var_subjets_pt_vec)[subjet_leading.second];
+		    double eta_1 =  (*var_subjets_eta_vec)[subjet_leading.first];
+		    double eta_2 =  (*var_subjets_eta_vec)[subjet_leading.second];
+		    double phi_1 = (*var_subjets_phi_vec)[subjet_leading.first];
+		    double phi_2 = (*var_subjets_phi_vec)[subjet_leading.second];
+		    double e1 = (*var_subjets_E_vec)[subjet_leading.first];
+		    
+		    double subjet_mass =  (*var_subjets_m_vec)[subjet_leading.first];
+		    
+		    double mu12 = subjet_mass/(mass*1000);
+		    var_massdrop = mu12;
+		    
+		    // momentum balance
+		    double dRsub12 = DeltaR (eta_1, phi_1, eta_2, phi_2);
+		    Float_t yt = (pt2*dRsub12)/(mass*1000);		    
+		    yt*=yt;
+		    var_yt = yt;
+		  }
 	      } // end if(subjets)
 
 	    // tau21
@@ -2179,7 +2111,7 @@ void makeMassWindowFile(bool applyMassWindow,bool extendedVars)
 		var_TauWTA2TauWTA1[0]=(*var_TauWTA2_vec[0])[leadTruthIndex]/(*var_TauWTA1_vec[0])[leadTruthIndex];
 		var_TauWTA2TauWTA1[2]=(*var_TauWTA2_vec[2])[leadGroomedIndex]/(*var_TauWTA1_vec[2])[leadGroomedIndex];
 		if (leadTopoIndex == -99)
-		  var_TauWTA2TauWTA1[1]=-99;//(*var_TauWTA2_vec[1])[leadGroomedIndex]/(*var_TauWTA1_vec[1])[leadGroomedIndex];
+		  var_TauWTA2TauWTA1[1]=-99;
 		else
 		  var_TauWTA2TauWTA1[1]=(*var_TauWTA2_vec[1])[leadTopoIndex]/(*var_TauWTA1_vec[1])[leadTopoIndex];
 	      }
@@ -2190,9 +2122,10 @@ void makeMassWindowFile(bool applyMassWindow,bool extendedVars)
 	    pt_reweight->Fill((*jet_pt_truth)[chosenLeadTruthJetIndex]/1000.0);
 
 	    }
+
 	  // write the rweight th1f things to the outfile...
 	  // calculate the new reweight with a new histogram!
-	  //std::cout << "negative masses: " << negative << std::endl;
+
 	  outTree->GetCurrentFile()->Write();
 	  pt_reweight->Write();
 
@@ -2209,11 +2142,6 @@ void makeMassWindowFile(bool applyMassWindow,bool extendedVars)
 	  delete intree;
 	}
     }
-    // not doing this yet.... TODO
-    /*for (int j=0; j<nFineBins; j++){
-      mass_max = TopEdgeMassWindow_finePt[i][j];
-      mass_min = BottomEdgeMassWindow_finePt[i][j];
-      }*/
     
   }
 
@@ -2268,55 +2196,28 @@ vector<std::string> getListOfJetBranches(std::string &algorithm)
   return branches;
 } // getListOfBranches()
 
-/*void plotVariables(TTree * tree, vector<std:string> & branches)
-  {
-  
-  
-  
-  } // plotVariables()*/
-
-
-void setMassBranch(TTree * tree, std::string &algorithm, int groomAlgoIndex)
-{
-  if (algorithm.find("AntiKt") == std::string::npos)
-    {
-      tree->SetBranchAddress(std::string("jet_"+AlgoPrefix[groomAlgoIndex]+"LC"+algorithm+"_m").c_str(), &currTree_mass);
-      tree->SetBranchStatus(std::string("jet_"+AlgoPrefix[groomAlgoIndex]+"LC"+algorithm+"_m").c_str(), 1);
-    }
-  else
-    {
-      tree->SetBranchAddress(std::string("jet_"+AlgoPrefix[groomAlgoIndex]+algorithm+"_m").c_str(), &currTree_mass);
-      tree->SetBranchStatus(std::string("jet_"+AlgoPrefix[groomAlgoIndex]+""+algorithm+"_m").c_str(), 1);
-    }
-
-} // setMassBranch()
 
 
 
- std::string returnJetType(std::string & samplePrefix, std::string & groomalgo, bool addLC, int i)
+std::string returnJetType(std::string & samplePrefix, std::string & groomalgo, bool addLC, int i)
 {
   std::string jetType = "";
       switch (i)
 	{
 	case 0: // truth
 	  jetType="jet_CamKt12Truth_";
-	  //jetType = "jet_" + samplePrefix + "Truth_";
-	  //jetType = "jet_" + samplePrefix + "Truth"+groomalgo.substr(4,groomalgo.length())+"_"; // added groomalgo+"_"
 	  break;
 	case 1: // topo
-	  //jetType="jet_CamKt12LCTopo_";
 	  if (addLC)
 	    jetType = "jet_" + samplePrefix + "LCTopo_";
 	  else
 	    jetType = "jet_" + samplePrefix + "Topo_";
 	  break;
 	default: // groomed
-	  //jetType="jet_CamKt12LC"+groomalgo+"_";
 	  if (addLC)
 	    jetType = "jet_" + samplePrefix +"LC" + groomalgo + "_";
 	  else
-	    jetType = "jet_" + samplePrefix + groomalgo + "_"; 
-	  
+	    jetType = "jet_" + samplePrefix + groomalgo + "_"; 	  
 	}
       return jetType;
 } // returnJetType
@@ -2330,18 +2231,6 @@ std::string returnSubJetType(std::string & samplePrefix, std::string & groomalgo
 
 }// return subjettype
 
-
-void clearVectors()
-{
-
-  // clear the vectors that we are using to add new derived variables
-
-  var_massdrop = 0;
-  var_yt = 0;
-  //var_Tau21.clear();
-  //var_TauWTA2TauWTA1.clear();
-
-} // clear VEctors
 
 
 void addJetsBranches(TTree * tree, std::string & groomalgo, bool signal, int groomIdx)
@@ -2357,16 +2246,15 @@ void addJetsBranches(TTree * tree, std::string & groomalgo, bool signal, int gro
 
 void addJets(TChain * tree, std::string &groomalgo, bool signal, int groomIdx, bool extendedVars)
 {
-  tree->SetBranchAddress("mc_event_weight",&mc_event_weight);
-  tree->SetBranchAddress("mc_channel_number", &mc_channel_number);
-
   std::string samplePrefix = "";
   bool addLC = false;
   samplePrefix = AlgoPrefix[groomIdx];
-
-
+  
   if (groomIdx <= 6) // we're doing reclustering
     addLC = true; // just add the LC to the name
+
+  tree->SetBranchAddress("mc_event_weight",&mc_event_weight);
+  tree->SetBranchAddress("mc_channel_number", &mc_channel_number);
 
   for (int i = 0; i < jetType::MAX; i++) // truth, topo, groomed
     {
@@ -2380,7 +2268,7 @@ void addJets(TChain * tree, std::string &groomalgo, bool signal, int groomIdx, b
       tree->SetBranchAddress(std::string(jetType+"phi").c_str(),&var_phi_vec.at(i));
       tree->SetBranchStatus(std::string(jetType+"constit_index").c_str(),1);
       tree->SetBranchAddress(std::string(jetType+"constit_index").c_str(),&var_constit_index.at(i));
-      if (i != 0)
+      if (i != 0) // no truth emfrac
 	tree->SetBranchAddress(std::string(jetType+"emfrac").c_str(),&var_emfrac_vec.at(i));
       tree->SetBranchAddress(std::string(jetType+"Tau1").c_str(),&var_Tau1_vec.at(i));
       tree->SetBranchAddress(std::string(jetType+"Tau2").c_str(),&var_Tau2_vec.at(i));
@@ -2409,18 +2297,14 @@ void addJets(TChain * tree, std::string &groomalgo, bool signal, int groomIdx, b
 	  tree->SetBranchAddress(std::string(jetType+"ZCUT12").c_str(),&var_ZCUT12_vec.at(i));
 	}
 
-
     } // end for loop over topo/truth/groom
-
-  //if (!subjets)
-  //return;
 
   std::string jetType = returnJetType( samplePrefix, groomalgo, addLC, 2); //set to truth/ topo/ groomed
   std::string subjetType = returnSubJetType(samplePrefix, groomalgo, addLC);
   
   tree->SetBranchStatus(std::string(subjetIndex[groomalgo]).c_str(),1);
   tree->SetBranchAddress(std::string(subjetIndex[groomalgo]).c_str(),&subjet_index);
-  std::cout << subjetIndex[groomalgo] << std::endl;
+
   if(!tree->GetListOfBranches()->FindObject(std::string(subjetIndex[groomalgo]).c_str())) {
     std::cout << "subjet branch is not here" << std::endl;}
   
@@ -2430,7 +2314,6 @@ void addJets(TChain * tree, std::string &groomalgo, bool signal, int groomIdx, b
   tree->SetBranchAddress(std::string(subjetType+"eta").c_str(),&var_subjets_eta_vec);
   tree->SetBranchAddress(std::string(subjetType+"phi").c_str(),&var_subjets_phi_vec);
   
-
 }//addJets
 
 void addSubJets(TTree * tree, std::string & groomalgo, bool signal, int groomIdx)
@@ -2443,7 +2326,6 @@ void addSubJets(TTree * tree, std::string & groomalgo, bool signal, int groomIdx
   if (groomIdx <= 6) // we're doing reclustering
     addLC = true; // just add the LC to the name
 
-
   std::string jetType = returnJetType( samplePrefix, groomalgo, addLC, 2); //set to truth/ topo/ groomed
   std::string subjetType = returnSubJetType(samplePrefix, groomalgo, addLC);
   
@@ -2453,18 +2335,8 @@ void addSubJets(TTree * tree, std::string & groomalgo, bool signal, int groomIdx
   tree->Branch(std::string(subjetType+"eta").c_str(),&var_subjets_eta,std::string(subjetType+"eta/F").c_str());
   tree->Branch(std::string(subjetType+"phi").c_str(),&var_subjets_phi,std::string(subjetType+"phi/F").c_str());
 
-
-
   tree->Branch(std::string(jetType+"massdrop").c_str(),&var_massdrop, std::string(jetType+"massdrop/F").c_str());
   tree->Branch(std::string(jetType+"yt").c_str(),&var_yt,std::string(jetType+"yt/F").c_str());
-
-
-
-/*tree->SetBranchStatus(std::string(jetType+"massdrop").c_str(),1);
-  tree->SetBranchStatus(std::string(jetType+"yt").c_str(),1);
-  tree->SetBranchStatus(std::string(returnJetType(samplePrefix, groomalgo, addLC,0)+"Tau21").c_str(),1);
-  tree->SetBranchStatus(std::string(returnJetType(samplePrefix, groomalgo, addLC,1)+"Tau21").c_str(),1);
-  tree->SetBranchStatus(std::string(jetType+"Tau21").c_str(),1);*/
 
 } //addJets()
 
@@ -2472,8 +2344,7 @@ void addSubJets(TTree * tree, std::string & groomalgo, bool signal, int groomIdx
 //void getBranchesSelection(TTree * tree, std::string & algorithm)
 void setSelectionVectors(bool signal, std::string & algorithm)
 {  
-  
-
+ 
   jet_eta_truth = var_eta_vec[0];
   jet_phi_truth = var_phi_vec[0];
   jet_pt_truth = var_pt_vec[0];
@@ -2488,8 +2359,7 @@ void setSelectionVectors(bool signal, std::string & algorithm)
   jet_phi_groomed = var_phi_vec[2];
   jet_pt_groomed = var_pt_vec[2];
   jet_emfrac_groomed = var_emfrac_vec[2];
-
-  
+ 
 }// setSelectionVectors()
 
 void initVectors()
@@ -2548,13 +2418,6 @@ void initVectors()
   var_subjets_m_vec = 0;
   var_subjets_eta_vec = 0;
   var_subjets_phi_vec = 0;
-  /*var_massdrop_vec = new vector<Float_t>(5);
-    var_yt_vec = new vector<Float_t>(5);*/
-  //var_Tau21 = 0;//[0];
-  //var_Tau21 = 0;//[1];
-  //var_Tau21 = 0;//[2];
-	
-    
 
 } // initVEctors
 
@@ -2580,6 +2443,9 @@ void setOutputVariables(bool extendedVars, int jet_idx_truth, int jet_idx_topo, 
 	  break;
 	}
       
+      if (jet_idx == -99)
+	continue;
+
       var_E[x]=(*var_E_vec[x])[jet_idx];
       var_pt[x]=(*var_pt_vec[x])[jet_idx];
       var_m[x]=(*var_m_vec[x])[jet_idx];
@@ -2608,7 +2474,7 @@ void setOutputVariables(bool extendedVars, int jet_idx_truth, int jet_idx_topo, 
       var_Pull_C10[x]=(*var_Pull_C10_vec[x])[jet_idx];
       var_Pull_C11[x]=(*var_Pull_C11_vec[x])[jet_idx];
       // tau21 is set in the main loop, not here, because we have to calculate it
-      //var_Tau21[x]=(*var_Tau21_vec[x])[jet_idx];
+
       if (extendedVars)
 	{
 	  var_TauWTA1[x]=(*var_TauWTA1_vec[x])[jet_idx];
@@ -2627,14 +2493,13 @@ void setOutputVariables(bool extendedVars, int jet_idx_truth, int jet_idx_topo, 
       var_subjets_phi = (*var_subjets_phi_vec)[subjet_idx];
     }
 
-
-    
-  //var_massdrop = var_subjets_E_vec;
-  //var_yt = var_subjets_E_vec;
 } //setOutputVariables
 
 void clearOutputVariables()
 {
+
+  var_massdrop = 0;
+  var_yt = 0;
 
   var_E.clear();
   var_pt.clear();
@@ -2677,37 +2542,37 @@ void resetOutputVariables()
   for (int i = 0; i < jetType::MAX; i++)
     {
 
-      var_E.push_back(0);
-      var_pt.push_back(0);
-      var_m.push_back(0);
-      var_eta.push_back(0);
-      var_phi.push_back(0);
-      var_emfrac.push_back(0);
-      var_Tau1.push_back(0);
-      var_Tau2.push_back(0);
-      var_Tau3.push_back(0);
-      var_WIDTH.push_back(0);
-      var_SPLIT12.push_back(0);
-      var_SPLIT23.push_back(0);
-      var_SPLIT34.push_back(0);
-      var_Dip12.push_back(0);
-      var_Dip13.push_back(0);
-      var_Dip23.push_back(0);
-      var_DipExcl12.push_back(0);
-      var_PlanarFlow.push_back(0);
-      var_Angularity.push_back(0);
-      var_QW.push_back(0);
-      var_PullMag.push_back(0);
-      var_PullPhi.push_back(0);
-      var_Pull_C00.push_back(0);
-      var_Pull_C01.push_back(0);
-      var_Pull_C10.push_back(0);
-      var_Pull_C11.push_back(0);
-      var_Tau21.push_back(0);
-      var_TauWTA2TauWTA1.push_back(0);
-      var_TauWTA1.push_back(0);
-      var_TauWTA2.push_back(0);
-      var_ZCUT12.push_back(0);
+      var_E.push_back(-999);
+      var_pt.push_back(-999);
+      var_m.push_back(-999);
+      var_eta.push_back(-999);
+      var_phi.push_back(-999);
+      var_emfrac.push_back(-999);
+      var_Tau1.push_back(-999);
+      var_Tau2.push_back(-999);
+      var_Tau3.push_back(-999);
+      var_WIDTH.push_back(-999);
+      var_SPLIT12.push_back(-999);
+      var_SPLIT23.push_back(-999);
+      var_SPLIT34.push_back(-999);
+      var_Dip12.push_back(-999);
+      var_Dip13.push_back(-999);
+      var_Dip23.push_back(-999);
+      var_DipExcl12.push_back(-999);
+      var_PlanarFlow.push_back(-999);
+      var_Angularity.push_back(-999);
+      var_QW.push_back(-999);
+      var_PullMag.push_back(-999);
+      var_PullPhi.push_back(-999);
+      var_Pull_C00.push_back(-999);
+      var_Pull_C01.push_back(-999);
+      var_Pull_C10.push_back(-999);
+      var_Pull_C11.push_back(-999);
+      var_Tau21.push_back(-999);
+      var_TauWTA2TauWTA1.push_back(-999);
+      var_TauWTA1.push_back(-999);
+      var_TauWTA2.push_back(-999);
+      var_ZCUT12.push_back(-999);
     }
 } //resetOutputVariables
 
@@ -2735,8 +2600,6 @@ void setOutputBranches(TTree * tree, std::string & groomalgo, int groomIdx, bool
       tree->Branch(std::string(jetType+"m").c_str(),&var_m.at(i),std::string(jetType+"m/F").c_str());
       tree->Branch(std::string(jetType+"eta").c_str(),&var_eta.at(i),std::string(jetType+"eta/F").c_str());
       tree->Branch(std::string(jetType+"phi").c_str(),&var_phi.at(i),std::string(jetType+"phi/F").c_str());
-      //tree->SetBranchStatus(std::string(jetType+"constit_index").c_str(),1);
-      //tree->Branch(std::string(jetType+"constit_index").c_str(),&var_constit_index.at(i),std::string(jetType+"E"+"/F").c_str());
       if (i != 0)
 	tree->Branch(std::string(jetType+"emfrac").c_str(),&var_emfrac.at(i),std::string(jetType+"emfrac"+"/F").c_str());
       tree->Branch(std::string(jetType+"Tau1").c_str(),&var_Tau1.at(i),std::string(jetType+"Tau1/F").c_str());
@@ -2760,29 +2623,66 @@ void setOutputBranches(TTree * tree, std::string & groomalgo, int groomIdx, bool
       tree->Branch(std::string(jetType+"Pull_C10").c_str(),&var_Pull_C10.at(i),std::string(jetType+"Pull_C10/F").c_str());
       tree->Branch(std::string(jetType+"Pull_C11").c_str(),&var_Pull_C11.at(i),std::string(jetType+"Pull_C11/F").c_str());
 
-     // end for loop over topo/truth/groom
 
-  if (extendedVars)
-    {
-      tree->Branch(std::string(jetType+"TauWTA1").c_str(),&var_TauWTA1.at(i),std::string(jetType+"TauWTA1/F").c_str());
-      tree->Branch(std::string(jetType+"TauWTA2").c_str(),&var_TauWTA2.at(i),std::string(jetType+"TauWTA2/F").c_str());
-      tree->Branch(std::string(jetType+"ZCUT12").c_str(),&var_ZCUT12.at(i),std::string(jetType+"ZCUT12/F").c_str());
+      if (extendedVars)
+	{
+	  tree->Branch(std::string(jetType+"TauWTA1").c_str(),&var_TauWTA1.at(i),std::string(jetType+"TauWTA1/F").c_str());
+	  tree->Branch(std::string(jetType+"TauWTA2").c_str(),&var_TauWTA2.at(i),std::string(jetType+"TauWTA2/F").c_str());
+	  tree->Branch(std::string(jetType+"ZCUT12").c_str(),&var_ZCUT12.at(i),std::string(jetType+"ZCUT12/F").c_str());
+	  
+	  tree->Branch(std::string(returnJetType(samplePrefix, groomalgo, addLC,0)+"TauWTA2/TauWTA1").c_str(),&var_TauWTA2TauWTA1.at(0),std::string(jetType+"TauWTA2TauWTA1/F").c_str());
+	  tree->Branch(std::string(returnJetType(samplePrefix, groomalgo, addLC,1)+"TauWTA2/TauWTA1").c_str(),&var_TauWTA2TauWTA1.at(1),std::string(jetType+"TauWTA2TauWTA1/F").c_str());
+	  tree->Branch(std::string(jetType+"TauWTA2/TauWTA1").c_str(),&var_TauWTA2TauWTA1.at(2),std::string(jetType+"TauWTA2TauWTA1/F").c_str());  
+	  
+	}
 
-      tree->Branch(std::string(returnJetType(samplePrefix, groomalgo, addLC,0)+"TauWTA2/TauWTA1").c_str(),&var_TauWTA2TauWTA1.at(0),std::string(jetType+"TauWTA2TauWTA1/F").c_str());
-      tree->Branch(std::string(returnJetType(samplePrefix, groomalgo, addLC,1)+"TauWTA2/TauWTA1").c_str(),&var_TauWTA2TauWTA1.at(1),std::string(jetType+"TauWTA2TauWTA1/F").c_str());
-      tree->Branch(std::string(jetType+"TauWTA2/TauWTA1").c_str(),&var_TauWTA2TauWTA1.at(2),std::string(jetType+"TauWTA2TauWTA1/F").c_str());  
-
-    }
-
-  tree->Branch(std::string(returnJetType(samplePrefix, groomalgo, addLC,0)+"Tau21").c_str(),&var_Tau21.at(0),std::string(jetType+"Tau21/F").c_str());
-  tree->Branch(std::string(returnJetType(samplePrefix, groomalgo, addLC,1)+"Tau21").c_str(),&var_Tau21.at(1),std::string(jetType+"Tau21/F").c_str());
-  tree->Branch(std::string(jetType+"Tau21").c_str(),&var_Tau21.at(2),std::string(jetType+"Tau21/F").c_str());  
-
-
-
-  //      tree->Branch(std::string(jetType+"TauWTA2/TauWTA1").c_str(),&var_TauWTA2TauWTA1.at(i),std::string(jetType+"TauWTA2/TauWTA1"+"/F").c_str());
-
+      tree->Branch(std::string(returnJetType(samplePrefix, groomalgo, addLC,0)+"Tau21").c_str(),&var_Tau21.at(0),std::string(jetType+"Tau21/F").c_str());
+      tree->Branch(std::string(returnJetType(samplePrefix, groomalgo, addLC,1)+"Tau21").c_str(),&var_Tau21.at(1),std::string(jetType+"Tau21/F").c_str());
+      tree->Branch(std::string(jetType+"Tau21").c_str(),&var_Tau21.at(2),std::string(jetType+"Tau21/F").c_str());  
 
     }
   
 } // setOutputBranches
+
+
+
+void scaleHists()
+{
+  for (int ii=0; ii<nAlgos; ii++){//-1; ii++){
+    int i = algoMap[ii]; // this is here because we don't always run all algorithms, just a subsample...
+	
+    qcd_Lead_CA12_pt[i]->Scale(1.0/qcd_Lead_CA12_pt[i]->Integral());  
+    Wprime_Lead_CA12_pt[i]->Scale(1.0/Wprime_Lead_CA12_pt[i]->Integral());
+    Wprime_Lead_CA12_scaled_pt[i]->Scale(1.0/Wprime_Lead_CA12_scaled_pt[i]->Integral());
+	
+    for (int j=0; j<nPtBins; j++){
+      qcd_Lead_CA12_mass[i][j]->Scale(1.0/qcd_Lead_CA12_mass[i][j]->Integral());
+      Wprime_Lead_CA12_mass[i][j]->Scale(1.0/Wprime_Lead_CA12_mass[i][j]->Integral());
+    }
+	
+    for (int j=0; j<nFineBins; j++){	  
+      qcd_finePtBin_mass[i][j]->Scale(1.0/qcd_finePtBin_mass[i][j]->Integral());
+      Wprime_finePtBin_mass[i][j]->Scale(1.0/Wprime_finePtBin_mass[i][j]->Integral());
+    }	
+    //qcd_PtReweight[i]->Scale(1.0/qcd_PtReweight[i]->Integral());
+    //Wp_PtReweight[i]->Scale(1.0/Wp_PtReweight[i]->Integral());
+    Wprime_Lead_CA12_scaled_pt[i]->Scale(1.0/Wprime_Lead_CA12_scaled_pt[i]->Integral());
+		
+  }
+
+} // scaleHists
+
+
+void getMPV()
+{
+  for (int ii=0; ii<nAlgos; ii++){//-1; ii++){
+    int i = algoMap[ii];
+    for (int j=0; j<nPtBins; j++){
+      myMPV[i][j]=mpv(Wprime_Lead_CA12_mass[i][j]);
+    }
+    
+    for (int j=0; j<nFineBins; j++){
+      myMPV_finePt[i][j]=mpv(Wprime_finePtBin_mass[i][j]);
+    }
+  }
+} //getMPV
