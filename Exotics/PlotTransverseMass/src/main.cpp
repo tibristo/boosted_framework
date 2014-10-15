@@ -1947,7 +1947,7 @@ void makeMassWindowFile(bool applyMassWindow,bool extendedVars)
 	      }
 	    }
 
-	  addJets(inputTChain[tchainIdx], AlgoNames[i], signal, i, extendedVars); //set all of the branches for the output tree for the jets	  
+	  setJetsBranches(inputTChain[tchainIdx], AlgoNames[i], signal, i, extendedVars); //set all of the branches for the output tree for the jets	  
 	  mass_max = TopEdgeMassWindow[i][j];
 	  mass_min = BottomEdgeMassWindow[i][j];
 
@@ -2054,6 +2054,7 @@ void makeMassWindowFile(bool applyMassWindow,bool extendedVars)
 	      leadGroomedIndex = chosenLeadGroomedIndex;
 	      leadTruthIndex = chosenLeadTruthJetIndex;
 	      leadTopoIndex = chosenLeadTopoJetIndex;
+	      runNumberOut = runNumberIn;
 	      mass = (*var_m_vec[2])[leadGroomedIndex]/1000.0 ;
 
 	      if (applyMassWindow && (mass > mass_max && mass < mass_min))
@@ -2241,10 +2242,11 @@ void addJetsBranches(TTree * tree, std::string & groomalgo, bool signal, int gro
   //tree->Branch("pt_reweight",&pt_reweight, "pt_reweight/F");
   tree->Branch("normalisation",&normalisation, "normalisation/F");
   tree->Branch("NEvents",&NEvents,"NEvents/I");
+  tree->Branch("RunNumber",&runNumberOut, "RunNumber/I");
   //tree->Branch("NEvents_weighted",&NEvents_weighted,"NEvents_weighted/F");
 }// addJetsBranches
 
-void addJets(TChain * tree, std::string &groomalgo, bool signal, int groomIdx, bool extendedVars)
+void setJetsBranches(TChain * tree, std::string &groomalgo, bool signal, int groomIdx, bool extendedVars)
 {
   std::string samplePrefix = "";
   bool addLC = false;
@@ -2255,6 +2257,7 @@ void addJets(TChain * tree, std::string &groomalgo, bool signal, int groomIdx, b
 
   tree->SetBranchAddress("mc_event_weight",&mc_event_weight);
   tree->SetBranchAddress("mc_channel_number", &mc_channel_number);
+  tree->SetBranchAddress("RunNumber", &runNumberIn);
 
   for (int i = 0; i < jetType::MAX; i++) // truth, topo, groomed
     {
@@ -2314,7 +2317,7 @@ void addJets(TChain * tree, std::string &groomalgo, bool signal, int groomIdx, b
   tree->SetBranchAddress(std::string(subjetType+"eta").c_str(),&var_subjets_eta_vec);
   tree->SetBranchAddress(std::string(subjetType+"phi").c_str(),&var_subjets_phi_vec);
   
-}//addJets
+}//setJetsBranches
 
 void addSubJets(TTree * tree, std::string & groomalgo, bool signal, int groomIdx)
 {
@@ -2338,7 +2341,7 @@ void addSubJets(TTree * tree, std::string & groomalgo, bool signal, int groomIdx
   tree->Branch(std::string(jetType+"massdrop").c_str(),&var_massdrop, std::string(jetType+"massdrop/F").c_str());
   tree->Branch(std::string(jetType+"yt").c_str(),&var_yt,std::string(jetType+"yt/F").c_str());
 
-} //addJets()
+} //addSubJets()
 
 
 //void getBranchesSelection(TTree * tree, std::string & algorithm)
