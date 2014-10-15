@@ -96,8 +96,8 @@ void setMassBranch(TTree * tree, std::string &algorithm, int groomAlgoIndex);
 void plotVariables(TTree * tree, vector<std::string> & branches);
 std::vector<std::string> getListOfBranches(std::string &algorithm);
 //void make68Plots(int algidx, TChain * bkg, TChain * sig);
-void makeMassWindowFile(bool applyMassWindow, std::vector<std::string> & inputBkgFiles, std::vector<std::string> & inputSigFiles);
-void addJets(TChain * tree, std::string & algorithm, bool signal, int groomIdx);
+void makeMassWindowFile(bool applyMassWindow, bool extendedVars);
+void addJets(TChain * tree, std::string & algorithm, bool signal, int groomIdx, bool extendedVars);
 void addJetsBranches(TTree * tree, std::string & algorithm, bool signal, int groomIdx);
 void addSubJets(TTree * tree, std::string & algorithm, bool signal, int groomIdx);
 //void getBranchesSelection(TTree * tree, std::string & algorithm);
@@ -109,10 +109,14 @@ std::pair<int,int> getTwoLeadingSubjets(std::vector<int> & indices, std::vector<
 std::string returnJetType(std::string & samplePrefix, std::string & groomalgo, bool addLC, int idx);
 std::string returnSubJetType(std::string & samplePrefix, std::string & groomalgo, bool addLC);
 void clearVectors();
-
+void clearOutputVariables();
+void setOutputVariables(bool extendedVars, int idx1, int idx2, int idx3, int subidx);
+void setOutputBranches(TTree* tree, std::string & algorithm, int groomIdx, bool extendedVars);
+void resetOutputVariables();
 
 enum class groomAlgoEnum{groomZero, TopoSplitFilteredMu67SmallR0YCut9, TopoSplitFilteredMu100SmallR30YCut4, TopoTrimmedPtFrac5SmallR30, TopoTrimmedPtFrac5SmallR20, TopoPrunedCaRcutFactor50Zcut10, TopoPrunedCaRcutFactor50Zcut20, AntiKt2LCTopo, AntiKt3LCTopo, AntiKt4LCTopo};
 enum sampleType{BACKGROUND, SIGNAL};
+enum jetType{TRUTH,TOPO,GROOMED,MAX};
 //groomAlgo options:
 //TopoSplitFilteredMu67SmallR0YCut9   - 1
 //TopoSplitFilteredMu100SmallR30YCut4  - 2
@@ -150,7 +154,10 @@ Float_t normalisation = 1.0;
 Int_t NEvents = 0;
 std::map<int, float> NEvents_weighted;
 Float_t mc_event_weight = 1.0;
+Float_t mc_event_weight_out = 1.0;
 UInt_t mc_channel_number  = 0;
+UInt_t mc_channel_number_out  = 0;
+
 
 //QCD split filtering with Y cut 9
 vector<float> * qcd_CA12_truth_pt = 0;
@@ -451,88 +458,102 @@ static inline std::string &rtrim(std::string &s) {
 
 
 
-std::map<int, std::vector<Float_t> *> signal_E_vec;
-std::map<int, std::vector<Float_t> *> signal_pt_vec;
-std::map<int, std::vector<Float_t> *> signal_m_vec;
-std::map<int, std::vector<Float_t> *> signal_eta_vec;
-std::map<int, std::vector<Float_t> *> signal_phi_vec;
-std::map<int, std::vector<Float_t> *> signal_emfrac_vec;
-std::map<int, std::vector<Float_t> *> signal_Tau1_vec;
-std::map<int, std::vector<Float_t> *> signal_Tau2_vec;
-std::map<int, std::vector<Float_t> *> signal_Tau3_vec;
-std::map<int, std::vector<Float_t> *> signal_WIDTH_vec;
-std::map<int, std::vector<Float_t> *> signal_SPLIT12_vec;
-std::map<int, std::vector<Float_t> *> signal_SPLIT23_vec;
-std::map<int, std::vector<Float_t> *> signal_SPLIT34_vec;
-std::map<int, std::vector<Float_t> *> signal_Dip12_vec;
-std::map<int, std::vector<Float_t> *> signal_Dip13_vec;
-std::map<int, std::vector<Float_t> *> signal_Dip23_vec;
-std::map<int, std::vector<Float_t> *> signal_DipExcl12_vec;
-std::map<int, std::vector<Float_t> *> signal_PlanarFlow_vec;
-std::map<int, std::vector<Float_t> *> signal_Angularity_vec;
-std::map<int, std::vector<Float_t> *> signal_QW_vec;
-std::map<int, std::vector<Float_t> *> signal_PullMag_vec;
-std::map<int, std::vector<Float_t> *> signal_PullPhi_vec;
-std::map<int, std::vector<Float_t> *> signal_Pull_C00_vec;
-std::map<int, std::vector<Float_t> *> signal_Pull_C01_vec;
-std::map<int, std::vector<Float_t> *> signal_Pull_C10_vec;
-std::map<int, std::vector<Float_t> *> signal_Pull_C11_vec;
 
 
+std::map<int, std::vector<Float_t> *> var_E_vec;
+std::map<int, std::vector<Float_t> *> var_pt_vec;
+std::map<int, std::vector<Float_t> *> var_m_vec;
+std::map<int, std::vector<Float_t> *> var_eta_vec;
+std::map<int, std::vector<Float_t> *> var_phi_vec;
+std::map<int, std::vector<Float_t> *> var_emfrac_vec;
+std::map<int, std::vector<Float_t> *> var_Tau1_vec;
+std::map<int, std::vector<Float_t> *> var_Tau2_vec;
+std::map<int, std::vector<Float_t> *> var_Tau3_vec;
+std::map<int, std::vector<Float_t> *> var_WIDTH_vec;
+std::map<int, std::vector<Float_t> *> var_SPLIT12_vec;
+std::map<int, std::vector<Float_t> *> var_SPLIT23_vec;
+std::map<int, std::vector<Float_t> *> var_SPLIT34_vec;
+std::map<int, std::vector<Float_t> *> var_Dip12_vec;
+std::map<int, std::vector<Float_t> *> var_Dip13_vec;
+std::map<int, std::vector<Float_t> *> var_Dip23_vec;
+std::map<int, std::vector<Float_t> *> var_DipExcl12_vec;
+std::map<int, std::vector<Float_t> *> var_PlanarFlow_vec;
+std::map<int, std::vector<Float_t> *> var_Angularity_vec;
+std::map<int, std::vector<Float_t> *> var_QW_vec;
+std::map<int, std::vector<Float_t> *> var_PullMag_vec;
+std::map<int, std::vector<Float_t> *> var_PullPhi_vec;
+std::map<int, std::vector<Float_t> *> var_Pull_C00_vec;
+std::map<int, std::vector<Float_t> *> var_Pull_C01_vec;
+std::map<int, std::vector<Float_t> *> var_Pull_C10_vec;
+std::map<int, std::vector<Float_t> *> var_Pull_C11_vec;
 
-std::map<int, std::vector<Float_t> *> bkg_E_vec;
-std::map<int, std::vector<Float_t> *> bkg_pt_vec;
-std::map<int, std::vector<Float_t> *> bkg_m_vec;
-std::map<int, std::vector<Float_t> *> bkg_eta_vec;
-std::map<int, std::vector<Float_t> *> bkg_phi_vec;
-std::map<int, std::vector<Float_t> *> bkg_emfrac_vec;
-std::map<int, std::vector<Float_t> *> bkg_Tau1_vec;
-std::map<int, std::vector<Float_t> *> bkg_Tau2_vec;
-std::map<int, std::vector<Float_t> *> bkg_Tau3_vec;
-std::map<int, std::vector<Float_t> *> bkg_WIDTH_vec;
-std::map<int, std::vector<Float_t> *> bkg_SPLIT12_vec;
-std::map<int, std::vector<Float_t> *> bkg_SPLIT23_vec;
-std::map<int, std::vector<Float_t> *> bkg_SPLIT34_vec;
-std::map<int, std::vector<Float_t> *> bkg_Dip12_vec;
-std::map<int, std::vector<Float_t> *> bkg_Dip13_vec;
-std::map<int, std::vector<Float_t> *> bkg_Dip23_vec;
-std::map<int, std::vector<Float_t> *> bkg_DipExcl12_vec;
-std::map<int, std::vector<Float_t> *> bkg_PlanarFlow_vec;
-std::map<int, std::vector<Float_t> *> bkg_Angularity_vec;
-std::map<int, std::vector<Float_t> *> bkg_QW_vec;
-std::map<int, std::vector<Float_t> *> bkg_PullMag_vec;
-std::map<int, std::vector<Float_t> *> bkg_PullPhi_vec;
-std::map<int, std::vector<Float_t> *> bkg_Pull_C00_vec;
-std::map<int, std::vector<Float_t> *> bkg_Pull_C01_vec;
-std::map<int, std::vector<Float_t> *> bkg_Pull_C10_vec;
-std::map<int, std::vector<Float_t> *> bkg_Pull_C11_vec;
+std::map<int, std::vector<Float_t> *> var_TauWTA1_vec; 
+std::map<int, std::vector<Float_t> *> var_TauWTA2_vec; 
+std::map<int, std::vector<Float_t> *> var_TauWTA2TauWTA1_vec; 
+std::map<int, std::vector<Float_t> *> var_ZCUT12_vec;
 
 
-std::map<int, std::vector<std::vector < int>  > * > signal_constit_index;
-std::map<int, std::vector<std::vector < int>  > * > bkg_constit_index;
+std::map<int, std::vector<std::vector < int>  > * > var_constit_index;
 
 std::vector<std::vector <int> > * subjet_index;
 
+std::vector<Float_t> * var_subjets_E_vec;
+std::vector<Float_t> * var_subjets_pt_vec;
+std::vector<Float_t> * var_subjets_m_vec;
+std::vector<Float_t> * var_subjets_eta_vec;
+std::vector<Float_t> * var_subjets_phi_vec;
+//std::vector<Float_t> var_massdrop_vec;
+//std::vector<Float_t> var_yt_vec;
+//std::map<int, std::vector<Float_t> > var_Tau21_vec;
 
 
-std::vector<Float_t> * signal_subjets_E_vec;
-std::vector<Float_t> * signal_subjets_pt_vec;
-std::vector<Float_t> * signal_subjets_m_vec;
-std::vector<Float_t> * signal_subjets_eta_vec;
-std::vector<Float_t> * signal_subjets_phi_vec;
+// variables that we write out to the outfile
 
-std::vector<Float_t> * bkg_subjets_E_vec;
-std::vector<Float_t> * bkg_subjets_pt_vec;
-std::vector<Float_t> * bkg_subjets_m_vec;
-std::vector<Float_t> * bkg_subjets_eta_vec;
-std::vector<Float_t> * bkg_subjets_phi_vec;
+// store one value each for truth, topo, groomed
+std::vector<Float_t> var_E;
+std::vector<Float_t> var_pt;
+std::vector<Float_t> var_m;
+std::vector<Float_t> var_eta;
+std::vector<Float_t> var_phi;
+std::vector<Float_t> var_emfrac;
+std::vector<Float_t> var_Tau1;
+std::vector<Float_t> var_Tau2;
+std::vector<Float_t> var_Tau3;
+std::vector<Float_t> var_WIDTH;
+std::vector<Float_t> var_SPLIT12;
+std::vector<Float_t> var_SPLIT23;
+std::vector<Float_t> var_SPLIT34;
+std::vector<Float_t> var_Dip12;
+std::vector<Float_t> var_Dip13;
+std::vector<Float_t> var_Dip23;
+std::vector<Float_t> var_DipExcl12;
+std::vector<Float_t> var_PlanarFlow;
+std::vector<Float_t> var_Angularity;
+std::vector<Float_t> var_QW;
+std::vector<Float_t> var_PullMag;
+std::vector<Float_t> var_PullPhi;
+std::vector<Float_t> var_Pull_C00;
+std::vector<Float_t> var_Pull_C01;
+std::vector<Float_t> var_Pull_C10;
+std::vector<Float_t> var_Pull_C11;
+std::vector<Float_t> var_Tau21;
 
-std::vector<Float_t> signal_massdrop_vec;
-std::vector<Float_t> signal_yt_vec;
-std::vector<Float_t> bkg_massdrop_vec;
-std::vector<Float_t> bkg_yt_vec;
-std::map<int, std::vector<Float_t> > signal_Tau21_vec;
-std::map<int, std::vector<Float_t> > bkg_Tau21_vec;
+// these variables are only stored for the subjets of the groomed jets, so we don't need a vector
+Float_t var_subjets_E;
+Float_t var_subjets_pt;
+Float_t var_subjets_m;
+Float_t var_subjets_eta;
+Float_t var_subjets_phi;
+Float_t var_massdrop;
+Float_t var_yt;
+
+// these variables are only in Lily's samples, so we need to add a flag to say we are running on those samples
+std::vector<Float_t> var_TauWTA1; 
+std::vector<Float_t> var_TauWTA2; 
+std::vector<Float_t> var_TauWTA2TauWTA1; 
+std::vector<Float_t> var_ZCUT12;
+
+
 
 bool subjets;
 
