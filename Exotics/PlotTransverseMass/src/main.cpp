@@ -47,6 +47,7 @@ int main( int argc, char * argv[] ) {
   bool getMPVFlag = false;
   bool checkBkgFrac = false;
   bool applyMassWindowFlag = false;
+  std::string fileid = "";
         po::variables_map vm;
     try {
         int opt;
@@ -81,6 +82,7 @@ int main( int argc, char * argv[] ) {
 	  ("make-ptplots", po::value<bool>(&makePtPlotsFlag)->default_value(false),"create pT plots")
 	  ("scale-hists", po::value<bool>(&scaleHists)->default_value(false),"scale mass/ pt histograms")
 	  ("mpv", po::value<bool>(&getMPVFlag)->default_value(false),"Find the MPV")
+	  ("fileid", po::value<string>(&fileid)->default_value(""),"Add an identifier to the output folder/ file names")
 	  ("bkg-frac", po::value<bool>(&checkBkgFrac)->default_value(false),"Check the background fraction in the signal")
             ;
 
@@ -190,6 +192,8 @@ int main( int argc, char * argv[] ) {
     }    
 
     bool massHistos = applyMassWindowFlag;
+
+    fileid_global = fileid;
 
     vector<string> inputBkgFiles = vm["background-file"].as<vector<string> > ();
     vector<string> inputSigFiles = vm["signal-file"].as<vector<string> > ();
@@ -1986,7 +1990,7 @@ void makeMassWindowFile(bool applyMassWindow,bool extendedVars)
 	  std::stringstream ss; // store the name of the output file and include the i and j indices!
 	  std::string bkg = signal ? "sig": "bkg";
 	  ss << AlgoNames[i] << "_" << i << "_" << pTbins[j] << "_" << bkg << ".root";
-	  boost::filesystem::path dir(AlgoNames[i]);
+	  boost::filesystem::path dir(std::string(AlgoNames[i]+fileid_global));
 	  boost::filesystem::create_directory(dir);
 	  std::cout << AlgoNames[i] << "/" << ss.str() << std::endl;
 	  //std::cout << "fileIdx " << fileIdx << endl;
@@ -2015,7 +2019,7 @@ void makeMassWindowFile(bool applyMassWindow,bool extendedVars)
 	  mass_max = TopEdgeMassWindow[i][j];
 	  mass_min = BottomEdgeMassWindow[i][j];
 
-	  TFile * outfile = new TFile(std::string(AlgoNames[i]+"/"+ss.str()).c_str(),"RECREATE");	  
+	  TFile * outfile = new TFile(std::string(AlgoNames[i]+fileid_global+"/"+ss.str()).c_str(),"RECREATE");	  
 	  TTree * outTree = new TTree("physics","physics");
 	  //intree->LoadTree(0);
 	  //TTree * newtc = (TTree*)intree->GetTree();
@@ -2192,7 +2196,7 @@ void makeMassWindowFile(bool applyMassWindow,bool extendedVars)
 
 	  std::stringstream ss2; // store the name of the output file and include the i and j indices!
 	  std::string bkg2 = signal ? "sig": "bkg";
-	  ss2 << AlgoNames[i] << "_" << i << "_" << pTbins[j] << "_" << bkg << ".nevents";
+	  ss2 << AlgoNames[i] << fileid_global << "_" << i << "_" << pTbins[j] << "_" << bkg << ".nevents";
 	  ofstream ev_out(ss2.str());
 	  for (std::map<int,float>::iterator it = NEvents_weighted.begin(); it!= NEvents_weighted.end(); it++)
 	    ev_out << it->first << "," << NEvents_weighted[it->first] << std::endl;
