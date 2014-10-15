@@ -139,7 +139,7 @@ vector<TLorentzVector> Recluster(vector<TLorentzVector> small_jets, double PTcut
 
 /////
 
-
+std::string fileid_global;
 
 TFile *inputFile[20];
 TTree *inputTree[20];
