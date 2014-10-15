@@ -1,0 +1,70 @@
+SHELL = /bin/sh
+UNAME = $(shell uname)
+
+# Root variables
+ROOTCFLAGS   = -L$(ROOTSYS)/lib $(shell root-config --cflags)
+ROOTLIBS     = -L$(ROOTSYS)/lib $(shell root-config --libs)
+ROOTGLIBS    = -L$(ROOTSYS)/lib $(shell root-config --glibs)
+
+################
+##linux
+CXX          = g++
+RM           = rm -f
+AR           = ar cru
+
+##Flags
+CXXFLAGS     = -O2 -g -fPIC -funroll-loops -std=c++11 #-Wall 
+
+EXENAME		= PlotsMunichWorkshop
+SRCEXT   	= cpp
+SRCDIR  	= src
+INCDIR   	= include
+OBJDIR   	= build
+EXEDIR  	= bin
+SRCS    	:= src/main.cpp #$(shell find $(SRCDIR) -name '*.$(SRCEXT)')
+OBJS    	:= build/main.o #$(patsubst $(SRCDIR)/%.$(SRCEXT),$(OBJDIR)/%.o,$(SRCS))
+
+GARBAGE  = $(OBJDIR)/main.o $(EXEDIR)/$(EXENAME)
+INCDIR+=-I/Disk/speyside8/lhcb/atlas/tibristo/fastjet-install/include
+INCDIR+=-I/usr/local/include
+INCDIR+=-I/Home/s1214155/usr/local/include
+#################
+##Dependencies
+# Linux
+ifeq "$(UNAME)" "Linux"
+RANLIB       = ranlib
+CXXFLAGS    += -I$(INCDIR) $(ROOTCFLAGS) #-I$(GSLINC)
+LINKFLAGS    = -g $(shell root-config --nonew) $(shell root-config --ldflags) -Wl,--no-as-needed
+endif
+
+# OS X
+ifeq "$(UNAME)" "Darwin"
+RANLIB       = ranlib
+CXXFLAGS    += -I$(INCDIR) $(ROOTCFLAGS) `/Disk/speyside8/lhcb/atlas/tibristo/fastjet-install/bin/fastjet-config --cxxflags` 
+#
+#-I$(GSLINC)
+LINKFLAGS    =
+endif
+
+##Libraries
+LIBS       += $(ROOTLIBS) -lThread `/Disk/speyside8/lhcb/atlas/tibristo/fastjet-install/bin/fastjet-config --libs` -L/usr/local/lib -L/Home/s1214155/usr/local/lib -lboost_filesystem -lboost_system -lboost_program_options -L/Disk/speyside8/lhcb/atlas/tibristo/fastjet-install/lib
+
+##Targets
+all : $(EXEDIR)/$(EXENAME)
+
+$(EXEDIR)/$(EXENAME) : $(OBJS)
+	$(CXX) -o $@ $(OBJS) $(LINKFLAGS) $(LIBS)
+
+$(OBJDIR)/main.o : $(SRCDIR)/main.$(SRCEXT)
+	$(CXX) $(CXXFLAGS) -c $< -o $@
+
+clean   :
+	$(RM) $(GARBAGE)
+
+cleanall:
+	$(RM) $(GARBAGE)
+
+
+##fastjet
+#   g++ short-example.cc -o short-example \
+      `fastjet-install/bin/fastjet-config --cxxflags --libs --plugins`
