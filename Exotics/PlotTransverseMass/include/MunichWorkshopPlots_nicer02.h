@@ -97,7 +97,7 @@ void plotVariables(TTree * tree, vector<std::string> & branches);
 std::vector<std::string> getListOfBranches(std::string &algorithm);
 //void make68Plots(int algidx, TChain * bkg, TChain * sig);
 void makeMassWindowFile(bool applyMassWindow, bool extendedVars);
-void addJets(TChain * tree, std::string & algorithm, bool signal, int groomIdx, bool extendedVars);
+void setJetsBranches(TChain * tree, std::string & algorithm, bool signal, int groomIdx, bool extendedVars);
 void addJetsBranches(TTree * tree, std::string & algorithm, bool signal, int groomIdx);
 void addSubJets(TTree * tree, std::string & algorithm, bool signal, int groomIdx);
 //void getBranchesSelection(TTree * tree, std::string & algorithm);
@@ -159,6 +159,8 @@ Float_t mc_event_weight = 1.0;
 Float_t mc_event_weight_out = 1.0;
 UInt_t mc_channel_number  = 0;
 UInt_t mc_channel_number_out  = 0;
+UInt_t runNumberOut = 0;
+UInt_t runNumberIn = 0;
 
 
 //QCD split filtering with Y cut 9
