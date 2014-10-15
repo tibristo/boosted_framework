@@ -113,6 +113,8 @@ void clearOutputVariables();
 void setOutputVariables(bool extendedVars, int idx1, int idx2, int idx3, int subidx);
 void setOutputBranches(TTree* tree, std::string & algorithm, int groomIdx, bool extendedVars);
 void resetOutputVariables();
+void getMPV();
+void scaleHists();
 
 enum class groomAlgoEnum{groomZero, TopoSplitFilteredMu67SmallR0YCut9, TopoSplitFilteredMu100SmallR30YCut4, TopoTrimmedPtFrac5SmallR30, TopoTrimmedPtFrac5SmallR20, TopoPrunedCaRcutFactor50Zcut10, TopoPrunedCaRcutFactor50Zcut20, AntiKt2LCTopo, AntiKt3LCTopo, AntiKt4LCTopo};
 enum sampleType{BACKGROUND, SIGNAL};
