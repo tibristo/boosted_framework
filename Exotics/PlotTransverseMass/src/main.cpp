@@ -207,6 +207,9 @@ int main( int argc, char * argv[] ) {
 
     // right now the idea of filteridx, Xidx is not fully complete... The code as it stands runs on one type of algorithm at once, but 
     // I would like it to run on a number of types.  This is why this is here.  It used to do this in fact, before switching stuff around
+    bool filter67 = false;
+    bool filter100 = false;
+    bool filterall= false;
     if (alg_in.find("all")!=string::npos)
       {
 	allsamples = true;
@@ -220,8 +223,24 @@ int main( int argc, char * argv[] ) {
 	if (!filtering)
 	  {
 	    filteridx = nArg-1;
-	    subset = {1,2};//{0,1,2};
-	    algoMap.insert(algoMap.end(),subset.begin(),subset.end());
+	    if (alg_in.find("67")!=string::npos)
+	      {
+		subset = {1};//{0,1,2};
+		algoMap.insert(algoMap.end(),subset.begin(),subset.end());
+		filter67 = true;
+	      }
+	    else if (alg_in.find("100")!=string::npos)
+	      {
+		subset = {2};//{0,1,2};
+		algoMap.insert(algoMap.end(),subset.begin(),subset.end());
+		filter100 = true;
+	      }
+	    else
+	      {
+		subset = {1,2};//{0,1,2};
+		algoMap.insert(algoMap.end(),subset.begin(),subset.end());
+		filterall=true;
+	      }
 	  }
 	filtering = true;
       }
@@ -274,8 +293,10 @@ int main( int argc, char * argv[] ) {
 
   if (filtering || allsamples)
     {
-      runAlgorithm(inputTChain[filteridx], inputTChain[filteridx+1], "TopoSplitFilteredMu67SmallR0YCut9", 1, massHistos);
-      runAlgorithm(inputTChain[filteridx], inputTChain[filteridx+1], "TopoSplitFilteredMu100SmallR30YCut4", 2, massHistos);
+      if (filterall || filter67)
+	runAlgorithm(inputTChain[filteridx], inputTChain[filteridx+1], "TopoSplitFilteredMu67SmallR0YCut9", 1, massHistos);
+      if (filterall || filter100)
+	runAlgorithm(inputTChain[filteridx], inputTChain[filteridx+1], "TopoSplitFilteredMu100SmallR30YCut4", 2, massHistos);
     }
   
   if (trimmed || allsamples)
@@ -1921,7 +1942,7 @@ void makeMassWindowFile(bool applyMassWindow,bool extendedVars)
 	{
 	  signal = k == 0 ? false : true;
 	  // Initialise all the vectors to.. something 
-	  initVectors();
+	  initVectors(extendedVars);
 	  
 	  int tchainIdx = signal ? sampleType::SIGNAL : sampleType::BACKGROUND;
 	  std::stringstream ss; // store the name of the output file and include the i and j indices!
@@ -1931,23 +1952,38 @@ void makeMassWindowFile(bool applyMassWindow,bool extendedVars)
 	  boost::filesystem::create_directory(dir);
 
 	  inputTChain[tchainIdx]->GetEntries();
-	  TTree * intree = (TTree*)inputTChain[tchainIdx]->GetTree();
+	  //TTree * intree = (TTree*)inputTChain[tchainIdx]->GetTree();
 
 
 	  // I can't remember if I need intree anymore... it was for debugging something
-	  inputTChain[tchainIdx]->SetBranchStatus("*",0);
-	  intree->SetBranchStatus("*",0);
+	  try
+	    {
+	      inputTChain[tchainIdx]->SetBranchStatus("*",0);
+	    }
+	  catch (exception &e)
+	    {
+	      std::cout << "There is a missing algorithm in the tree" << std::endl;
+	      return;
+	    }
+	  //intree->SetBranchStatus("*",0);
 	  // turn on the branches we're interested in
 	  for (std::vector<string>::iterator it = branches.begin(); it != branches.end(); it++)
 	    {
-	      inputTChain[tchainIdx]->SetBranchStatus((*it).c_str(),1);
-	      intree->SetBranchStatus((*it).c_str(),1);
-	      if(!intree->GetListOfBranches()->FindObject((*it).c_str())) {
+	      //inputTChain[tchainIdx]->SetBranchStatus((*it).c_str(),1);
+	      //intree->SetBranchStatus((*it).c_str(),1);
+	      if(!inputTChain[tchainIdx]->GetListOfBranches()->FindObject((*it).c_str())) {
 		std::cout << "could not find branch: " << (*it) << std::endl;
 	      }
+	      else
+		{
+		  inputTChain[tchainIdx]->SetBranchStatus((*it).c_str(),1);
+		  //intree->SetBranchStatus((*it).c_str(),1);
+		}
+	      
 	    }
 
 	  setJetsBranches(inputTChain[tchainIdx], AlgoNames[i], signal, i, extendedVars); //set all of the branches for the output tree for the jets	  
+	  std::cout << "set jetsbranches" << std::endl;
 	  mass_max = TopEdgeMassWindow[i][j];
 	  mass_min = BottomEdgeMassWindow[i][j];
 
@@ -1982,7 +2018,7 @@ void makeMassWindowFile(bool applyMassWindow,bool extendedVars)
 	      resetOutputVariables(); 
 
 	      if (n%1000==0)
-		std::cout << "Entry: "<< n << std::endl;
+		std::cout << "Entry: "<< n << " / " << entries <<  std::endl;
 
 	      if (NEvents_weighted.find(mc_channel_number) != NEvents_weighted.end())
 		NEvents_weighted[mc_channel_number] += mc_event_weight;
@@ -2140,7 +2176,7 @@ void makeMassWindowFile(bool applyMassWindow,bool extendedVars)
 	    ev_out << it->first << "," << NEvents_weighted[it->first] << std::endl;
 	  ev_out.close();
 	  delete outfile;
-	  delete intree;
+	  //delete intree;
 	}
     }
     
@@ -2261,55 +2297,187 @@ void setJetsBranches(TChain * tree, std::string &groomalgo, bool signal, int gro
 
   for (int i = 0; i < jetType::MAX; i++) // truth, topo, groomed
     {
-      
+      std::cout << i << std::endl;
       std::string jetType = returnJetType(samplePrefix, groomalgo, addLC,i); //set to truth/ topo/ groomed
-
-      tree->SetBranchAddress(std::string(jetType+"E").c_str(),&var_E_vec.at(i));
-      tree->SetBranchAddress(std::string(jetType+"pt").c_str(),&var_pt_vec.at(i));
-      tree->SetBranchAddress(std::string(jetType+"m").c_str(),&var_m_vec.at(i));
-      tree->SetBranchAddress(std::string(jetType+"eta").c_str(),&var_eta_vec.at(i));
-      tree->SetBranchAddress(std::string(jetType+"phi").c_str(),&var_phi_vec.at(i));
-      tree->SetBranchStatus(std::string(jetType+"constit_index").c_str(),1);
-      tree->SetBranchAddress(std::string(jetType+"constit_index").c_str(),&var_constit_index.at(i));
-      if (i != 0) // no truth emfrac
+      // I want to call GetListOfBranches once, but the ROOT site is down so I'm not sure what datatype it is....
+      // whenever something fails we should set a bool so that we know not to add this to the output tree
+      if(tree->GetListOfBranches()->FindObject(std::string(jetType+"E").c_str()))
+	tree->SetBranchAddress(std::string(jetType+"E").c_str(),&var_E_vec.at(i));
+      else
+	std::cout << "branch not found: " << std::string(jetType+"E") << std::endl;
+      if(tree->GetListOfBranches()->FindObject(std::string(jetType+"pt").c_str()))
+	tree->SetBranchAddress(std::string(jetType+"pt").c_str(),&var_pt_vec.at(i));
+      else
+	std::cout << "branch not found: " << std::string(jetType+"pt") << std::endl;
+      if(tree->GetListOfBranches()->FindObject(std::string(jetType+"m").c_str()))
+	tree->SetBranchAddress(std::string(jetType+"m").c_str(),&var_m_vec.at(i));
+      else
+	std::cout << "branch not found: " << std::string(jetType+"m") << std::endl;
+      if(tree->GetListOfBranches()->FindObject(std::string(jetType+"eta").c_str()))
+	tree->SetBranchAddress(std::string(jetType+"eta").c_str(),&var_eta_vec.at(i));
+      else
+	std::cout << "branch not found: " << std::string(jetType+"eta") << std::endl;
+      if(tree->GetListOfBranches()->FindObject(std::string(jetType+"phi").c_str()))
+	tree->SetBranchAddress(std::string(jetType+"phi").c_str(),&var_phi_vec.at(i));
+      else
+	std::cout << "branch not found: " << std::string(jetType+"phi") << std::endl;
+      //tree->SetBranchStatus(std::string(jetType+"constit_index").c_str(),1);
+      //tree->SetBranchAddress(std::string(jetType+"constit_index").c_str(),&var_constit_index.at(i));
+      if (i != 0 && tree->GetListOfBranches()->FindObject(std::string(jetType+"emfrac").c_str())) // no truth emfrac
 	tree->SetBranchAddress(std::string(jetType+"emfrac").c_str(),&var_emfrac_vec.at(i));
-      tree->SetBranchAddress(std::string(jetType+"Tau1").c_str(),&var_Tau1_vec.at(i));
-      tree->SetBranchAddress(std::string(jetType+"Tau2").c_str(),&var_Tau2_vec.at(i));
-      tree->SetBranchAddress(std::string(jetType+"Tau3").c_str(),&var_Tau3_vec.at(i));
-      tree->SetBranchAddress(std::string(jetType+"WIDTH").c_str(),&var_WIDTH_vec.at(i));
-      tree->SetBranchAddress(std::string(jetType+"SPLIT12").c_str(),&var_SPLIT12_vec.at(i));
-      tree->SetBranchAddress(std::string(jetType+"SPLIT23").c_str(),&var_SPLIT23_vec.at(i));
-      tree->SetBranchAddress(std::string(jetType+"SPLIT34").c_str(),&var_SPLIT34_vec.at(i));
-      tree->SetBranchAddress(std::string(jetType+"Dip12").c_str(),&var_Dip12_vec.at(i));
-      tree->SetBranchAddress(std::string(jetType+"Dip13").c_str(),&var_Dip13_vec.at(i));
-      tree->SetBranchAddress(std::string(jetType+"Dip23").c_str(),&var_Dip23_vec.at(i));
-      tree->SetBranchAddress(std::string(jetType+"DipExcl12").c_str(),&var_DipExcl12_vec.at(i));
-      tree->SetBranchAddress(std::string(jetType+"PlanarFlow").c_str(),&var_PlanarFlow_vec.at(i));
-      tree->SetBranchAddress(std::string(jetType+"Angularity").c_str(),&var_Angularity_vec.at(i));
-      tree->SetBranchAddress(std::string(jetType+"QW").c_str(),&var_QW_vec.at(i));
-      tree->SetBranchAddress(std::string(jetType+"PullMag").c_str(),&var_PullMag_vec.at(i));
-      tree->SetBranchAddress(std::string(jetType+"PullPhi").c_str(),&var_PullPhi_vec.at(i));
-      tree->SetBranchAddress(std::string(jetType+"Pull_C00").c_str(),&var_Pull_C00_vec.at(i));
-      tree->SetBranchAddress(std::string(jetType+"Pull_C01").c_str(),&var_Pull_C01_vec.at(i));
-      tree->SetBranchAddress(std::string(jetType+"Pull_C10").c_str(),&var_Pull_C10_vec.at(i));
-      tree->SetBranchAddress(std::string(jetType+"Pull_C11").c_str(),&var_Pull_C11_vec.at(i));
+      else
+	std::cout << "branch not found: " << std::string(jetType+"emfrac") << std::endl;
+      if(tree->GetListOfBranches()->FindObject(std::string(jetType+"Tau1").c_str()))
+	tree->SetBranchAddress(std::string(jetType+"Tau1").c_str(),&var_Tau1_vec.at(i));
+      else
+	std::cout << "branch not found: " << std::string(jetType+"Tau1") << std::endl;
+      if(tree->GetListOfBranches()->FindObject(std::string(jetType+"Tau2").c_str()))
+	tree->SetBranchAddress(std::string(jetType+"Tau2").c_str(),&var_Tau2_vec.at(i));
+      else
+	std::cout << "branch not found: " << std::string(jetType+"Tau2") << std::endl;
+      if(tree->GetListOfBranches()->FindObject(std::string(jetType+"Tau3").c_str()))
+	tree->SetBranchAddress(std::string(jetType+"Tau3").c_str(),&var_Tau3_vec.at(i));
+      else
+	std::cout << "branch not found: " << std::string(jetType+"Tau3") << std::endl;
+      if(tree->GetListOfBranches()->FindObject(std::string(jetType+"WIDTH").c_str()))
+	tree->SetBranchAddress(std::string(jetType+"WIDTH").c_str(),&var_WIDTH_vec.at(i));
+      else
+	std::cout << "branch not found: " << std::string(jetType+"WIDTH") << std::endl;
+      if(tree->GetListOfBranches()->FindObject(std::string(jetType+"SPLIT12").c_str()))
+	tree->SetBranchAddress(std::string(jetType+"SPLIT12").c_str(),&var_SPLIT12_vec.at(i));
+      else
+	std::cout << "branch not found: " << std::string(jetType+"SPLIT12") << std::endl;
+      if(tree->GetListOfBranches()->FindObject(std::string(jetType+"SPLIT23").c_str()))
+	tree->SetBranchAddress(std::string(jetType+"SPLIT23").c_str(),&var_SPLIT23_vec.at(i));
+      else
+	std::cout << "branch not found: " << std::string(jetType+"SPLIT23") << std::endl;
+      if(tree->GetListOfBranches()->FindObject(std::string(jetType+"SPLIT34").c_str()))
+	tree->SetBranchAddress(std::string(jetType+"SPLIT34").c_str(),&var_SPLIT34_vec.at(i));
+      else
+	std::cout << "branch not found: " << std::string(jetType+"SPLIT34") << std::endl;
+      if(tree->GetListOfBranches()->FindObject(std::string(jetType+"Dip12").c_str()))
+	tree->SetBranchAddress(std::string(jetType+"Dip12").c_str(),&var_Dip12_vec.at(i));
+      else
+	std::cout << "branch not found: " << std::string(jetType+"Dip12") << std::endl;
+      if(tree->GetListOfBranches()->FindObject(std::string(jetType+"Dip13").c_str()))
+	tree->SetBranchAddress(std::string(jetType+"Dip13").c_str(),&var_Dip13_vec.at(i));
+      else
+	std::cout << "branch not found: " << std::string(jetType+"Dip13") << std::endl;
+      if(tree->GetListOfBranches()->FindObject(std::string(jetType+"Dip23").c_str()))
+	tree->SetBranchAddress(std::string(jetType+"Dip23").c_str(),&var_Dip23_vec.at(i));
+      else
+	std::cout << "branch not found: " << std::string(jetType+"Dip23") << std::endl;
+      if(tree->GetListOfBranches()->FindObject(std::string(jetType+"DipExcl12").c_str()))
+	tree->SetBranchAddress(std::string(jetType+"DipExcl12").c_str(),&var_DipExcl12_vec.at(i));
+      else
+	std::cout << "branch not found: " << std::string(jetType+"DipExcl12") << std::endl;
+      if(tree->GetListOfBranches()->FindObject(std::string(jetType+"PlanarFlow").c_str()))
+	tree->SetBranchAddress(std::string(jetType+"PlanarFlow").c_str(),&var_PlanarFlow_vec.at(i));
+      else
+	std::cout << "branch not found: " << std::string(jetType+"PlanarFlow") << std::endl;
+      if(tree->GetListOfBranches()->FindObject(std::string(jetType+"Angularity").c_str()))
+	tree->SetBranchAddress(std::string(jetType+"Angularity").c_str(),&var_Angularity_vec.at(i));
+      else
+	std::cout << "branch not found: " << std::string(jetType+"Angularity") << std::endl;
+      if(tree->GetListOfBranches()->FindObject(std::string(jetType+"QW").c_str()))
+	tree->SetBranchAddress(std::string(jetType+"QW").c_str(),&var_QW_vec.at(i));
+      else
+	std::cout << "branch not found: " << std::string(jetType+"QW") << std::endl;
+      if(tree->GetListOfBranches()->FindObject(std::string(jetType+"PullMag").c_str()))
+	tree->SetBranchAddress(std::string(jetType+"PullMag").c_str(),&var_PullMag_vec.at(i));
+      else
+	std::cout << "branch not found: " << std::string(jetType+"PullMag") << std::endl;
+      if(tree->GetListOfBranches()->FindObject(std::string(jetType+"PullPhi").c_str()))
+	tree->SetBranchAddress(std::string(jetType+"PullPhi").c_str(),&var_PullPhi_vec.at(i));
+      else
+	std::cout << "branch not found: " << std::string(jetType+"PullPhi") << std::endl;
+      if(tree->GetListOfBranches()->FindObject(std::string(jetType+"Pull_C00").c_str()))
+	tree->SetBranchAddress(std::string(jetType+"Pull_C00").c_str(),&var_Pull_C00_vec.at(i));
+      else
+	std::cout << "branch not found: " << std::string(jetType+"Pull_C00") << std::endl;
+      if(tree->GetListOfBranches()->FindObject(std::string(jetType+"Pull_C01").c_str()))
+	tree->SetBranchAddress(std::string(jetType+"Pull_C01").c_str(),&var_Pull_C01_vec.at(i));
+      else
+	std::cout << "branch not found: " << std::string(jetType+"Pull_C01") << std::endl;
+      if(tree->GetListOfBranches()->FindObject(std::string(jetType+"Pull_C10").c_str()))
+	tree->SetBranchAddress(std::string(jetType+"Pull_C10").c_str(),&var_Pull_C10_vec.at(i));
+      else
+	std::cout << "branch not found: " << std::string(jetType+"Pull_C10") << std::endl;
+      if(tree->GetListOfBranches()->FindObject(std::string(jetType+"Pull_C11").c_str()))
+	tree->SetBranchAddress(std::string(jetType+"Pull_C11").c_str(),&var_Pull_C11_vec.at(i));
+      else
+	std::cout << "branch not found: " << std::string(jetType+"Pull_C11") << std::endl;
+
+      std::cout << "checking extendedVars: " << extendedVars << std::endl;
       if (extendedVars)
 	{
-	  tree->SetBranchAddress(std::string(jetType+"TauWTA1").c_str(),&var_TauWTA1_vec.at(i));
-	  tree->SetBranchAddress(std::string(jetType+"TauWTA2").c_str(),&var_TauWTA2_vec.at(i));
-	  tree->SetBranchAddress(std::string(jetType+"ZCUT12").c_str(),&var_ZCUT12_vec.at(i));
+	  if(tree->GetListOfBranches()->FindObject(std::string(jetType+"TauWTA1").c_str()))
+	    tree->SetBranchAddress(std::string(jetType+"TauWTA1").c_str(),&var_TauWTA1_vec.at(i));
+	  else
+	    std::cout << "branch not found: " << std::string(jetType+"TauWTA1") << std::endl;
+	  if(tree->GetListOfBranches()->FindObject(std::string(jetType+"TauWTA2").c_str()))
+	    tree->SetBranchAddress(std::string(jetType+"TauWTA2").c_str(),&var_TauWTA2_vec.at(i));
+	  else
+	    std::cout << "branch not found: " << std::string(jetType+"TauWTA2") << std::endl;
+	  if(tree->GetListOfBranches()->FindObject(std::string(jetType+"ZCUT12").c_str()))
+	    tree->SetBranchAddress(std::string(jetType+"ZCUT12").c_str(),&var_ZCUT12_vec.at(i));
+	  else
+	    std::cout << "branch not found: " << std::string(jetType+"ZCUT12") << std::endl;
+
 	}
+
+
+      /*setAddress(tree,std::string(jetType+"E"),var_E_vec.at(i));
+	setAddress(tree,std::string(jetType+"pt"),var_pt_vec.at(i));
+	setAddress(tree,std::string(jetType+"m"),var_m_vec.at(i));
+	setAddress(tree,std::string(jetType+"eta"),var_eta_vec.at(i));
+	setAddress(tree,std::string(jetType+"phi"),var_phi_vec.at(i));
+	if (i != 0)
+	  setAddress(tree,std::string(jetType+"emfrac"),var_emfrac_vec.at(i));
+	setAddress(tree,std::string(jetType+"Tau1"),var_Tau1_vec.at(i));
+	setAddress(tree,std::string(jetType+"Tau2"),var_Tau2_vec.at(i));
+	setAddress(tree,std::string(jetType+"Tau3"),var_Tau3_vec.at(i));
+	setAddress(tree,std::string(jetType+"WIDTH"),var_WIDTH_vec.at(i));
+	setAddress(tree,std::string(jetType+"SPLIT12"),var_SPLIT12_vec.at(i));
+	setAddress(tree,std::string(jetType+"SPLIT23"),var_SPLIT23_vec.at(i));
+	setAddress(tree,std::string(jetType+"SPLIT34"),var_SPLIT34_vec.at(i));
+	setAddress(tree,std::string(jetType+"Dip12"),var_Dip12_vec.at(i));
+	setAddress(tree,std::string(jetType+"Dip13"),var_Dip13_vec.at(i));
+	setAddress(tree,std::string(jetType+"Dip23"),var_Dip23_vec.at(i));
+	setAddress(tree,std::string(jetType+"DipExcl12"),var_DipExcl12_vec.at(i));
+	setAddress(tree,std::string(jetType+"PlanarFlow"),var_PlanarFlow_vec.at(i));
+	setAddress(tree,std::string(jetType+"Angularity"),var_Angularity_vec.at(i));
+	setAddress(tree,std::string(jetType+"QW"),var_QW_vec.at(i));
+	setAddress(tree,std::string(jetType+"PullMag"),var_PullMag_vec.at(i));
+	setAddress(tree,std::string(jetType+"PullPhi"),var_PullPhi_vec.at(i));
+	setAddress(tree,std::string(jetType+"Pull_C00"),var_Pull_C00_vec.at(i));
+	setAddress(tree,std::string(jetType+"Pull_C01"),var_Pull_C01_vec.at(i));
+	setAddress(tree,std::string(jetType+"Pull_C10"),var_Pull_C10_vec.at(i));
+	setAddress(tree,std::string(jetType+"Pull_C11"),var_Pull_C11_vec.at(i));
+      if (extendedVars)
+	{
+	    setAddress(tree,std::string(jetType+"TauWTA1"),var_TauWTA1_vec.at(i));
+	    setAddress(tree,std::string(jetType+"TauWTA2"),var_TauWTA2_vec.at(i));
+	    setAddress(tree,jetType+"ZCUT12",var_ZCUT12_vec.at(i));
+	}*/
+
 
     } // end for loop over topo/truth/groom
 
+  if (!subjets)
+    return;
+
   std::string jetType = returnJetType( samplePrefix, groomalgo, addLC, 2); //set to truth/ topo/ groomed
   std::string subjetType = returnSubJetType(samplePrefix, groomalgo, addLC);
+  
   
   tree->SetBranchStatus(std::string(subjetIndex[groomalgo]).c_str(),1);
   tree->SetBranchAddress(std::string(subjetIndex[groomalgo]).c_str(),&subjet_index);
 
   if(!tree->GetListOfBranches()->FindObject(std::string(subjetIndex[groomalgo]).c_str())) {
-    std::cout << "subjet branch is not here" << std::endl;}
+    std::cout << "subjet branch is not here" << std::endl;
+    return;
+  }
   
   tree->SetBranchAddress(std::string(subjetType+"E").c_str(),&var_subjets_E_vec);
   tree->SetBranchAddress(std::string(subjetType+"pt").c_str(),&var_subjets_pt_vec);
@@ -2365,7 +2533,7 @@ void setSelectionVectors(bool signal, std::string & algorithm)
  
 }// setSelectionVectors()
 
-void initVectors()
+void initVectors(bool extendedVars)
 {
 
   // have the vectors for the above histograms so we can do the reading in stuff from the TTree
@@ -2412,6 +2580,13 @@ void initVectors()
       var_Pull_C10_vec[i] = 0;
       var_Pull_C11_vec[i]= 0;//std::map<i, 0>;
   
+      if (extendedVars)
+	{
+	  var_TauWTA1_vec[i] = 0;
+	  var_TauWTA2_vec[i] = 0;
+	  var_ZCUT12_vec[i] = 0;
+	}
+
     }  
 
 
@@ -2689,3 +2864,13 @@ void getMPV()
     }
   }
 } //getMPV
+
+void setAddress(TChain * tree, std::string name, std::vector<Float_t> * var_vec)
+{
+  
+  if(tree->GetListOfBranches()->FindObject(name.c_str()) )
+    tree->SetBranchAddress(name.c_str(),&var_vec);
+  else
+    std::cout << "branch not found: " << name << std::endl;
+  
+} //setAddress
