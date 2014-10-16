@@ -104,7 +104,7 @@ void addSubJets(TTree * tree, std::string & algorithm, bool signal, int groomIdx
 void setSelectionVectors(bool signal, std::string & algorithm);
 void runAlgorithm(TChain *inputTree, TChain *inputTree1, TString groomAlgo, int groomAlgoIndex, bool massHistos);
 vector<std::string> getListOfJetBranches(std::string & algorithm);
-void initVectors();
+void initVectors(bool extendedVars);
 std::pair<int,int> getTwoLeadingSubjets(std::vector<int> & indices, std::vector<float> * subjets);
 std::string returnJetType(std::string & samplePrefix, std::string & groomalgo, bool addLC, int idx);
 std::string returnSubJetType(std::string & samplePrefix, std::string & groomalgo, bool addLC);
@@ -115,6 +115,7 @@ void setOutputBranches(TTree* tree, std::string & algorithm, int groomIdx, bool 
 void resetOutputVariables();
 void getMPV();
 void scaleHists();
+void setAddress(TChain * tree, std::string  name, std::vector<Float_t> * var_vec);
 
 enum class groomAlgoEnum{groomZero, TopoSplitFilteredMu67SmallR0YCut9, TopoSplitFilteredMu100SmallR30YCut4, TopoTrimmedPtFrac5SmallR30, TopoTrimmedPtFrac5SmallR20, TopoPrunedCaRcutFactor50Zcut10, TopoPrunedCaRcutFactor50Zcut20, AntiKt2LCTopo, AntiKt3LCTopo, AntiKt4LCTopo};
 enum sampleType{BACKGROUND, SIGNAL};
@@ -334,7 +335,7 @@ void defineStrings(TString *AlgoList, TString *binLabel, TString *pTbins, TStrin
   AlgoList[2]="SF100r30Y4";
   AlgoNames[2] = "TopoSplitFilteredMu100SmallR30YCut4";
   AlgoPrefix[2] = "CamKt12";
-  subjetMap["TopoSplitFilteredMu100SmallR30YCut4"] = "TopoSplitFiltSubjetsMu100SmallR0YCut4";
+  subjetMap["TopoSplitFilteredMu100SmallR30YCut4"] = "TopoSplitFiltSubjetsMu100SmallR30YCut4";
   subjetIndex["TopoSplitFilteredMu100SmallR30YCut4"] = "jet_CamKt12LCTopo_SplitFiltSubjetsMu100SmallR30YCut4_index";
   //TrimmedPtFrac5SmallR30
   AlgoList[3]="TrimPt5r30";
