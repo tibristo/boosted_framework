@@ -5,7 +5,7 @@ numbins = [] # give all 20 bins?
 axisvalues = [[0,1700],[0,1200],[0,300],[-5,5],[-4,4],[-2,2],[0,1],[0,100],[0,1],[0,0.3],[0,90],[0,30],[0,15],[-2,5],[-2,5],[-2,10],[-2,5],[0.1,1],[0,1],[0,150],[-1500,100],[-1500,100],[-1500,100],[-1500,100],[-1500,100],[-1500,100],[0,1]] #going to be 2d for min, max
 var_type = ['E','pt','m','eta','phi','emfrac','Tau1','Tau2','Tau3','WIDTH','SPLIT12','SPLIT23','SPLIT34','Dip12','Dip13','Dip23','DipExcl12','PlanarFlow','Angularity','QW','PullMag','PullPhi','Pull_C00','Pull_C01','Pull_C10','Pull_C11','constit_index']
 
-subjet_alg = {'TopoTrimmedPtFrac5SmallR30':'TopoTrimmedSubjetsPtFrac5SmallR30','TopoSplitFilteredMu67SmallR0YCut9':'TopoSplitFiltSubjetsMu67SmallR0YCut9','TopoSplitFilteredMu100SmallR0YCut4':'TopoSplitFiltSubjetsMu100SmallR0YCut4'}
+subjet_alg = {'TopoTrimmedPtFrac5SmallR30':'TopoTrimmedSubjetsPtFrac5SmallR30','TopoSplitFilteredMu67SmallR0YCut9':'TopoSplitFiltSubjetsMu67SmallR0YCut9','TopoSplitFilteredMu100SmallR30YCut4':'TopoSplitFiltSubjetsMu100SmallR30YCut4'}
 alg_prefix = {'TopoSplitFilteredMu67SmallR0YCut9':'CamKt12','TopoSplitFilteredMu100SmallR30YCut4':'CamKt12','TopoTrimmedPtFrac5SmallR30':'AntiKt10','TopoTrimmedPtFrac5SmallR20':'AntiKt10','TopoPrunedCaRcutFactor50Zcut10':'AntiKt10','TopoPrunedCaRcutFactor50Zcut20':'AntiKt10','AntiKt2LCTopo':'','AntiKt3LCTopo':'','AntiKt4LCTopo':''}
 subjet_axes = [[0,1700],[0,1200],[0,300],[-5,5],[-4,4],[0,1],[0,0.3]]
 subjet_vars = ['E','pt','m','eta','phi','constit_index','WIDTH']
@@ -37,7 +37,7 @@ for alg in algorithms:
         f2.write(prefix+alg+'_'+t+'\n')
         tcount+=1
     ecount = 0
-    if alg in subjet_alg:
+    if alg in subjet_alg.keys():
         for e in subjet_vars:
             f.write('subjet_'+e+','+prefix+subjet_alg[alg]+'_'+e+','+str(20)+','+str(subjet_axes[ecount][0]) + ',' + str(subjet_axes[ecount][1])+',\n')    
             f2.write(prefix+subjet_alg[alg]+'_'+e+'\n')
