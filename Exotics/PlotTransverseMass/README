@@ -1,0 +1,49 @@
+Just some quick instructions
+
+
+You need to have the boost libraries installed.  Instructions for this here: http://www.boost.org/doc/libs/1_56_0/more/getting_started/unix-variants.html
+
+You'll then need to set up the Makefiles to get your paths correct.  There are two programs, so two Makefiles.  Makefile_munich is for the code that selects the jets and subjets and writes them out to a new file.  
+
+To compile this, do make munich.
+
+Generally you can read in the list of branches that you want to run.  Run python createBranches.py and this will create a file for you with the branches for different grooming algorithms.  You can edit the python script and add/remove branches.  Note that this file
+also has some settings that are not used in this setup, but were used for plotter.cpp (which is shortly to be removed as we're now doing that in python).  You'll see that there is normally an extra comma at the end of the line, and this was due to some
+sketchy piece of string splitting code that wouldn't work without it.  I have since moved to boost, but I haven't replaced that part yet.
+
+There are lots of ways to run the code.  Generally you will do something like:
+./bin/PlotsMunichWorkshop bkgfile.root sigfile.root algorithmtype
+where algorithm type is all, trimmed, filtered, pruned ( reclustered isn't set up yet)
+
+This can also be done like this:
+./bin/PlotsMunichWorkshop --background-file=bkgfile.root --signal-file=sigfile.root --algorithm=algorithmtype
+
+Other options *:
+--subjets	This is whether or not you want to run over the subjets as well
+--make-plots	Whether you want to create the mass plots
+--make-ptplots	The pt plots
+--extendedvars	Variables like TauWTA1/2 and ZCUT12 which are not in all samples
+--mass-window	Whether or not to apply the 68% mass window cuts
+--scale-hists	Whether or not to scale the output mass or pt histograms 
+--mpv		Whether or not to calculate the MPV
+--fileid	An extra identifier to the file/folder name
+--bkg-frac	Calculate the background fraction
+
+Right now the code only does one algorithm type at a time, but I am working on adding more flexibility on this front.  It would be useful to also set which grooming algorithm of each type we run, but this is for future work.
+
+However, you can set it running on a number of background and signal files that will be TChained together.  Since I haven't been able to spend too much time on this part, you would have to specify it like this:
+./bin/PlotsMunichWorkshop --background-file=bkgfile1.root --background-file=bkgfile2.root ..... --background-file=bkgfilen.root --signal-file=sigfile.root --algorithm=algorithmtype
+
+It is possible to set all of these options in a config file.  Each option on a new line, or as in the case of the input files, you would have background-file = bkgfileX.root for each bkg file on a different line.  If you decide to use a config file you run the code like this:
+./bin/PlotsMunichWorkshop --config=someconfigfile.cfg
+
+*Note that I have been running with all options off except for subjets and fileid, so there may still be some problems running with other options.
+
+If make-(pt)plots is on, the code should output a number of .pngs with different variables, and write these histograms to MunichPlots.root.
+
+When mass window is on, the code should calculate the mass window, and then run through the trees again and only select relevent events.  If it is off, no mass window cuts are applied.
+
+The output file of all the events that are kept will be in a folder AlgorithmName+fileid/.  AlgorithmName will be something like TopoTrimmedPtFrac30, etc.  It contains the leading jet kinematics for each jet, where it finds a groomed jet matched to a truth jet.  Otherwise it skips the event.  If there is no topo jet truth matched, then the topo entries will be -999 for that event.
+
+There is still a lot of error checking that needs to be put in place so that things don't just crash.
+
