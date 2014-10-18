@@ -497,8 +497,8 @@ std::map<int, std::vector<Float_t> *> var_TauWTA2_vec;
 std::map<int, std::vector<Float_t> *> var_TauWTA2TauWTA1_vec; 
 std::map<int, std::vector<Float_t> *> var_ZCUT12_vec;
 
-std::map<int, std::vector<Float_t> *> var_massFraction_vec;
-std::map<int, std::vector<Float_t> *> var_ytcut2_vec;
+Float_t var_massFraction_vec;
+Float_t var_ktycut2_vec;
 
 
 std::map<int, std::vector<std::vector < int>  > * > var_constit_index;
@@ -563,6 +563,7 @@ std::vector<Float_t> var_ZCUT12;
 
 
 
-bool subjets;
+bool subjetscalc;
+bool subjetspre;
 
 
