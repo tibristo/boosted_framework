@@ -2144,6 +2144,12 @@ void makeMassWindowFile(bool applyMassWindow,bool extendedVars)
 		  }
 	      } // end if(subjets)
 
+	    if (false)//extendedVars && !subjets)
+	      {
+		var_massdrop = (*var_massFraction_vec[2])[leadGroomedIndex];
+		var_yt = (*var_ytcut2_vec[2])[leadGroomedIndex];
+	      }
+
 	    // tau21
 	    var_Tau21[0]=(*var_Tau2_vec[0])[leadTruthIndex]/(*var_Tau1_vec[0])[leadTruthIndex];
 	    var_Tau21[1]=(*var_Tau2_vec[1])[leadTopoIndex]/(*var_Tau1_vec[1])[leadTopoIndex];
@@ -2414,6 +2420,7 @@ void setJetsBranches(TChain * tree, std::string &groomalgo, bool signal, int gro
       else
 	std::cout << "branch not found: " << std::string(jetType+"Pull_C11") << std::endl;
 
+
       std::cout << "checking extendedVars: " << extendedVars << std::endl;
       if (extendedVars)
 	{
@@ -2429,6 +2436,16 @@ void setJetsBranches(TChain * tree, std::string &groomalgo, bool signal, int gro
 	    tree->SetBranchAddress(std::string(jetType+"ZCUT12").c_str(),&var_ZCUT12_vec.at(i));
 	  else
 	    std::cout << "branch not found: " << std::string(jetType+"ZCUT12") << std::endl;
+
+	  if(tree->GetListOfBranches()->FindObject(std::string(jetType+"config_massFraction").c_str()))
+	    tree->SetBranchAddress(std::string(jetType+"config_massFraction").c_str(),&var_massFraction_vec.at(i));
+	  else
+	    std::cout << "branch not found: " << std::string(jetType+"config_massFraction") << std::endl;
+	  if(tree->GetListOfBranches()->FindObject(std::string(jetType+"config_ytcut2").c_str()))
+	    tree->SetBranchAddress(std::string(jetType+"config_ytcut2").c_str(),&var_ytcut2_vec.at(i));
+	  else
+	    std::cout << "branch not found: " << std::string(jetType+"config_ytcut2") << std::endl;
+
 
 	}
 
@@ -2591,6 +2608,8 @@ void initVectors(bool extendedVars)
 	  var_TauWTA1_vec[i] = 0;
 	  var_TauWTA2_vec[i] = 0;
 	  var_ZCUT12_vec[i] = 0;
+	  var_massFraction_vec[i] = 0;
+	  var_ytcut2_vec[i] = 0;
 	}
 
     }  
@@ -2664,6 +2683,8 @@ void setOutputVariables(bool extendedVars, int jet_idx_truth, int jet_idx_topo, 
 	  var_TauWTA1[x]=(*var_TauWTA1_vec[x])[jet_idx];
 	  var_TauWTA2[x]=(*var_TauWTA2_vec[x])[jet_idx];
 	  var_ZCUT12[x]=(*var_ZCUT12_vec[x])[jet_idx];
+	  //var_massFraction[x]=(*var_massFraction_vec[x])[jet_idx];
+	  //var_ytcut2[x]=(*var_ZCUT12_vec[x])[jet_idx];
 	}
     } // end for loop
 
