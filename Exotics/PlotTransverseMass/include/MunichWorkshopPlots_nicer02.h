@@ -116,6 +116,8 @@ void resetOutputVariables();
 void getMPV();
 void scaleHists();
 void setAddress(TChain * tree, std::string  name, std::vector<Float_t> * var_vec);
+void readWeights();
+
 
 enum class groomAlgoEnum{groomZero, TopoSplitFilteredMu67SmallR0YCut9, TopoSplitFilteredMu100SmallR30YCut4, TopoTrimmedPtFrac5SmallR30, TopoTrimmedPtFrac5SmallR20, TopoPrunedCaRcutFactor50Zcut10, TopoPrunedCaRcutFactor50Zcut20, AntiKt2LCTopo, AntiKt3LCTopo, AntiKt4LCTopo};
 enum sampleType{BACKGROUND, SIGNAL};
@@ -460,7 +462,11 @@ static inline std::string &rtrim(std::string &s) {
 }
 
 
-
+//store all the weights for different runNumbers:
+std::map<long, float> k_factors;
+std::map<long, float> filt_eff;
+std::map<long, float> xs;
+//std::map<int, float> ;
 
 
 
@@ -560,6 +566,11 @@ std::vector<Float_t> var_TauWTA1;
 std::vector<Float_t> var_TauWTA2; 
 std::vector<Float_t> var_TauWTA2TauWTA1; 
 std::vector<Float_t> var_ZCUT12;
+
+// store the weights for the samples
+Float_t var_k_factor;
+Float_t var_filter_eff;
+Float_t var_xs;
 
 
 

@@ -17,7 +17,8 @@
 #include <fstream>
 #include <boost/filesystem.hpp>
 #include <boost/program_options.hpp>
-
+#include <boost/algorithm/string.hpp>
+using namespace boost::algorithm;
 using namespace std;
 namespace po = boost::program_options;
 
@@ -284,7 +285,7 @@ int main( int argc, char * argv[] ) {
       }
     
 		       //}
-
+    readWeights();
   defineStrings(AlgoList, binLabel, pTbins, finePtBins);
   createHistos();
   
@@ -496,12 +497,12 @@ void getMassHistograms(TTree *inputTree, TTree *inputTree1, TString groomAlgo, i
     UInt_t RunNumber = (qcd_mc_channel_number);
     //cout << "QCD channel number " << RunNumber << endl;
     
-    //add weight to the QCD event
-    if (RunNumber == 147913) weight*=1.6664E+03*1.9139E-03; 
-    if (RunNumber == 147914) weight*=2.7646E+01*1.4296E-03; 
-    if (RunNumber == 147915) weight*=3.0317E-01*5.5040E-03; 
-    if (RunNumber == 147916) weight*=7.5078E-03*1.5252E-02;          
-    if (RunNumber == 147917) weight*=1.3760E-03*7.6369E-02;  
+    //add weight to the QCD event from here https://twiki.cern.ch/twiki/bin/viewauth/AtlasProtected/BosonTaggingPaper2012#7th_July_2014_Mixture_with_small
+    if (RunNumber == 147913) weight*=1.6664E+03*1.9139E-03; //JZ3W
+    if (RunNumber == 147914) weight*=2.7646E+01*1.4296E-03; //JZ4W
+    if (RunNumber == 147915) weight*=3.0317E-01*5.5040E-03; //JZ5W
+    if (RunNumber == 147916) weight*=7.5078E-03*1.5252E-02; //JZ6W   
+    if (RunNumber == 147917) weight*=1.3760E-03*7.6369E-02; //JZ7W
     //cout << "weight after re-weight " << weight << endl;
     
 
@@ -2091,6 +2092,9 @@ void makeMassWindowFile(bool applyMassWindow,bool extendedVars)
 	      leadTruthIndex = chosenLeadTruthJetIndex;
 	      leadTopoIndex = chosenLeadTopoJetIndex;
 	      runNumberOut = runNumberIn;
+	      var_k_factor = k_factors[runNumberOut];
+	      var_filter_eff = filt_eff[runNumberOut];
+	      var_xs = xs[runNumberOut];
 	      mass = (*var_m_vec[2])[leadGroomedIndex]/1000.0 ;
 
 	      if (applyMassWindow && (mass > mass_max && mass < mass_min))
@@ -2285,6 +2289,9 @@ void addJetsBranches(TTree * tree, std::string & groomalgo, bool signal, int gro
   tree->Branch("normalisation",&normalisation, "normalisation/F");
   tree->Branch("NEvents",&NEvents,"NEvents/I");
   tree->Branch("RunNumber",&runNumberOut, "RunNumber/I");
+  tree->Branch("k_factor", &var_k_factor, "k_factor/F");
+  tree->Branch("filter_eff", &var_filter_eff, "filter_eff/F");
+  tree->Branch("xs", &var_xs, "xs/F");
   //tree->Branch("NEvents_weighted",&NEvents_weighted,"NEvents_weighted/F");
 }// addJetsBranches
 
@@ -2901,3 +2908,81 @@ void setAddress(TChain * tree, std::string name, std::vector<Float_t> * var_vec)
     std::cout << "branch not found: " << name << std::endl;
   
 } //setAddress
+
+
+void readWeights()
+{
+  // read in the weights for the different samples.  Weights are based on RunNumbers, the file should have
+  // RunNumber,SampleName,xs,k-factor,filter-efficiency
+  // weights come from these two twiki pages: https://twiki.cern.ch/twiki/bin/viewauth/AtlasProtected/BosonTaggingPaper2012#7th_July_2014_Mixture_with_small and https://twiki.cern.ch/twiki/bin/view/AtlasProtected/BoostedBosonTaggingD3PD#Properly_normalizing_MC_samples
+  ifstream wf ("weighting_input.csv");
+  string line;
+  while (getline( wf, line))
+    {
+      trim(line);
+      std::vector<std::string> strs;
+      boost::split(strs, "string to split", boost::is_any_of(","));
+      int cntr = 0;
+      long runNumber = 0;
+      for (std::vector<std::string>::iterator it = strs.begin(); it != strs.end(); it ++)
+	{
+	  switch (cntr)
+	    {
+	    case 0:
+	      try
+		{
+		  runNumber = std::stol(*it);
+		}
+	      catch (exception &e)
+		{
+		  std::cout << "error converting to run number:" << *it << std::endl;
+		}
+	      k_factors[runNumber] = 1;
+	      filt_eff[runNumber] = 1;
+	      xs[runNumber] = 1;
+	      break;
+	    case 1:
+	      // This will be the sample name, but not using it right now.
+	      break;
+	    case 2:
+	      try
+		{
+		  xs[runNumber] = std::stof(*it);
+		}
+	      catch (exception &e)
+		{
+		  std::cout << "error converting to xs:" << *it << std::endl;
+		}
+	      break;
+	    case 3:
+	      try
+		{
+		  k_factors[runNumber] = std::stof(*it);
+		}
+	      catch (exception &e)
+		{
+		  std::cout << "error converting to k-factor:" << *it << std::endl;
+		}
+	      break;
+	    case 4:
+	      try
+		{
+		  filt_eff[runNumber] = std::stof(*it);
+		}
+	      catch (exception &e)
+		{
+		  std::cout << "error converting to eff:" << *it << std::endl;
+		}
+	      break;
+	    default:
+	      // this is probably an extra , on the end or something and is probably not needed!
+	      break;
+	      
+	    }
+	  cntr++;
+	}
+    }
+
+  wf.close();
+  
+} // readWeights
