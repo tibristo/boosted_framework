@@ -27,8 +27,8 @@ bool ComparePt(TLorentzVector a, TLorentzVector b) { return a.Pt() > b.Pt(); }
 template<class T>
 ostream& operator<<(ostream& os, const vector<T>& v)
 {
-    copy(v.begin(), v.end(), ostream_iterator<T>(os, " ")); 
-    return os;
+  copy(v.begin(), v.end(), ostream_iterator<T>(os, " ")); 
+  return os;
 }
 
 int main( int argc, char * argv[] ) {
@@ -176,116 +176,116 @@ int main( int argc, char * argv[] ) {
       return 1;
     }    
 
-    bool massHistos = applyMassWindowFlag;
+  bool massHistos = applyMassWindowFlag;
 
-    fileid_global = fileid;
+  fileid_global = fileid;
 
-    vector<string> inputBkgFiles = vm["background-file"].as<vector<string> > ();
-    vector<string> inputSigFiles = vm["signal-file"].as<vector<string> > ();
+  vector<string> inputBkgFiles = vm["background-file"].as<vector<string> > ();
+  vector<string> inputSigFiles = vm["signal-file"].as<vector<string> > ();
 
-    string alg_in = vm["algorithm"].as<string>();
+  string alg_in = vm["algorithm"].as<string>();
 
-    inputTChain[sampleType::BACKGROUND] = new TChain("physics");
-    for (vector<string>::iterator it = inputBkgFiles.begin(); it != inputBkgFiles.end(); it++)
-      {
-	inputTChain[sampleType::BACKGROUND]->Add((*it).c_str());
-	std::cout << "bkg file added: " << (*it) << std::endl;
-      }
+  inputTChain[sampleType::BACKGROUND] = new TChain("physics");
+  for (vector<string>::iterator it = inputBkgFiles.begin(); it != inputBkgFiles.end(); it++)
+    {
+      inputTChain[sampleType::BACKGROUND]->Add((*it).c_str());
+      std::cout << "bkg file added: " << (*it) << std::endl;
+    }
 
-    inputTChain[sampleType::SIGNAL] = new TChain("physics");
-    for (vector<string>::iterator it = inputSigFiles.begin(); it != inputSigFiles.end(); it++)
-      {
-	inputTChain[sampleType::SIGNAL]->Add((*it).c_str());
-	std::cout << "sig file added: " << (*it) << std::endl;
-      }
+  inputTChain[sampleType::SIGNAL] = new TChain("physics");
+  for (vector<string>::iterator it = inputSigFiles.begin(); it != inputSigFiles.end(); it++)
+    {
+      inputTChain[sampleType::SIGNAL]->Add((*it).c_str());
+      std::cout << "sig file added: " << (*it) << std::endl;
+    }
 
-    std::transform(alg_in.begin(), alg_in.end(), alg_in.begin(), ::tolower);
-    vector<int> subset;
+  std::transform(alg_in.begin(), alg_in.end(), alg_in.begin(), ::tolower);
+  vector<int> subset;
 
-    int nArg = 1; // TODO: this will need to be changed when moving from a system where only one algorithm is run at once
+  int nArg = 1; // TODO: this will need to be changed when moving from a system where only one algorithm is run at once
 
-    // right now the idea of filteridx, Xidx is not fully complete... The code as it stands runs on one type of algorithm at once, but 
-    // I would like it to run on a number of types.  This is why this is here.  It used to do this in fact, before switching stuff around
-    bool filter67 = false;
-    bool filter100 = false;
-    bool filterall= false;
-    if (alg_in.find("all")!=string::npos)
-      {
-	allsamples = true;
-	filteridx = trimidx = pruneidx = reclusteridx = 0;
-	cout << "all samples is true" << endl;
-	subset = {0,1,2,3,4,5,6,7,8,9};
-	algoMap.insert(algoMap.end(),subset.begin(),subset.end());
-      }
-    else if (alg_in.find("filter")!=string::npos || alg_in.find("split")!=string::npos)
-      {
-	if (!filtering)
-	  {
-	    filteridx = nArg-1;
-	    if (alg_in.find("67")!=string::npos)
-	      {
-		subset = {1};//{0,1,2};
-		algoMap.insert(algoMap.end(),subset.begin(),subset.end());
-		filter67 = true;
-	      }
-	    else if (alg_in.find("100")!=string::npos)
-	      {
-		subset = {2};//{0,1,2};
-		algoMap.insert(algoMap.end(),subset.begin(),subset.end());
-		filter100 = true;
-	      }
-	    else
-	      {
-		subset = {1,2};//{0,1,2};
-		algoMap.insert(algoMap.end(),subset.begin(),subset.end());
-		filterall=true;
-	      }
-	  }
-	filtering = true;
-      }
-    else if (alg_in.find("trim")!=string::npos)
-      {
-	if(!trimmed)
-	  {
-	    trimidx = nArg-1;
-	    subset = {3};//,4};
-	    algoMap.insert(algoMap.end(),subset.begin(),subset.end());
-	  }
-	trimmed = true;
-      }
-    else if (alg_in.find("prune")!=string::npos)
-      {
-	if (!pruned)
-	  {
-	    pruneidx = nArg-1;
-	    subset = {0,5,6};
-	    algoMap.insert(algoMap.end(),subset.begin(),subset.end());
-	  }
-	pruned = true;
-      }
-    else if (alg_in.find("reclust")!=string::npos)
-      {
-	if (!recluster)
-	  {
-	    reclusteridx = nArg -1;	
-	    subset = {7,8,9}; // removed 0 for now
-	    algoMap.insert(algoMap.end(),subset.begin(),subset.end());
-	  }
-	recluster = true;
-      }
-    else 
-      {
-	std::cout << "Incorrect algorithm given! Please choose from split/filter, pruned, trimmed, reclustered or all" << std::endl;
-	return 1;
-      }
-    if (!subset.empty())
-      {
-	for (std::vector<int>::iterator it = subset.begin(); it != subset.end(); it++)
-	  fileMap[(*it)] = nArg-1; // what about index 0?  That might cause problems because we set it for ALL files!
-      }
+  // right now the idea of filteridx, Xidx is not fully complete... The code as it stands runs on one type of algorithm at once, but 
+  // I would like it to run on a number of types.  This is why this is here.  It used to do this in fact, before switching stuff around
+  bool filter67 = false;
+  bool filter100 = false;
+  bool filterall= false;
+  if (alg_in.find("all")!=string::npos)
+    {
+      allsamples = true;
+      filteridx = trimidx = pruneidx = reclusteridx = 0;
+      cout << "all samples is true" << endl;
+      subset = {0,1,2,3,4,5,6,7,8,9};
+      algoMap.insert(algoMap.end(),subset.begin(),subset.end());
+    }
+  else if (alg_in.find("filter")!=string::npos || alg_in.find("split")!=string::npos)
+    {
+      if (!filtering)
+	{
+	  filteridx = nArg-1;
+	  if (alg_in.find("67")!=string::npos)
+	    {
+	      subset = {1};//{0,1,2};
+	      algoMap.insert(algoMap.end(),subset.begin(),subset.end());
+	      filter67 = true;
+	    }
+	  else if (alg_in.find("100")!=string::npos)
+	    {
+	      subset = {2};//{0,1,2};
+	      algoMap.insert(algoMap.end(),subset.begin(),subset.end());
+	      filter100 = true;
+	    }
+	  else
+	    {
+	      subset = {1,2};//{0,1,2};
+	      algoMap.insert(algoMap.end(),subset.begin(),subset.end());
+	      filterall=true;
+	    }
+	}
+      filtering = true;
+    }
+  else if (alg_in.find("trim")!=string::npos)
+    {
+      if(!trimmed)
+	{
+	  trimidx = nArg-1;
+	  subset = {3};//,4};
+	  algoMap.insert(algoMap.end(),subset.begin(),subset.end());
+	}
+      trimmed = true;
+    }
+  else if (alg_in.find("prune")!=string::npos)
+    {
+      if (!pruned)
+	{
+	  pruneidx = nArg-1;
+	  subset = {0,5,6};
+	  algoMap.insert(algoMap.end(),subset.begin(),subset.end());
+	}
+      pruned = true;
+    }
+  else if (alg_in.find("reclust")!=string::npos)
+    {
+      if (!recluster)
+	{
+	  reclusteridx = nArg -1;	
+	  subset = {7,8,9}; // removed 0 for now
+	  algoMap.insert(algoMap.end(),subset.begin(),subset.end());
+	}
+      recluster = true;
+    }
+  else 
+    {
+      std::cout << "Incorrect algorithm given! Please choose from split/filter, pruned, trimmed, reclustered or all" << std::endl;
+      return 1;
+    }
+  if (!subset.empty())
+    {
+      for (std::vector<int>::iterator it = subset.begin(); it != subset.end(); it++)
+	fileMap[(*it)] = nArg-1; // what about index 0?  That might cause problems because we set it for ALL files!
+    }
     
-		       //}
-    readWeights();
+  //}
+  readWeights();
   defineStrings(AlgoList, binLabel, pTbins, finePtBins);
   createHistos();
   
@@ -1205,35 +1205,35 @@ void getBranches(TTree *inputTree, TTree *inputTree1, TString groomAlgo, int gro
 
     ///////////////////////////////////////////////
     /*
-    inputTree->SetBranchAddress("mc_channel_number", &qcd_mc_channel_number);
-    inputTree->SetBranchAddress("mc_event_weight", &qcd_mc_event_weight);
-    inputTree->SetBranchAddress("jet_AntiKt10Truth_pt", &qcd_CA12_truth_pt);
-    inputTree->SetBranchAddress("jet_AntiKt10Truth_eta", &qcd_CA12_truth_eta);
-    inputTree->SetBranchAddress("jet_AntiKt10Truth_phi", &qcd_CA12_truth_phi);
-    inputTree->SetBranchAddress("jet_AntiKt10Truth_m", &qcd_CA12_truth_mass);
-    inputTree->SetBranchAddress("jet_AntiKt10Truth_E", &qcd_CA12_truth_E);
+      inputTree->SetBranchAddress("mc_channel_number", &qcd_mc_channel_number);
+      inputTree->SetBranchAddress("mc_event_weight", &qcd_mc_event_weight);
+      inputTree->SetBranchAddress("jet_AntiKt10Truth_pt", &qcd_CA12_truth_pt);
+      inputTree->SetBranchAddress("jet_AntiKt10Truth_eta", &qcd_CA12_truth_eta);
+      inputTree->SetBranchAddress("jet_AntiKt10Truth_phi", &qcd_CA12_truth_phi);
+      inputTree->SetBranchAddress("jet_AntiKt10Truth_m", &qcd_CA12_truth_mass);
+      inputTree->SetBranchAddress("jet_AntiKt10Truth_E", &qcd_CA12_truth_E);
 
-    inputTree->SetBranchAddress("jet_AntiKt10"+groomAlgo+"_pt", &qcd_CA12_groomed_pt);
-    inputTree->SetBranchAddress("jet_AntiKt10"+groomAlgo+"_eta", &qcd_CA12_groomed_eta);
-    inputTree->SetBranchAddress("jet_AntiKt10"+groomAlgo+"_phi", &qcd_CA12_groomed_phi);
-    inputTree->SetBranchAddress("jet_AntiKt10"+groomAlgo+"_m", &qcd_CA12_groomed_mass);
-    inputTree->SetBranchAddress("jet_AntiKt10"+groomAlgo+"_E", &qcd_CA12_groomed_E);
-    inputTree->SetBranchAddress("jet_AntiKt10"+groomAlgo+"_emfrac", &qcd_CA12_groomed_emfrac);
+      inputTree->SetBranchAddress("jet_AntiKt10"+groomAlgo+"_pt", &qcd_CA12_groomed_pt);
+      inputTree->SetBranchAddress("jet_AntiKt10"+groomAlgo+"_eta", &qcd_CA12_groomed_eta);
+      inputTree->SetBranchAddress("jet_AntiKt10"+groomAlgo+"_phi", &qcd_CA12_groomed_phi);
+      inputTree->SetBranchAddress("jet_AntiKt10"+groomAlgo+"_m", &qcd_CA12_groomed_mass);
+      inputTree->SetBranchAddress("jet_AntiKt10"+groomAlgo+"_E", &qcd_CA12_groomed_E);
+      inputTree->SetBranchAddress("jet_AntiKt10"+groomAlgo+"_emfrac", &qcd_CA12_groomed_emfrac);
 
-    inputTree1->SetBranchAddress("mc_channel_number", &Wp_mc_channel_number);
-    inputTree1->SetBranchAddress("mc_event_weight", &Wp_mc_event_weight);
-    inputTree1->SetBranchAddress("jet_AntiKt10Truth_pt", &Wp_CA12_truth_pt);
-    inputTree1->SetBranchAddress("jet_AntiKt10Truth_eta", &Wp_CA12_truth_eta);
-    inputTree1->SetBranchAddress("jet_AntiKt10Truth_phi", &Wp_CA12_truth_phi);
-    inputTree1->SetBranchAddress("jet_AntiKt10Truth_m", &Wp_CA12_truth_mass);
-    inputTree1->SetBranchAddress("jet_AntiKt10Truth_E", &Wp_CA12_truth_E);
+      inputTree1->SetBranchAddress("mc_channel_number", &Wp_mc_channel_number);
+      inputTree1->SetBranchAddress("mc_event_weight", &Wp_mc_event_weight);
+      inputTree1->SetBranchAddress("jet_AntiKt10Truth_pt", &Wp_CA12_truth_pt);
+      inputTree1->SetBranchAddress("jet_AntiKt10Truth_eta", &Wp_CA12_truth_eta);
+      inputTree1->SetBranchAddress("jet_AntiKt10Truth_phi", &Wp_CA12_truth_phi);
+      inputTree1->SetBranchAddress("jet_AntiKt10Truth_m", &Wp_CA12_truth_mass);
+      inputTree1->SetBranchAddress("jet_AntiKt10Truth_E", &Wp_CA12_truth_E);
 
-    inputTree1->SetBranchAddress("jet_AntiKt10LCTopo_pt", &Wp_CA12_topo_pt);
-    inputTree1->SetBranchAddress("jet_AntiKt10LCTopo_eta", &Wp_CA12_topo_eta);
-    inputTree1->SetBranchAddress("jet_AntiKt10LCTopo_phi", &Wp_CA12_topo_phi);
-    inputTree1->SetBranchAddress("jet_AntiKt10LCTopo_m", &Wp_CA12_topo_mass);
-    inputTree1->SetBranchAddress("jet_AntiKt10LCTopo_E", &Wp_CA12_topo_E);
-    inputTree1->SetBranchAddress("jet_AntiKt10LCTopo_emfrac", &Wp_CA12_topo_emfrac);
+      inputTree1->SetBranchAddress("jet_AntiKt10LCTopo_pt", &Wp_CA12_topo_pt);
+      inputTree1->SetBranchAddress("jet_AntiKt10LCTopo_eta", &Wp_CA12_topo_eta);
+      inputTree1->SetBranchAddress("jet_AntiKt10LCTopo_phi", &Wp_CA12_topo_phi);
+      inputTree1->SetBranchAddress("jet_AntiKt10LCTopo_m", &Wp_CA12_topo_mass);
+      inputTree1->SetBranchAddress("jet_AntiKt10LCTopo_E", &Wp_CA12_topo_E);
+      inputTree1->SetBranchAddress("jet_AntiKt10LCTopo_emfrac", &Wp_CA12_topo_emfrac);
     */
 
   }
@@ -1245,13 +1245,13 @@ void getBranches(TTree *inputTree, TTree *inputTree1, TString groomAlgo, int gro
   else if (groomAlgoIndex>6){
 
     /*
-    inputTree->SetBranchAddress("mc_channel_number", &qcd_mc_channel_number);
-    inputTree->SetBranchAddress("mc_event_weight", &qcd_mc_event_weight);
-    inputTree->SetBranchAddress("jet_CamKt12Truth_pt", &qcd_CA12_truth_pt);
-    inputTree->SetBranchAddress("jet_CamKt12Truth_eta", &qcd_CA12_truth_eta);
-    inputTree->SetBranchAddress("jet_CamKt12Truth_phi", &qcd_CA12_truth_phi);
-    inputTree->SetBranchAddress("jet_CamKt12Truth_m", &qcd_CA12_truth_mass);
-    inputTree->SetBranchAddress("jet_CamKt12Truth_E", &qcd_CA12_truth_E);
+      inputTree->SetBranchAddress("mc_channel_number", &qcd_mc_channel_number);
+      inputTree->SetBranchAddress("mc_event_weight", &qcd_mc_event_weight);
+      inputTree->SetBranchAddress("jet_CamKt12Truth_pt", &qcd_CA12_truth_pt);
+      inputTree->SetBranchAddress("jet_CamKt12Truth_eta", &qcd_CA12_truth_eta);
+      inputTree->SetBranchAddress("jet_CamKt12Truth_phi", &qcd_CA12_truth_phi);
+      inputTree->SetBranchAddress("jet_CamKt12Truth_m", &qcd_CA12_truth_mass);
+      inputTree->SetBranchAddress("jet_CamKt12Truth_E", &qcd_CA12_truth_E);
     */
     inputTree->SetBranchAddress("mc_channel_number", &qcd_mc_channel_number);
     inputTree->SetBranchAddress("mc_event_weight", &qcd_mc_event_weight);
@@ -1264,36 +1264,36 @@ void getBranches(TTree *inputTree, TTree *inputTree1, TString groomAlgo, int gro
     //AntiKt2LCTopo
 
     /*inputTree->SetBranchAddress("jet_"+groomAlgo+"_pt", &qcd_CA12_topo_pt);
-    inputTree->SetBranchAddress("jet_"+groomAlgo+"_eta", &qcd_CA12_topo_eta);
-    inputTree->SetBranchAddress("jet_"+groomAlgo+"_phi", &qcd_CA12_topo_phi);
-    inputTree->SetBranchAddress("jet_"+groomAlgo+"_m", &qcd_CA12_topo_mass);
-    inputTree->SetBranchAddress("jet_"+groomAlgo+"_E", &qcd_CA12_topo_E);
-    inputTree->SetBranchAddress("jet_"+groomAlgo+"_emfrac", &qcd_CA12_topo_emfrac);
+      inputTree->SetBranchAddress("jet_"+groomAlgo+"_eta", &qcd_CA12_topo_eta);
+      inputTree->SetBranchAddress("jet_"+groomAlgo+"_phi", &qcd_CA12_topo_phi);
+      inputTree->SetBranchAddress("jet_"+groomAlgo+"_m", &qcd_CA12_topo_mass);
+      inputTree->SetBranchAddress("jet_"+groomAlgo+"_E", &qcd_CA12_topo_E);
+      inputTree->SetBranchAddress("jet_"+groomAlgo+"_emfrac", &qcd_CA12_topo_emfrac);
     */
     inputTree->SetBranchAddress(std::string("jet_"+AlgoPrefix[groomAlgoIndex]+""+groomAlgo+"_pt").c_str(), &qcd_CA12_groomed_pt);
-      inputTree->SetBranchAddress(std::string("jet_"+AlgoPrefix[groomAlgoIndex]+""+groomAlgo+"_eta").c_str(), &qcd_CA12_groomed_eta);
-      inputTree->SetBranchAddress(std::string("jet_"+AlgoPrefix[groomAlgoIndex]+""+groomAlgo+"_phi").c_str(), &qcd_CA12_groomed_phi);
-      inputTree->SetBranchAddress(std::string("jet_"+AlgoPrefix[groomAlgoIndex]+""+groomAlgo+"_m").c_str(), &qcd_CA12_groomed_mass);
-      inputTree->SetBranchAddress(std::string("jet_"+AlgoPrefix[groomAlgoIndex]+""+groomAlgo+"_E").c_str(), &qcd_CA12_groomed_E);
-      inputTree->SetBranchAddress(std::string("jet_"+AlgoPrefix[groomAlgoIndex]+""+groomAlgo+"_emfrac").c_str(), &qcd_CA12_groomed_emfrac);
+    inputTree->SetBranchAddress(std::string("jet_"+AlgoPrefix[groomAlgoIndex]+""+groomAlgo+"_eta").c_str(), &qcd_CA12_groomed_eta);
+    inputTree->SetBranchAddress(std::string("jet_"+AlgoPrefix[groomAlgoIndex]+""+groomAlgo+"_phi").c_str(), &qcd_CA12_groomed_phi);
+    inputTree->SetBranchAddress(std::string("jet_"+AlgoPrefix[groomAlgoIndex]+""+groomAlgo+"_m").c_str(), &qcd_CA12_groomed_mass);
+    inputTree->SetBranchAddress(std::string("jet_"+AlgoPrefix[groomAlgoIndex]+""+groomAlgo+"_E").c_str(), &qcd_CA12_groomed_E);
+    inputTree->SetBranchAddress(std::string("jet_"+AlgoPrefix[groomAlgoIndex]+""+groomAlgo+"_emfrac").c_str(), &qcd_CA12_groomed_emfrac);
     
  
-      /*inputTree1->SetBranchAddress("mc_channel_number", &Wp_mc_channel_number);
-    inputTree1->SetBranchAddress("mc_event_weight", &Wp_mc_event_weight);
-    inputTree1->SetBranchAddress("jet_CamKt12Truth_pt", &Wp_CA12_truth_pt);
-    inputTree1->SetBranchAddress("jet_CamKt12Truth_eta", &Wp_CA12_truth_eta);
-    inputTree1->SetBranchAddress("jet_CamKt12Truth_phi", &Wp_CA12_truth_phi);
-    inputTree1->SetBranchAddress("jet_CamKt12Truth_m", &Wp_CA12_truth_mass);
-    inputTree1->SetBranchAddress("jet_CamKt12Truth_E", &Wp_CA12_truth_E);*/
+    /*inputTree1->SetBranchAddress("mc_channel_number", &Wp_mc_channel_number);
+      inputTree1->SetBranchAddress("mc_event_weight", &Wp_mc_event_weight);
+      inputTree1->SetBranchAddress("jet_CamKt12Truth_pt", &Wp_CA12_truth_pt);
+      inputTree1->SetBranchAddress("jet_CamKt12Truth_eta", &Wp_CA12_truth_eta);
+      inputTree1->SetBranchAddress("jet_CamKt12Truth_phi", &Wp_CA12_truth_phi);
+      inputTree1->SetBranchAddress("jet_CamKt12Truth_m", &Wp_CA12_truth_mass);
+      inputTree1->SetBranchAddress("jet_CamKt12Truth_E", &Wp_CA12_truth_E);*/
     
     
-      inputTree1->SetBranchAddress("mc_channel_number", &Wp_mc_channel_number);
-      //inputTree1->SetBranchAddress("mc_event_weight", &Wp_mc_event_weight);
-      inputTree1->SetBranchAddress(std::string("jet_CamKt12Truth_pt").c_str(), &Wp_CA12_truth_pt);
-      inputTree1->SetBranchAddress(std::string("jet_CamKt12Truth_eta").c_str(), &Wp_CA12_truth_eta);
-      inputTree1->SetBranchAddress(std::string("jet_CamKt12Truth_phi").c_str(), &Wp_CA12_truth_phi);
-      inputTree1->SetBranchAddress(std::string("jet_CamKt12Truth_m").c_str(), &Wp_CA12_truth_mass);
-      inputTree1->SetBranchAddress(std::string("jet_CamKt12Truth_E").c_str(), &Wp_CA12_truth_E);
+    inputTree1->SetBranchAddress("mc_channel_number", &Wp_mc_channel_number);
+    //inputTree1->SetBranchAddress("mc_event_weight", &Wp_mc_event_weight);
+    inputTree1->SetBranchAddress(std::string("jet_CamKt12Truth_pt").c_str(), &Wp_CA12_truth_pt);
+    inputTree1->SetBranchAddress(std::string("jet_CamKt12Truth_eta").c_str(), &Wp_CA12_truth_eta);
+    inputTree1->SetBranchAddress(std::string("jet_CamKt12Truth_phi").c_str(), &Wp_CA12_truth_phi);
+    inputTree1->SetBranchAddress(std::string("jet_CamKt12Truth_m").c_str(), &Wp_CA12_truth_mass);
+    inputTree1->SetBranchAddress(std::string("jet_CamKt12Truth_E").c_str(), &Wp_CA12_truth_E);
       
     inputTree1->SetBranchAddress(std::string("jet_"+AlgoPrefix[groomAlgoIndex]+"LCTopo_pt").c_str(), &Wp_CA12_topo_pt);
     inputTree1->SetBranchAddress(std::string("jet_"+AlgoPrefix[groomAlgoIndex]+"LCTopo_eta").c_str(), &Wp_CA12_topo_eta);
@@ -1302,12 +1302,12 @@ void getBranches(TTree *inputTree, TTree *inputTree1, TString groomAlgo, int gro
     inputTree1->SetBranchAddress(std::string("jet_"+AlgoPrefix[groomAlgoIndex]+"LCTopo_E").c_str(), &Wp_CA12_topo_E);
     inputTree1->SetBranchAddress(std::string("jet_"+AlgoPrefix[groomAlgoIndex]+"LCTopo_emfrac").c_str(), &Wp_CA12_topo_emfrac);
     
-      inputTree1->SetBranchAddress(std::string("jet_"+AlgoPrefix[groomAlgoIndex]+""+groomAlgo+"_pt").c_str(), &Wp_CA12_groomed_pt);
-      inputTree1->SetBranchAddress(std::string("jet_"+AlgoPrefix[groomAlgoIndex]+""+groomAlgo+"_eta").c_str(), &Wp_CA12_groomed_eta);
-      inputTree1->SetBranchAddress(std::string("jet_"+AlgoPrefix[groomAlgoIndex]+""+groomAlgo+"_phi").c_str(), &Wp_CA12_groomed_phi);
-      inputTree1->SetBranchAddress(std::string("jet_"+AlgoPrefix[groomAlgoIndex]+""+groomAlgo+"_m").c_str(), &Wp_CA12_groomed_mass);
-      inputTree1->SetBranchAddress(std::string("jet_"+AlgoPrefix[groomAlgoIndex]+""+groomAlgo+"_E").c_str(), &Wp_CA12_groomed_E);
-      inputTree1->SetBranchAddress(std::string("jet_"+AlgoPrefix[groomAlgoIndex]+""+groomAlgo+"_emfrac").c_str(), &Wp_CA12_groomed_emfrac);
+    inputTree1->SetBranchAddress(std::string("jet_"+AlgoPrefix[groomAlgoIndex]+""+groomAlgo+"_pt").c_str(), &Wp_CA12_groomed_pt);
+    inputTree1->SetBranchAddress(std::string("jet_"+AlgoPrefix[groomAlgoIndex]+""+groomAlgo+"_eta").c_str(), &Wp_CA12_groomed_eta);
+    inputTree1->SetBranchAddress(std::string("jet_"+AlgoPrefix[groomAlgoIndex]+""+groomAlgo+"_phi").c_str(), &Wp_CA12_groomed_phi);
+    inputTree1->SetBranchAddress(std::string("jet_"+AlgoPrefix[groomAlgoIndex]+""+groomAlgo+"_m").c_str(), &Wp_CA12_groomed_mass);
+    inputTree1->SetBranchAddress(std::string("jet_"+AlgoPrefix[groomAlgoIndex]+""+groomAlgo+"_E").c_str(), &Wp_CA12_groomed_E);
+    inputTree1->SetBranchAddress(std::string("jet_"+AlgoPrefix[groomAlgoIndex]+""+groomAlgo+"_emfrac").c_str(), &Wp_CA12_groomed_emfrac);
     
 
   }
@@ -1994,7 +1994,7 @@ void makeMassWindowFile(bool applyMassWindow,bool extendedVars)
 	  setOutputBranches(outTree, AlgoNames[i], i, extendedVars);
 	  //addJetsBranches(outTree, AlgoNames[i], signal, i);
 
-	  if (subjetscalc)
+	  if (subjetscalc || subjetspre)
 	    addSubJets(outTree, AlgoNames[i], signal, i);
 	  addJetsBranches(outTree, AlgoNames[i], signal, i);
 
@@ -2049,10 +2049,10 @@ void makeMassWindowFile(bool applyMassWindow,bool extendedVars)
 		  for (int jet_i=0; jet_i<(*jet_pt_topo).size(); jet_i++)
 		    {
 		      if (!hasTopoJet && (*jet_emfrac_topo)[jet_i]<0.99 && fabs((*jet_eta_topo)[jet_i])<1.2) 
-		      {
-			chosenLeadTopoJetIndex=jet_i;
-			hasTopoJet=true;
-		      } 
+			{
+			  chosenLeadTopoJetIndex=jet_i;
+			  hasTopoJet=true;
+			} 
 		    } // end loop over jet_pt_topo
 		  
 		  //now match truth jet with the chosen topo jet
@@ -2086,15 +2086,13 @@ void makeMassWindowFile(bool applyMassWindow,bool extendedVars)
 		} // end loop over jet_pt_groomed
 	      
 	      if (chosenLeadGroomedIndex == -99) // failed selection
-		  continue;	      
+		continue;	      
 	      
 	      leadGroomedIndex = chosenLeadGroomedIndex;
 	      leadTruthIndex = chosenLeadTruthJetIndex;
 	      leadTopoIndex = chosenLeadTopoJetIndex;
 	      runNumberOut = runNumberIn;
-	      var_k_factor = k_factors[runNumberOut];
-	      var_filter_eff = filt_eff[runNumberOut];
-	      var_xs = xs[runNumberOut];
+
 	      mass = (*var_m_vec[2])[leadGroomedIndex]/1000.0 ;
 
 	      if (applyMassWindow && (mass > mass_max && mass < mass_min))
@@ -2102,71 +2100,100 @@ void makeMassWindowFile(bool applyMassWindow,bool extendedVars)
 		  continue;
 		}
 
-	    int lead_subjet = 0;
+	      int lead_subjet = 0;
 
-	    if (subjetscalc)
-	      {
+	      if (subjetscalc)
+		{
 
-		std::vector<int> subjet_idx = (*subjet_index).at(leadGroomedIndex); // only groomed ones.....
-		std::pair<int,int> subjet_leading = getTwoLeadingSubjets(subjet_idx,var_subjets_pt_vec);
+		  std::vector<int> subjet_idx = (*subjet_index).at(leadGroomedIndex); // only groomed ones.....
+		  std::pair<int,int> subjet_leading = getTwoLeadingSubjets(subjet_idx,var_subjets_pt_vec);
 
-		// calculate the mass drop
-		if (subjet_idx.size() <= 1)
-		  {
-		    var_massdrop = -999;
-		    var_yt = -999;
-		    //break;
-		  }
-		else
-		  {
-		    lead_subjet = subjet_leading.first;
+		  // calculate the mass drop
+		  if (subjet_idx.size() <= 1)
+		    {
+		      var_massdrop = -999;
+		      var_yt = -999;
+		      //break;
+		    }
+		  else
+		    {
+		      lead_subjet = subjet_leading.first;
 		    
-		    double pt1 =  (*var_subjets_pt_vec)[subjet_leading.first];
-		    double pt2 =  (*var_subjets_pt_vec)[subjet_leading.second];
-		    double eta_1 =  (*var_subjets_eta_vec)[subjet_leading.first];
-		    double eta_2 =  (*var_subjets_eta_vec)[subjet_leading.second];
-		    double phi_1 = (*var_subjets_phi_vec)[subjet_leading.first];
-		    double phi_2 = (*var_subjets_phi_vec)[subjet_leading.second];
-		    double e1 = (*var_subjets_E_vec)[subjet_leading.first];
+		      double pt1 =  (*var_subjets_pt_vec)[subjet_leading.first];
+		      double pt2 =  (*var_subjets_pt_vec)[subjet_leading.second];
+		      double eta_1 =  (*var_subjets_eta_vec)[subjet_leading.first];
+		      double eta_2 =  (*var_subjets_eta_vec)[subjet_leading.second];
+		      double phi_1 = (*var_subjets_phi_vec)[subjet_leading.first];
+		      double phi_2 = (*var_subjets_phi_vec)[subjet_leading.second];
+		      double e1 = (*var_subjets_E_vec)[subjet_leading.first];
 		    
-		    double subjet_mass =  (*var_subjets_m_vec)[subjet_leading.first];
+		      double subjet_mass =  (*var_subjets_m_vec)[subjet_leading.first];
 		    
-		    double mu12 = subjet_mass/(mass*1000);
-		    var_massdrop = mu12;
+		      double mu12 = subjet_mass/(mass*1000);
+		      var_massdrop = mu12;
 		    
-		    // momentum balance
-		    double dRsub12 = DeltaR (eta_1, phi_1, eta_2, phi_2);
-		    Float_t yt = (pt2*dRsub12)/(mass*1000);		    
-		    yt*=yt;
-		    var_yt = yt;
-		  }
-	      } // end if(subjets)
+		      // momentum balance
+		      double dRsub12 = DeltaR (eta_1, phi_1, eta_2, phi_2);
+		      Float_t yt = (pt2*dRsub12)/(mass*1000);		    
+		      yt*=yt;
+		      var_yt = yt;
+		    }
+		} // end if(subjets)
 
-	    else if (subjetspre)
-	      {
-		var_massdrop = var_massFraction_vec;//[leadGroomedIndex];
-		var_yt = var_ktycut2_vec;//[leadGroomedIndex];
-	      }
+	      else if (subjetspre)
+		{
+		  var_massdrop = var_massFraction_vec;//[leadGroomedIndex];
+		  //std::cout << var_massFraction_vec << std::endl;
+		  var_yt = var_ktycut2_vec;//[leadGroomedIndex];
+		}
 
-	    // tau21
-	    var_Tau21[0]=(*var_Tau2_vec[0])[leadTruthIndex]/(*var_Tau1_vec[0])[leadTruthIndex];
-	    var_Tau21[1]=(*var_Tau2_vec[1])[leadTopoIndex]/(*var_Tau1_vec[1])[leadTopoIndex];
-	    var_Tau21[2]=(*var_Tau2_vec[2])[leadGroomedIndex]/(*var_Tau1_vec[2])[leadGroomedIndex];
+	      // tau21
+	      var_Tau21[0]=(*var_Tau2_vec[0])[leadTruthIndex]/(*var_Tau1_vec[0])[leadTruthIndex];
+	      var_Tau21[1]=(*var_Tau2_vec[1])[leadTopoIndex]/(*var_Tau1_vec[1])[leadTopoIndex];
+	      var_Tau21[2]=(*var_Tau2_vec[2])[leadGroomedIndex]/(*var_Tau1_vec[2])[leadGroomedIndex];
 	    
-	    if (extendedVars)
-	      {
-		var_TauWTA2TauWTA1[0]=(*var_TauWTA2_vec[0])[leadTruthIndex]/(*var_TauWTA1_vec[0])[leadTruthIndex];
-		var_TauWTA2TauWTA1[2]=(*var_TauWTA2_vec[2])[leadGroomedIndex]/(*var_TauWTA1_vec[2])[leadGroomedIndex];
-		if (leadTopoIndex == -99)
-		  var_TauWTA2TauWTA1[1]=-99;
-		else
-		  var_TauWTA2TauWTA1[1]=(*var_TauWTA2_vec[1])[leadTopoIndex]/(*var_TauWTA1_vec[1])[leadTopoIndex];
-	      }
+	      if (extendedVars)
+		{
+		  var_TauWTA2TauWTA1[0]=(*var_TauWTA2_vec[0])[leadTruthIndex]/(*var_TauWTA1_vec[0])[leadTruthIndex];
+		  var_TauWTA2TauWTA1[2]=(*var_TauWTA2_vec[2])[leadGroomedIndex]/(*var_TauWTA1_vec[2])[leadGroomedIndex];
+		  if (leadTopoIndex == -99)
+		    var_TauWTA2TauWTA1[1]=-99;
+		  else
+		    var_TauWTA2TauWTA1[1]=(*var_TauWTA2_vec[1])[leadTopoIndex]/(*var_TauWTA1_vec[1])[leadTopoIndex];
+		}
 	    
-	    setOutputVariables(extendedVars, leadTruthIndex, leadTopoIndex, leadGroomedIndex, lead_subjet);
+	      setOutputVariables(extendedVars, leadTruthIndex, leadTopoIndex, leadGroomedIndex, lead_subjet);
 
-	    outTree->Fill();
-	    pt_reweight->Fill((*jet_pt_truth)[chosenLeadTruthJetIndex]/1000.0);
+	      if (k_factors.count(long(mc_channel_number)) > 0 )
+		{
+		  var_k_factor = k_factors[long(mc_channel_number)];
+		}
+	      else
+		{
+		  var_k_factor = 1.0;
+		  //std::cout << "Warning: k-factor not known for " << mc_channel_number << endl;
+		}
+	      if (filt_eff.count(long(mc_channel_number)) > 0 )
+		{
+		  var_filter_eff = filt_eff[long(mc_channel_number)];
+		}
+	      else
+		{
+		  var_filter_eff = 1.0;
+		  //std::cout << "Warning: filter eff not known for " << mc_channel_number << endl;
+		}
+	      if (xs.count(long(mc_channel_number)) > 0)
+		{
+		  var_xs = xs[long(mc_channel_number)];
+		}
+	      else
+		{
+		  var_xs = 1.0;
+		  //std::cout << "Warning: xs not known for " << mc_channel_number << endl;
+		}
+
+	      outTree->Fill();
+	      pt_reweight->Fill((*jet_pt_truth)[chosenLeadTruthJetIndex]/1000.0);
 
 	    }
 
@@ -2204,7 +2231,7 @@ std::pair<int,int> getTwoLeadingSubjets(std::vector<int> & jet_idx, std::vector<
   int max = -1;
   int sec = -1;
 
-    for (int i = 0; i < jet_idx.size(); i++)
+  for (int i = 0; i < jet_idx.size(); i++)
     {
       int idx = jet_idx[i];
       if (max_pt < (*subjet_pt)[idx])
@@ -2249,24 +2276,24 @@ vector<std::string> getListOfJetBranches(std::string &algorithm)
 std::string returnJetType(std::string & samplePrefix, std::string & groomalgo, bool addLC, int i)
 {
   std::string jetType = "";
-      switch (i)
-	{
-	case 0: // truth
-	  jetType="jet_CamKt12Truth_";
-	  break;
-	case 1: // topo
-	  if (addLC)
-	    jetType = "jet_" + samplePrefix + "LCTopo_";
-	  else
-	    jetType = "jet_" + samplePrefix + "Topo_";
-	  break;
-	default: // groomed
-	  if (addLC)
-	    jetType = "jet_" + samplePrefix +"LC" + groomalgo + "_";
-	  else
-	    jetType = "jet_" + samplePrefix + groomalgo + "_"; 	  
-	}
-      return jetType;
+  switch (i)
+    {
+    case 0: // truth
+      jetType="jet_CamKt12Truth_";
+      break;
+    case 1: // topo
+      if (addLC)
+	jetType = "jet_" + samplePrefix + "LCTopo_";
+      else
+	jetType = "jet_" + samplePrefix + "Topo_";
+      break;
+    default: // groomed
+      if (addLC)
+	jetType = "jet_" + samplePrefix +"LC" + groomalgo + "_";
+      else
+	jetType = "jet_" + samplePrefix + groomalgo + "_"; 	  
+    }
+  return jetType;
 } // returnJetType
 
 
@@ -2448,7 +2475,7 @@ void setJetsBranches(TChain * tree, std::string &groomalgo, bool signal, int gro
 	setAddress(tree,std::string(jetType+"eta"),var_eta_vec.at(i));
 	setAddress(tree,std::string(jetType+"phi"),var_phi_vec.at(i));
 	if (i != 0)
-	  setAddress(tree,std::string(jetType+"emfrac"),var_emfrac_vec.at(i));
+	setAddress(tree,std::string(jetType+"emfrac"),var_emfrac_vec.at(i));
 	setAddress(tree,std::string(jetType+"Tau1"),var_Tau1_vec.at(i));
 	setAddress(tree,std::string(jetType+"Tau2"),var_Tau2_vec.at(i));
 	setAddress(tree,std::string(jetType+"Tau3"),var_Tau3_vec.at(i));
@@ -2469,11 +2496,11 @@ void setJetsBranches(TChain * tree, std::string &groomalgo, bool signal, int gro
 	setAddress(tree,std::string(jetType+"Pull_C01"),var_Pull_C01_vec.at(i));
 	setAddress(tree,std::string(jetType+"Pull_C10"),var_Pull_C10_vec.at(i));
 	setAddress(tree,std::string(jetType+"Pull_C11"),var_Pull_C11_vec.at(i));
-      if (extendedVars)
+	if (extendedVars)
 	{
-	    setAddress(tree,std::string(jetType+"TauWTA1"),var_TauWTA1_vec.at(i));
-	    setAddress(tree,std::string(jetType+"TauWTA2"),var_TauWTA2_vec.at(i));
-	    setAddress(tree,jetType+"ZCUT12",var_ZCUT12_vec.at(i));
+	setAddress(tree,std::string(jetType+"TauWTA1"),var_TauWTA1_vec.at(i));
+	setAddress(tree,std::string(jetType+"TauWTA2"),var_TauWTA2_vec.at(i));
+	setAddress(tree,jetType+"ZCUT12",var_ZCUT12_vec.at(i));
 	}*/
 
 
@@ -2531,12 +2558,14 @@ void addSubJets(TTree * tree, std::string & groomalgo, bool signal, int groomIdx
 
   std::string jetType = returnJetType( samplePrefix, groomalgo, addLC, 2); //set to truth/ topo/ groomed
   std::string subjetType = returnSubJetType(samplePrefix, groomalgo, addLC);
-  
-  tree->Branch(std::string(subjetType+"E").c_str(),&var_subjets_E,std::string(subjetType+"E/F").c_str());
-  tree->Branch(std::string(subjetType+"pt").c_str(),&var_subjets_pt,std::string(subjetType+"pt/F").c_str());
-  tree->Branch(std::string(subjetType+"m").c_str(),&var_subjets_m,std::string(subjetType+"m/F").c_str());
-  tree->Branch(std::string(subjetType+"eta").c_str(),&var_subjets_eta,std::string(subjetType+"eta/F").c_str());
-  tree->Branch(std::string(subjetType+"phi").c_str(),&var_subjets_phi,std::string(subjetType+"phi/F").c_str());
+  if (subjetscalc)
+    {
+      tree->Branch(std::string(subjetType+"E").c_str(),&var_subjets_E,std::string(subjetType+"E/F").c_str());
+      tree->Branch(std::string(subjetType+"pt").c_str(),&var_subjets_pt,std::string(subjetType+"pt/F").c_str());
+      tree->Branch(std::string(subjetType+"m").c_str(),&var_subjets_m,std::string(subjetType+"m/F").c_str());
+      tree->Branch(std::string(subjetType+"eta").c_str(),&var_subjets_eta,std::string(subjetType+"eta/F").c_str());
+      tree->Branch(std::string(subjetType+"phi").c_str(),&var_subjets_phi,std::string(subjetType+"phi/F").c_str());
+    }
 
   tree->Branch(std::string(jetType+"massdrop").c_str(),&var_massdrop, std::string(jetType+"massdrop/F").c_str());
   tree->Branch(std::string(jetType+"yt").c_str(),&var_yt,std::string(jetType+"yt/F").c_str());
@@ -2915,13 +2944,15 @@ void readWeights()
   // read in the weights for the different samples.  Weights are based on RunNumbers, the file should have
   // RunNumber,SampleName,xs,k-factor,filter-efficiency
   // weights come from these two twiki pages: https://twiki.cern.ch/twiki/bin/viewauth/AtlasProtected/BosonTaggingPaper2012#7th_July_2014_Mixture_with_small and https://twiki.cern.ch/twiki/bin/view/AtlasProtected/BoostedBosonTaggingD3PD#Properly_normalizing_MC_samples
-  ifstream wf ("weighting_input.csv");
+  ifstream wf ("weightings_input.csv");
   string line;
+  std::cout << "reading weights" << std::endl;
   while (getline( wf, line))
     {
       trim(line);
       std::vector<std::string> strs;
-      boost::split(strs, "string to split", boost::is_any_of(","));
+      boost::split(strs, line, boost::is_any_of(","));
+      //std::cout << strs.size() << std::endl;
       int cntr = 0;
       long runNumber = 0;
       for (std::vector<std::string>::iterator it = strs.begin(); it != strs.end(); it ++)
@@ -2980,6 +3011,7 @@ void readWeights()
 	      
 	    }
 	  cntr++;
+	  //std::cout << (*it) << std::endl;
 	}
     }
 
