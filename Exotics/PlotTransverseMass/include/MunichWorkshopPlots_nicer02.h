@@ -117,7 +117,7 @@ void getMPV();
 void scaleHists();
 void setAddress(TChain * tree, std::string  name, std::vector<Float_t> * var_vec);
 void readWeights();
-
+void createPtReweightFile(TH1F * bkg, TH1F * sig, std::string & fname);
 
 enum class groomAlgoEnum{groomZero, TopoSplitFilteredMu67SmallR0YCut9, TopoSplitFilteredMu100SmallR30YCut4, TopoTrimmedPtFrac5SmallR30, TopoTrimmedPtFrac5SmallR20, TopoPrunedCaRcutFactor50Zcut10, TopoPrunedCaRcutFactor50Zcut20, AntiKt2LCTopo, AntiKt3LCTopo, AntiKt4LCTopo};
 enum sampleType{BACKGROUND, SIGNAL};
@@ -155,6 +155,7 @@ Int_t leadGroomedIndex = 0;
 Int_t leadTruthIndex = 0;
 Int_t leadTopoIndex = 0;
 TH1F * pt_reweight = 0;
+TH1F * pt_reweight_arr[2];
 Float_t normalisation = 1.0;
 Int_t NEvents = 0;
 std::map<int, float> NEvents_weighted;

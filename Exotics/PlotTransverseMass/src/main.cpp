@@ -1935,7 +1935,8 @@ void makeMassWindowFile(bool applyMassWindow,bool extendedVars)
     for (int j=0; j<1; j++){//nPtBins; j++){
 
       signal = false;
-
+      std::stringstream ss;
+      ss << AlgoNames[i] << "_" << i << "_" << pTbins[j];
       // loop through background and signal
       for (int k = 0; k < 2; k++)
 	{
@@ -1944,9 +1945,9 @@ void makeMassWindowFile(bool applyMassWindow,bool extendedVars)
 	  initVectors(extendedVars);
 	  
 	  int tchainIdx = signal ? sampleType::SIGNAL : sampleType::BACKGROUND;
-	  std::stringstream ss; // store the name of the output file and include the i and j indices!
+	  std::stringstream ss_fname; // store the name of the output file and include the i and j indices!
 	  std::string bkg = signal ? "sig": "bkg";
-	  ss << AlgoNames[i] << "_" << i << "_" << pTbins[j] << "_" << bkg << ".root";
+	  ss_fname << ss.str() << "_" << bkg << ".root";
 	  boost::filesystem::path dir(std::string(AlgoNames[i]+fileid_global));
 	  boost::filesystem::create_directory(dir);
 
@@ -1987,7 +1988,7 @@ void makeMassWindowFile(bool applyMassWindow,bool extendedVars)
 	  mass_max = TopEdgeMassWindow[i][j];
 	  mass_min = BottomEdgeMassWindow[i][j];
 
-	  TFile * outfile = new TFile(std::string(AlgoNames[i]+fileid_global+"/"+ss.str()).c_str(),"RECREATE");	  
+	  TFile * outfile = new TFile(std::string(AlgoNames[i]+fileid_global+"/"+ss_fname.str()).c_str(),"RECREATE");	  
 	  TTree * outTree = new TTree("physics","physics");
 
 	  resetOutputVariables();
@@ -2006,9 +2007,9 @@ void makeMassWindowFile(bool applyMassWindow,bool extendedVars)
 >>>>>>> Some general cleanup. Set vars to -999 as default so that we can see when something doesn't get set. Particularly important for Topo jets which are not often found.
 	  long entries = (long)inputTChain[tchainIdx]->GetEntries();
 
-	  // these numbers are chosen somewhat arb - they come from the settings I use
-	  // in the config files for the plotter() code... such bad coding :(
-	  pt_reweight = new TH1F(std::string("pt_reweight").c_str(),std::string("pt_reweight_").c_str(), 20, 0, 1200);
+	  // Setting up this with a high limit of 3.5 TeV so we don't miss anything.  Lots of bins - 200, so we can
+	  // do a lot of tuning of the scale factor regions later on!
+	  pt_reweight = new TH1F(std::string("pt_reweight"+bkg).c_str(),std::string("pt_reweight_"+bkg).c_str(), 200, 0, 3500);
 	  
 	  double mass = 0;
 
@@ -2201,29 +2202,34 @@ void makeMassWindowFile(bool applyMassWindow,bool extendedVars)
 	      outTree->Fill();
 	      pt_reweight->Fill((*jet_pt_truth)[chosenLeadTruthJetIndex]/1000.0);
 
-	    }
+	    } // end loop over nentries
 
 	  // write the rweight th1f things to the outfile...
-	  // calculate the new reweight with a new histogram!
-
+	  // calculate the overall reweight with a new histogram!
 	  outTree->GetCurrentFile()->Write();
 	  pt_reweight->Write();
+	  pt_reweight_arr[tchainIdx] = (TH1F*)pt_reweight->Clone();
+	  // stupid clone method needs this so that it doesn't delete this histo when closing the file
+	  // http://root.cern.ch/phpBB3/viewtopic.php?f=3&t=11486
+	  pt_reweight_arr[tchainIdx]->SetDirectory(0);
 
 	  outTree->GetCurrentFile()->Close();
 
 	  std::stringstream ss2; // store the name of the output file and include the i and j indices!
 	  std::string bkg2 = signal ? "sig": "bkg";
-	  ss2 << AlgoNames[i] << fileid_global << "_" << i << "_" << pTbins[j] << "_" << bkg << ".nevents";
+	  ss2 << AlgoNames[i] << fileid_global << "/" << ss.str() << "_" << bkg2 << ".nevents";
 	  ofstream ev_out(ss2.str());
 	  for (std::map<int,float>::iterator it = NEvents_weighted.begin(); it!= NEvents_weighted.end(); it++)
 	    ev_out << it->first << "," << NEvents_weighted[it->first] << std::endl;
 	  ev_out.close();
 	  delete outfile;
 	  //delete intree;
-	}
-    }
-    
-  }
+	} // end loop of datatype
+      // create the reweighting histogram
+      std::string fname = AlgoNames[i]+fileid_global+"/" + ss.str() + ".ptweights";
+      createPtReweightFile(pt_reweight_arr[sampleType::BACKGROUND], pt_reweight_arr[sampleType::SIGNAL], fname);
+    } // end loop over pt bins
+  } // end loop over algorithms
 
 
 } // makeMassWindowFile()
@@ -3024,3 +3030,28 @@ void readWeights()
   wf.close();
   
 } // readWeights
+
+void createPtReweightFile(TH1F * bkg, TH1F * sig, std::string & fname)
+{
+  // create an output file containing a number of datapoints for each algorithm + pt range.
+  // each datapoint contains bkg/signal for each bin in bkg and sig arguments
+  // this output file will be read in by the plotting code later and used for reweighting the signal sample
+  int bins = bkg->GetNbinsX();
+  std::cout << "number of bins: " << bins << std::endl;
+  ofstream out(fname);
+  double weight;
+  for (int b = 1; b <= bins; b++)
+    {
+      weight = bkg->GetBinContent(b);
+      if (sig->GetBinContent(b) != 0)
+	weight/=sig->GetBinContent(b);
+      else
+	{
+	  std::cout << "oh no, we've been rumbled!  We have no signal in this bin and now we have to reweight by over 9000! But actually we're just going to make it 0." << std::endl;
+	  weight = 0;
+	}
+      out << bkg->GetXaxis()->GetBinLowEdge(b) << "," << weight << endl;     
+    }
+  out.close();
+  
+} // end createPtReweightHistogram
