@@ -187,6 +187,7 @@ int main( int argc, char * argv[] ) {
   vector<string> inputSigFiles = vm["signal-file"].as<vector<string> > ();
 
   std::string alg_in = vm["algorithm"].as<string>();
+  std::string alg_in_orig = vm["algorithm"].as<string>();
 
   inputTChain[sampleType::BACKGROUND] = new TChain("physics");
   for (vector<string>::iterator it = inputBkgFiles.begin(); it != inputBkgFiles.end(); it++)
@@ -210,7 +211,12 @@ int main( int argc, char * argv[] ) {
   // right now the idea of filteridx, Xidx is not fully complete... The code as it stands runs on one type of algorithm at once, but 
   // I would like it to run on a number of types.  This is why this is here.  It used to do this in fact, before switching stuff around
 
-  if (algorithms.AlgoNames.find(alg_in) == algorithms.AlgoNames.end())
+  std::cout << alg_in_orig << std::endl;
+  //for (std::map<std::string,std::string>::iterator it = algorithms.AlgoNames.begin(); it!= algorithms.AlgoNames.end(); it++){
+  //std::cout << (*it) << std::endl;
+  //}
+
+  if (algorithms.AlgoNames.find(alg_in_orig) == algorithms.AlgoNames.end())
     {
       std::cout << "Algorithm not defined in config file!" << std::endl;
       return 1;
@@ -221,11 +227,11 @@ int main( int argc, char * argv[] ) {
   //}
   readWeights();
   defineStrings(pTbins, finePtBins);
-  createHistos(alg_in);
+  createHistos(alg_in_orig);
   
   // TODO: option to run all algorithms of one type????
 
-  runAlgorithm(inputTChain[sampleType::BACKGROUND], inputTChain[sampleType::SIGNAL], algorithms.AlgoNames[alg_in], alg_in, massHistos);
+  runAlgorithm(inputTChain[sampleType::BACKGROUND], inputTChain[sampleType::SIGNAL], algorithms.AlgoNames[alg_in_orig], alg_in_orig, massHistos);
   
 
   //Plot things
@@ -246,7 +252,7 @@ int main( int argc, char * argv[] ) {
 
   if (makePlotsFlag)
     {
-      makePlots(alg_in);
+      makePlots(alg_in_orig);
     }
 
   //1. Get the MPV
@@ -290,9 +296,9 @@ int main( int argc, char * argv[] ) {
 
 
   if (makePtPlotsFlag)
-    makePtPlots(alg_in);
+    makePtPlots(alg_in_orig);
 
-  makeMassWindowFile(applyMassWindowFlag, extendedVars, alg_in);
+  makeMassWindowFile(applyMassWindowFlag, extendedVars, alg_in_orig);
 
   return 0;
 }
@@ -635,7 +641,7 @@ void getMassHistograms(TTree *inputTree, TTree *inputTree1, TString groomAlgo, s
     //NOW I WILL RECLUSTER MY JETS AND FEED THE APPROPRIATE VARIABLES 
     //FOR THE RECLUSTERING OPTIONS
 
-    if (groomAlgoIndex>6){
+    if (algorithms.AlgoType[groomAlgoIndex].find("recluster") != std::string::npos){
 
       vector<TLorentzVector> small_jets;
       for (int n=0; n<(*Wp_CA12_topo_pt).size(); n++){
@@ -676,7 +682,7 @@ void getMassHistograms(TTree *inputTree, TTree *inputTree1, TString groomAlgo, s
     
     //now for ungroomed truth:
       
-    if (groomAlgoIndex == 0){
+    if (algorithms.AlgoType[groomAlgoIndex].find("truthmatch") != std::string::npos){
       //check which is my CA12 ungroomed reco jet with EMfrac<0.99 and |eta|<1.2
       //loop over all topo jets and get the leading with cuts
       bool hasTopoJet=false;
@@ -1888,7 +1894,7 @@ void makeMassWindowFile(bool applyMassWindow,bool extendedVars, std::string & al
 		    } // end if(hasTopoJet)
 		} // end if(groomAlgoIndex==0)
 	      
-	      chosenLeadTruthJetIndex = groomAlgoIndex == 0 ? chosenLeadTruthJetIndex : 0;
+	      chosenLeadTruthJetIndex = algorithms.AlgoType[groomAlgoIndex].find("truthmatch") != std::string::npos ? chosenLeadTruthJetIndex : 0;
 
 	      if (chosenLeadTruthJetIndex < 0)
 		continue;
@@ -2886,9 +2892,11 @@ void Algorithms::load(const std::string & filename)
       if (name != "")
 	{
 	  std::string groomalgo = v.second.get<std::string>("GroomingAlgorithm","");
+	  std::cout << groomalgo << std::endl;
 	  if (groomalgo == "")
 	    {
-	      groomalgo = name.substr(name.find("Topo"),name.length());
+	      std::cout << name.find("Topo") << std::endl;
+	      groomalgo = name.substr(name.find("Topo"),name.length()-1);
 	    }
 	  AlgoNames[name] = groomalgo;
 	  std::string jetalgo = v.second.get<std::string>("JetAlgorithm","");
@@ -2910,3 +2918,4 @@ void Algorithms::load(const std::string & filename)
     };
 
 } // algorithms::load()
+

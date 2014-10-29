@@ -156,7 +156,7 @@ struct Algorithms
   void load(const std::string & filename);
 };
 
-Algorithms algorithms;
+struct Algorithms algorithms;
 /////
 
 std::string fileid_global;
