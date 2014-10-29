@@ -420,7 +420,10 @@ void getMassHistograms(TTree *inputTree, TTree *inputTree1, TString groomAlgo, s
       vector<TLorentzVector> small_jets;
       for (int n=0; n<(*qcd_CA12_topo_pt).size(); n++){
 	TLorentzVector tempJet;
-	if ((*qcd_CA12_topo_emfrac)[n]<0.99 && (*qcd_CA12_topo_pt)[n]/1000>15.0){
+	float emfractmp = 0.5;
+	if (emfracAvail)
+	  emfractmp = (*qcd_CA12_topo_emfrac)[n];
+	if (emfractmp<0.99 && (*qcd_CA12_topo_pt)[n]/1000>15.0){
 	  tempJet.SetPtEtaPhiE((*qcd_CA12_topo_pt)[n], (*qcd_CA12_topo_eta)[n], (*qcd_CA12_topo_phi)[n], (*qcd_CA12_topo_E)[n]);
 	  small_jets.push_back(tempJet);
 	}
@@ -466,8 +469,11 @@ void getMassHistograms(TTree *inputTree, TTree *inputTree1, TString groomAlgo, s
       
       bool hasTopoJet=false;
       int chosenTopoJetIndex=-99;
+      float emfractmp = 0.5;
       for (int i=0; i<(*qcd_CA12_topo_pt).size(); i++){
-	if (!hasTopoJet && (*qcd_CA12_topo_emfrac)[i]<0.99 && fabs((*qcd_CA12_topo_eta)[i])<1.2) {
+	if (emfracAvail)
+	  emfractmp = (*qcd_CA12_topo_emfrac)[i];
+	if (!hasTopoJet && emfractmp<0.99 && fabs((*qcd_CA12_topo_eta)[i])<1.2) {
 	  chosenTopoJetIndex=i;
 	  hasTopoJet=true;
 	  nEvt_1=nEvt_1+1;
@@ -520,9 +526,12 @@ void getMassHistograms(TTree *inputTree, TTree *inputTree1, TString groomAlgo, s
     //Now I have which events to make my pt reweight with, and to match to, etc
     //Start plotting things with the other algos for QCD
     int chosenLeadGroomedIndex=-99;
-    for (int i=0; i<(*qcd_CA12_groomed_pt).size(); i++){
 
-      if (chosenLeadTruthJetIndex>=0 && chosenLeadGroomedIndex<0 && DeltaR((*qcd_CA12_truth_eta)[chosenLeadTruthJetIndex],(*qcd_CA12_truth_phi)[chosenLeadTruthJetIndex],(*qcd_CA12_groomed_eta)[i],(*qcd_CA12_groomed_phi)[i])<0.9 && (*qcd_CA12_groomed_emfrac)[i]<0.99 && fabs((*qcd_CA12_groomed_eta)[i])<1.2){
+    for (int i=0; i<(*qcd_CA12_groomed_pt).size(); i++){
+      float emfractmp = 0.5;
+      if (emfracAvail)
+	emfractmp = (*qcd_CA12_groomed_emfrac)[i];
+      if (chosenLeadTruthJetIndex>=0 && chosenLeadGroomedIndex<0 && DeltaR((*qcd_CA12_truth_eta)[chosenLeadTruthJetIndex],(*qcd_CA12_truth_phi)[chosenLeadTruthJetIndex],(*qcd_CA12_groomed_eta)[i],(*qcd_CA12_groomed_phi)[i])<0.9 && emfractmp<0.99 && fabs((*qcd_CA12_groomed_eta)[i])<1.2){
 	// && (*qcd_CA12_groomed_pt)[i]/1000>100.0 ){ 
 	
 	chosenLeadGroomedIndex=i;
@@ -646,8 +655,11 @@ void getMassHistograms(TTree *inputTree, TTree *inputTree1, TString groomAlgo, s
 
       vector<TLorentzVector> small_jets;
       for (int n=0; n<(*Wp_CA12_topo_pt).size(); n++){
+	float emfractmp = 0.5;
+	if (emfracAvail)
+	  emfractmp = (*Wp_CA12_topo_emfrac)[n];
 	TLorentzVector tempJet;
-	if ((*Wp_CA12_topo_emfrac)[n]<0.99){
+	if (emfractmp<0.99){
 	  tempJet.SetPtEtaPhiE((*Wp_CA12_topo_pt)[n], (*Wp_CA12_topo_eta)[n], (*Wp_CA12_topo_phi)[n], (*Wp_CA12_topo_E)[n]);
 	  small_jets.push_back(tempJet);
 	}
@@ -689,7 +701,10 @@ void getMassHistograms(TTree *inputTree, TTree *inputTree1, TString groomAlgo, s
       bool hasTopoJet=false;
       int chosenTopoJetIndex=-99;
       for (int i=0; i<(*Wp_CA12_topo_pt).size(); i++){
-	if (!hasTopoJet && (*Wp_CA12_topo_emfrac)[i]<0.99 && fabs((*Wp_CA12_topo_eta)[i])<1.2) {
+	float emfractmp = 0.5;
+	if (emfracAvail)
+	  emfractmp = (*Wp_CA12_topo_emfrac)[i];
+	if (!hasTopoJet && emfractmp<0.99 && fabs((*Wp_CA12_topo_eta)[i])<1.2) {
 	  chosenTopoJetIndex=i;
 	  hasTopoJet=true;
 	  nEvt1_1=nEvt1_1+1;
@@ -741,8 +756,10 @@ void getMassHistograms(TTree *inputTree, TTree *inputTree1, TString groomAlgo, s
     //Start plotting things with the other algos for QCD
     int chosenLeadGroomedIndex=-99;
     for (int i=0; i<(*Wp_CA12_groomed_pt).size(); i++){
-
-      if (chosenLeadTruthJetIndex>=0 && chosenLeadGroomedIndex<0 && DeltaR((*Wp_CA12_truth_eta)[chosenLeadTruthJetIndex],(*Wp_CA12_truth_phi)[chosenLeadTruthJetIndex],(*Wp_CA12_groomed_eta)[i],(*Wp_CA12_groomed_phi)[i])<0.9 && (*Wp_CA12_groomed_emfrac)[i]<0.99 && fabs((*Wp_CA12_groomed_eta)[i])<1.2){
+      float emfractmp = 0.5;
+      if (emfracAvail)
+	emfractmp = (*Wp_CA12_groomed_emfrac)[i]; 
+      if (chosenLeadTruthJetIndex>=0 && chosenLeadGroomedIndex<0 && DeltaR((*Wp_CA12_truth_eta)[chosenLeadTruthJetIndex],(*Wp_CA12_truth_phi)[chosenLeadTruthJetIndex],(*Wp_CA12_groomed_eta)[i],(*Wp_CA12_groomed_phi)[i])<0.9 && emfractmp<0.99 && fabs((*Wp_CA12_groomed_eta)[i])<1.2){
 	//  && (*Wp_CA12_groomed_pt)[i]/1000>100.0 ){ 	
 	chosenLeadGroomedIndex=i;
 	//nEvt1_3=nEvt1_3+1;
@@ -1025,14 +1042,19 @@ void getBranches(TTree *inputTree, TTree *inputTree1, TString groomAlgo, std::st
     inputTree->SetBranchAddress(std::string("jet_"+algorithms.AlgoPrefix[groomAlgoIndex]+"LCTopo_phi").c_str(), &qcd_CA12_topo_phi);
     inputTree->SetBranchAddress(std::string("jet_"+algorithms.AlgoPrefix[groomAlgoIndex]+"LCTopo_m").c_str(), &qcd_CA12_topo_mass);
     inputTree->SetBranchAddress(std::string("jet_"+algorithms.AlgoPrefix[groomAlgoIndex]+"LCTopo_E").c_str(), &qcd_CA12_topo_E);
-    inputTree->SetBranchAddress(std::string("jet_"+algorithms.AlgoPrefix[groomAlgoIndex]+"LCTopo_emfrac").c_str(), &qcd_CA12_topo_emfrac);
-    
+    if (inputTree->GetListOfBranches()->FindObject(std::string("jet_"+algorithms.AlgoPrefix[groomAlgoIndex]+"LCTopo_emfrac").c_str()) )
+      {
+	inputTree->SetBranchAddress(std::string("jet_"+algorithms.AlgoPrefix[groomAlgoIndex]+"LCTopo_emfrac").c_str(), &qcd_CA12_topo_emfrac);
+      }
     inputTree->SetBranchAddress(std::string("jet_"+algorithms.AlgoPrefix[groomAlgoIndex]+"LC"+groomAlgo+"_pt").c_str(), &qcd_CA12_groomed_pt);
     inputTree->SetBranchAddress(std::string("jet_"+algorithms.AlgoPrefix[groomAlgoIndex]+"LC"+groomAlgo+"_eta").c_str(), &qcd_CA12_groomed_eta);
     inputTree->SetBranchAddress(std::string("jet_"+algorithms.AlgoPrefix[groomAlgoIndex]+"LC"+groomAlgo+"_phi").c_str(), &qcd_CA12_groomed_phi);
     inputTree->SetBranchAddress(std::string("jet_"+algorithms.AlgoPrefix[groomAlgoIndex]+"LC"+groomAlgo+"_m").c_str(), &qcd_CA12_groomed_mass);
     inputTree->SetBranchAddress(std::string("jet_"+algorithms.AlgoPrefix[groomAlgoIndex]+"LC"+groomAlgo+"_E").c_str(), &qcd_CA12_groomed_E);
-    inputTree->SetBranchAddress(std::string("jet_"+algorithms.AlgoPrefix[groomAlgoIndex]+"LC"+groomAlgo+"_emfrac").c_str(), &qcd_CA12_groomed_emfrac);
+    if (inputTree->GetListOfBranches()->FindObject(std::string("jet_"+algorithms.AlgoPrefix[groomAlgoIndex]+"LC" + groomAlgo+"_emfrac").c_str()) )
+      {
+	inputTree->SetBranchAddress(std::string("jet_"+algorithms.AlgoPrefix[groomAlgoIndex]+"LC"+groomAlgo+"_emfrac").c_str(), &qcd_CA12_groomed_emfrac);
+      }
     
     inputTree1->SetBranchAddress("mc_channel_number", &Wp_mc_channel_number);
     inputTree1->SetBranchAddress("mc_event_weight", &Wp_mc_event_weight);
@@ -1047,14 +1069,20 @@ void getBranches(TTree *inputTree, TTree *inputTree1, TString groomAlgo, std::st
     inputTree1->SetBranchAddress(std::string("jet_"+algorithms.AlgoPrefix[groomAlgoIndex]+"LCTopo_phi").c_str(), &Wp_CA12_topo_phi);
     inputTree1->SetBranchAddress(std::string("jet_"+algorithms.AlgoPrefix[groomAlgoIndex]+"LCTopo_m").c_str(), &Wp_CA12_topo_mass);
     inputTree1->SetBranchAddress(std::string("jet_"+algorithms.AlgoPrefix[groomAlgoIndex]+"LCTopo_E").c_str(), &Wp_CA12_topo_E);
-    inputTree1->SetBranchAddress(std::string("jet_"+algorithms.AlgoPrefix[groomAlgoIndex]+"LCTopo_emfrac").c_str(), &Wp_CA12_topo_emfrac);
+    if (inputTree1->GetListOfBranches()->FindObject(std::string("jet_"+algorithms.AlgoPrefix[groomAlgoIndex]+"LCTopo_emfrac").c_str()) )
+      {
+	inputTree1->SetBranchAddress(std::string("jet_"+algorithms.AlgoPrefix[groomAlgoIndex]+"LCTopo_emfrac").c_str(), &Wp_CA12_topo_emfrac);
+      }
     
     inputTree1->SetBranchAddress(std::string("jet_"+algorithms.AlgoPrefix[groomAlgoIndex]+"LC"+groomAlgo+"_pt").c_str(), &Wp_CA12_groomed_pt);
     inputTree1->SetBranchAddress(std::string("jet_"+algorithms.AlgoPrefix[groomAlgoIndex]+"LC"+groomAlgo+"_eta").c_str(), &Wp_CA12_groomed_eta);
     inputTree1->SetBranchAddress(std::string("jet_"+algorithms.AlgoPrefix[groomAlgoIndex]+"LC"+groomAlgo+"_phi").c_str(), &Wp_CA12_groomed_phi);
     inputTree1->SetBranchAddress(std::string("jet_"+algorithms.AlgoPrefix[groomAlgoIndex]+"LC"+groomAlgo+"_m").c_str(), &Wp_CA12_groomed_mass);
     inputTree1->SetBranchAddress(std::string("jet_"+algorithms.AlgoPrefix[groomAlgoIndex]+"LC"+groomAlgo+"_E").c_str(), &Wp_CA12_groomed_E);
-    inputTree1->SetBranchAddress(std::string("jet_"+algorithms.AlgoPrefix[groomAlgoIndex]+"LC"+groomAlgo+"_emfrac").c_str(), &Wp_CA12_groomed_emfrac);
+    if (inputTree1->GetListOfBranches()->FindObject(std::string("jet_"+algorithms.AlgoPrefix[groomAlgoIndex]+"LC"+groomAlgo+"_emfrac").c_str()) )
+      {
+	inputTree1->SetBranchAddress(std::string("jet_"+algorithms.AlgoPrefix[groomAlgoIndex]+"LC"+groomAlgo+"_emfrac").c_str(), &Wp_CA12_groomed_emfrac);
+      }
 
 
   }
@@ -1080,7 +1108,10 @@ void getBranches(TTree *inputTree, TTree *inputTree1, TString groomAlgo, std::st
     inputTree->SetBranchAddress(std::string("jet_"+algorithms.AlgoPrefix[groomAlgoIndex]+""+groomAlgo+"_phi").c_str(), &qcd_CA12_groomed_phi);
     inputTree->SetBranchAddress(std::string("jet_"+algorithms.AlgoPrefix[groomAlgoIndex]+""+groomAlgo+"_m").c_str(), &qcd_CA12_groomed_mass);
     inputTree->SetBranchAddress(std::string("jet_"+algorithms.AlgoPrefix[groomAlgoIndex]+""+groomAlgo+"_E").c_str(), &qcd_CA12_groomed_E);
-    inputTree->SetBranchAddress(std::string("jet_"+algorithms.AlgoPrefix[groomAlgoIndex]+""+groomAlgo+"_emfrac").c_str(), &qcd_CA12_groomed_emfrac);
+    if (inputTree->GetListOfBranches()->FindObject(std::string("jet_"+algorithms.AlgoPrefix[groomAlgoIndex]+groomAlgo+"_emfrac").c_str()) )
+      {
+	inputTree->SetBranchAddress(std::string("jet_"+algorithms.AlgoPrefix[groomAlgoIndex]+""+groomAlgo+"_emfrac").c_str(), &qcd_CA12_groomed_emfrac);
+      }
     
     
     
@@ -1097,14 +1128,20 @@ void getBranches(TTree *inputTree, TTree *inputTree1, TString groomAlgo, std::st
     inputTree1->SetBranchAddress(std::string("jet_"+algorithms.AlgoPrefix[groomAlgoIndex]+"LCTopo_phi").c_str(), &Wp_CA12_topo_phi);
     inputTree1->SetBranchAddress(std::string("jet_"+algorithms.AlgoPrefix[groomAlgoIndex]+"LCTopo_m").c_str(), &Wp_CA12_topo_mass);
     inputTree1->SetBranchAddress(std::string("jet_"+algorithms.AlgoPrefix[groomAlgoIndex]+"LCTopo_E").c_str(), &Wp_CA12_topo_E);
-    inputTree1->SetBranchAddress(std::string("jet_"+algorithms.AlgoPrefix[groomAlgoIndex]+"LCTopo_emfrac").c_str(), &Wp_CA12_topo_emfrac);
+    if (inputTree1->GetListOfBranches()->FindObject(std::string("jet_"+algorithms.AlgoPrefix[groomAlgoIndex]+"LCTopo_emfrac").c_str()) )
+      {
+	inputTree1->SetBranchAddress(std::string("jet_"+algorithms.AlgoPrefix[groomAlgoIndex]+"LCTopo_emfrac").c_str(), &Wp_CA12_topo_emfrac);
+      }
     
     inputTree1->SetBranchAddress(std::string("jet_"+algorithms.AlgoPrefix[groomAlgoIndex]+""+groomAlgo+"_pt").c_str(), &Wp_CA12_groomed_pt);
     inputTree1->SetBranchAddress(std::string("jet_"+algorithms.AlgoPrefix[groomAlgoIndex]+""+groomAlgo+"_eta").c_str(), &Wp_CA12_groomed_eta);
     inputTree1->SetBranchAddress(std::string("jet_"+algorithms.AlgoPrefix[groomAlgoIndex]+""+groomAlgo+"_phi").c_str(), &Wp_CA12_groomed_phi);
     inputTree1->SetBranchAddress(std::string("jet_"+algorithms.AlgoPrefix[groomAlgoIndex]+""+groomAlgo+"_m").c_str(), &Wp_CA12_groomed_mass);
     inputTree1->SetBranchAddress(std::string("jet_"+algorithms.AlgoPrefix[groomAlgoIndex]+""+groomAlgo+"_E").c_str(), &Wp_CA12_groomed_E);
-    inputTree1->SetBranchAddress(std::string("jet_"+algorithms.AlgoPrefix[groomAlgoIndex]+""+groomAlgo+"_emfrac").c_str(), &Wp_CA12_groomed_emfrac);
+    if (inputTree1->GetListOfBranches()->FindObject(std::string("jet_"+algorithms.AlgoPrefix[groomAlgoIndex]+groomAlgo+"_emfrac").c_str()) )
+      {
+	inputTree1->SetBranchAddress(std::string("jet_"+algorithms.AlgoPrefix[groomAlgoIndex]+""+groomAlgo+"_emfrac").c_str(), &Wp_CA12_groomed_emfrac);
+      }
     
 
   }
@@ -1886,7 +1923,10 @@ void makeMassWindowFile(bool applyMassWindow,bool extendedVars, std::string & al
 		
 		  for (int jet_i=0; jet_i<(*jet_pt_topo).size(); jet_i++)
 		    {
-		      if (!hasTopoJet && (*jet_emfrac_topo)[jet_i]<0.99 && fabs((*jet_eta_topo)[jet_i])<1.2) 
+		      float emfractmp = 0.5;
+		      if (emfracAvail)
+			emfractmp = (*jet_emfrac_topo)[jet_i];
+		      if (!hasTopoJet && emfractmp<0.99 && fabs((*jet_eta_topo)[jet_i])<1.2) 
 			{
 			  chosenLeadTopoJetIndex=jet_i;
 			  hasTopoJet=true;
@@ -1915,8 +1955,10 @@ void makeMassWindowFile(bool applyMassWindow,bool extendedVars, std::string & al
 
 	      for (int jet_i=0; jet_i<(*jet_pt_groomed).size(); jet_i++)
 		{
-		
-		  if (chosenLeadGroomedIndex<0 && DeltaR((*jet_eta_truth)[chosenLeadTruthJetIndex],(*jet_phi_truth)[chosenLeadTruthJetIndex],(*jet_eta_groomed)[jet_i],(*jet_phi_groomed)[jet_i])<0.9 && (*jet_emfrac_groomed)[jet_i]<0.99 && fabs((*jet_eta_groomed)[jet_i])<1.2)
+		  float emfractmp = 0.5;
+		  if (emfracAvail)
+		    emfractmp = (*jet_emfrac_groomed)[jet_i];
+		  if (chosenLeadGroomedIndex<0 && DeltaR((*jet_eta_truth)[chosenLeadTruthJetIndex],(*jet_phi_truth)[chosenLeadTruthJetIndex],(*jet_eta_groomed)[jet_i],(*jet_phi_groomed)[jet_i])<0.9 && emfractmp<0.99 && fabs((*jet_eta_groomed)[jet_i])<1.2)
 		    {
 		      chosenLeadGroomedIndex=jet_i;
 		      continue;
@@ -2532,7 +2574,7 @@ void setOutputVariables(bool extendedVars, int jet_idx_truth, int jet_idx_topo, 
       var_m[x]=(*var_m_vec[x])[jet_idx];
       var_eta[x]=(*var_eta_vec[x])[jet_idx];
       var_phi[x]=(*var_phi_vec[x])[jet_idx];
-      if (x!=0)
+      if (x!=0 && emfracAvail)
 	var_emfrac[x]=(*var_emfrac_vec[x])[jet_idx];
       var_Tau1[x]=(*var_Tau1_vec[x])[jet_idx];
       var_Tau2[x]=(*var_Tau2_vec[x])[jet_idx];
