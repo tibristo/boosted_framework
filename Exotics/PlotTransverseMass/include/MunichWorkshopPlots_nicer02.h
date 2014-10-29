@@ -83,26 +83,26 @@ void Qw(double &minWidth, double &topEdge, TH1F* histo, double frac);
 
 //void cleanBranches();
 //void defineStrings(TString *AlgoList, TString *binLabel, TString *pTbins, TString *finePtBins);
-void createHistos();
-void getMassHistograms(TTree *inputTree, TTree *inputTree1, TString groomAlgo, int groomAlgoIndex);
+void createHistos(std::string & algo);
+void getMassHistograms(TTree *inputTree, TTree *inputTree1, TString groomAlgo, std::string & groomAlgoIndex);
 void initializeVariables();
-void getBranches(TTree *inputTree, TTree *inputTree1, TString groomAlgo, int groomAlgoIndex);
+void getBranches(TTree *inputTree, TTree *inputTree1, TString groomAlgo, std::string & groomAlgoIndex);
 void deleteVectors();
 void getNormSherpaW(TString inputTree, unsigned long & evnum, double & weight);
 void makeROC(int type, TH1F *&S,TH1F *&B,TGraph &curve, TString name="", bool draw=false);
-void makePlots();
-void makePtPlots();
-void setMassBranch(TTree * tree, std::string &algorithm, int groomAlgoIndex);
+void makePlots(std::string & algorithm);
+void makePtPlots(std::string & algorithm);
+void setMassBranch(TTree * tree, std::string &algorithm, std::string & groomAlgoIndex);
 void plotVariables(TTree * tree, vector<std::string> & branches);
 std::vector<std::string> getListOfBranches(std::string &algorithm);
 //void make68Plots(int algidx, TChain * bkg, TChain * sig);
-void makeMassWindowFile(bool applyMassWindow, bool extendedVars);
-void setJetsBranches(TChain * tree, std::string & algorithm, bool signal, int groomIdx, bool extendedVars);
-void addJetsBranches(TTree * tree, std::string & algorithm, bool signal, int groomIdx);
-void addSubJets(TTree * tree, std::string & algorithm, bool signal, int groomIdx);
+void makeMassWindowFile(bool applyMassWindow, bool extendedVars, std::string & algorithm);
+void setJetsBranches(TChain * tree, std::string & algorithm, bool signal, std::string & groomIdx, bool extendedVars);
+void addJetsBranches(TTree * tree, std::string & algorithm, bool signal);
+void addSubJets(TTree * tree, std::string & algorithm, bool signal, std::string & groomIdx);
 //void getBranchesSelection(TTree * tree, std::string & algorithm);
 void setSelectionVectors(bool signal, std::string & algorithm);
-void runAlgorithm(TChain *inputTree, TChain *inputTree1, TString groomAlgo, int groomAlgoIndex, bool massHistos);
+void runAlgorithm(TChain *inputTree, TChain *inputTree1, TString groomAlgo, std::string & groomAlgoIndex, bool massHistos);
 vector<std::string> getListOfJetBranches(std::string & algorithm);
 void initVectors(bool extendedVars);
 std::pair<int,int> getTwoLeadingSubjets(std::vector<int> & indices, std::vector<float> * subjets);
@@ -111,7 +111,7 @@ std::string returnSubJetType(std::string & samplePrefix, std::string & groomalgo
 void clearVectors();
 void clearOutputVariables();
 void setOutputVariables(bool extendedVars, int idx1, int idx2, int idx3, int subidx);
-void setOutputBranches(TTree* tree, std::string & algorithm, int groomIdx, bool extendedVars);
+void setOutputBranches(TTree* tree, std::string & algorithm, std::string & groomIdx, bool extendedVars);
 void resetOutputVariables();
 void getMPV();
 void scaleHists();
@@ -122,6 +122,7 @@ void createPtReweightFile(TH1F * bkg, TH1F * sig, std::string & fname);
 enum class groomAlgoEnum{groomZero, TopoSplitFilteredMu67SmallR0YCut9, TopoSplitFilteredMu100SmallR30YCut4, TopoTrimmedPtFrac5SmallR30, TopoTrimmedPtFrac5SmallR20, TopoPrunedCaRcutFactor50Zcut10, TopoPrunedCaRcutFactor50Zcut20, AntiKt2LCTopo, AntiKt3LCTopo, AntiKt4LCTopo};
 enum sampleType{BACKGROUND, SIGNAL};
 enum jetType{TRUTH,TOPO,GROOMED,MAX};
+enum histType{TRUTHJET,GROOMEDJET,LEADTRUTHJET};
 //groomAlgo options:
 //TopoSplitFilteredMu67SmallR0YCut9   - 1
 //TopoSplitFilteredMu100SmallR30YCut4  - 2
@@ -142,12 +143,26 @@ std::map<int, int> fileMap; // stores the index of the input file for each groom
 vector<fastjet::PseudoJet> ObjsToPJ(vector<TLorentzVector> jets);
 vector<TLorentzVector> Recluster(vector<TLorentzVector> small_jets, double PTcut=15, double fcut=0.05, double jetRad=1.0);
 
+struct Algorithms
+{
+  std::map<std::string, std::string> AlgoNames; // the jet groomieng alg
+  std::map<std::string, std::string> AlgoPrefix; // the jet reco algorithm
+  std::map<std::string, std::string> AlgoType; // if split/filter, trimmed, etc
+  std::map<std::string, std::string> AlgoList; // the abbreviated name
+  std::map<std::string, std::string> AlgoListN; // the plotting labels
+  std::map<std::string, std::string> subjetMap; // subjet grooming alg for jet grooming alg 
+  std::map<std::string, std::string> subjetIndex;
+  std::map<std::string, std::string> binLabel;
+  void load(const std::string & filename);
+};
+
+Algorithms algorithms;
 /////
 
 std::string fileid_global;
 
-TFile *inputFile[20];
-TTree *inputTree[20];
+TFile *inputFile[2];
+TTree *inputTree[2];
 TChain *inputTChain[2];
 
 //get the branches we want to use
@@ -256,44 +271,44 @@ int nEvt1_4=0;
 
 const int nAlgosMax=12;
 int nAlgos=0;
-TString AlgoList[nAlgosMax];
-std::string AlgoNames[nAlgosMax];
-std::map<std::string, std::string> subjetMap;
-std::string AlgoPrefix[nAlgosMax];
-std::map<std::string, std::string> subjetIndex;
-TString binLabel[nAlgosMax-2];
+//TString AlgoList[nAlgosMax];
+//std::string AlgoNames[nAlgosMax];
+//std::map<std::string, std::string> subjetMap;
+//std::string AlgoPrefix[nAlgosMax];
+//std::map<std::string, std::string> subjetIndex;
+//TString binLabel[nAlgosMax-2];
 const int nPtBins=6;
 TString pTbins[nPtBins];
 const int nFineBins=12;
 TString finePtBins[nFineBins];
 std::vector<pair<float,float> > ptrange;
 
-TH1F *qcd_finePtBin_mass[nAlgosMax][nFineBins];
-TH1F *Wprime_finePtBin_mass[nAlgosMax][nFineBins];
+TH1F *qcd_finePtBin_mass[3][nFineBins];
+TH1F *Wprime_finePtBin_mass[3][nFineBins];
 
-TH1F *qcd_Lead_CA12_mass[nAlgosMax][nPtBins]; 
-TH1F *Wprime_Lead_CA12_mass[nAlgosMax][nPtBins];
-TH1F *qcd_Lead_CA12_pt[nAlgosMax];
-TH1F *Wprime_Lead_CA12_pt[nAlgosMax];
-TH1F *Wprime_Lead_CA12_scaled_pt[nAlgosMax];
-TH1F *pTweights[nAlgosMax];
-TH1F *qcd_PtReweight[nAlgosMax];
-TH1F *Wp_PtReweight[nAlgosMax];
-TString AlgoListN[nAlgosMax];
+TH1F *qcd_Lead_CA12_mass[3][nPtBins]; 
+TH1F *Wprime_Lead_CA12_mass[3][nPtBins];
+TH1F *qcd_Lead_CA12_pt[3];
+TH1F *Wprime_Lead_CA12_pt[3];
+TH1F *Wprime_Lead_CA12_scaled_pt;
+TH1F *pTweights;
+TH1F *qcd_PtReweight;
+TH1F *Wp_PtReweight;
+TString AlgoListN;
 TString pTbinsN[nPtBins];
 TString pTFinebinsN[nFineBins];
 
-double myMPV[nAlgosMax][nPtBins];
-double WidthMassWindow[nAlgosMax][nPtBins];
-double TopEdgeMassWindow[nAlgosMax][nPtBins];
-double BottomEdgeMassWindow[nAlgosMax][nPtBins];
-double QCDfrac[nAlgosMax][nPtBins];
+double myMPV[nPtBins];
+double WidthMassWindow[nPtBins];
+double TopEdgeMassWindow[nPtBins];
+double BottomEdgeMassWindow[nPtBins];
+double QCDfrac[nPtBins];
 
-double myMPV_finePt[nAlgosMax][nFineBins];
-double WidthMassWindow_finePt[nAlgosMax][nFineBins];
-double TopEdgeMassWindow_finePt[nAlgosMax][nFineBins];
-double BottomEdgeMassWindow_finePt[nAlgosMax][nFineBins];
-double QCDfrac_finePt[nAlgosMax][nFineBins];
+double myMPV_finePt[nFineBins];
+double WidthMassWindow_finePt[nFineBins];
+double TopEdgeMassWindow_finePt[nFineBins];
+double BottomEdgeMassWindow_finePt[nFineBins];
+double QCDfrac_finePt[nFineBins];
 
 
 TH1F * hMassLow[nPtBins];
@@ -302,89 +317,28 @@ TH1F * hMPV[nPtBins];
 TH1F * hWmass[nPtBins];
 TH1F * hQCDeff[nPtBins];
 
-TH1F * hQCDeff_finePt[nAlgosMax];
+TH1F * hQCDeff_finePt;
 
 
-TH1F * windowsVsPt[nAlgosMax];
+TH1F * windowsVsPt;
 
 // ROC
-TGraph *finePtBin_mass_curve[nAlgosMax][nFineBins];
-TGraph *Lead_CA12_mass_curve[nAlgosMax][nPtBins];
-TGraph *Lead_CA12_pt_curve[nAlgosMax];
-TGraph *Lead_CA12_scaled_pt_curve[nAlgosMax];
-TGraph *pTweights_curve[nAlgosMax];
-TGraph *PtReweight_curve[nAlgosMax];
+TGraph *finePtBin_mass_curve[3][nFineBins];
+TGraph *Lead_CA12_mass_curve[3][nPtBins];
+TGraph *Lead_CA12_pt_curve[3];
+TGraph *Lead_CA12_scaled_pt_curve[3];
+TGraph *pTweights_curve;
+TGraph *PtReweight_curve;
 
 
-TCanvas * c1[nAlgosMax][nPtBins]; 
-TCanvas * c3[nAlgosMax][nFineBins];
+TCanvas * c1[3][nPtBins]; 
+TCanvas * c3[3][nFineBins];
 TCanvas * c2[nPtBins];
 TPad *pad1[nPtBins];
 TPad *pad2[nPtBins];
 
 
-void defineStrings(TString *AlgoList, TString *binLabel, TString *pTbins, TString *finePtBins){//, std::map<std::string, std::string> subjetMap){
-
-  AlgoList[0]="TruthJet_RecoMatch";
-  AlgoNames[0] = "";
-  AlgoPrefix[0] = "";  
-  //SplitFilteredMu67SmallR0YCut9
-  AlgoList[1]="SF67r0Y9";
-  AlgoNames[1]="TopoSplitFilteredMu67SmallR0YCut9";
-  AlgoPrefix[1] = "CamKt12";
-  subjetMap["TopoSplitFilteredMu67SmallR0YCut9"] = "TopoSplitFiltSubjetsMu67SmallR0YCut9";
-  subjetIndex["TopoSplitFilteredMu67SmallR0YCut9"] = "jet_CamKt12LCTopo_SplitFiltSubjetsMu67SmallR0YCut9_index";
-  //SplitFilteredMu100SmallR30YCut4
-  AlgoList[2]="SF100r30Y4";
-  AlgoNames[2] = "TopoSplitFilteredMu100SmallR30YCut4";
-  AlgoPrefix[2] = "CamKt12";
-  subjetMap["TopoSplitFilteredMu100SmallR30YCut4"] = "TopoSplitFiltSubjetsMu100SmallR30YCut4";
-  subjetIndex["TopoSplitFilteredMu100SmallR30YCut4"] = "jet_CamKt12LCTopo_SplitFiltSubjetsMu100SmallR30YCut4_index";
-  //TrimmedPtFrac5SmallR30
-  AlgoList[3]="TrimPt5r30";
-  AlgoNames[3] = "TopoTrimmedPtFrac5SmallR30";
-  AlgoPrefix[3] = "AntiKt10";
-  subjetMap["TopoTrimmedPtFrac5SmallR30"] = "TopoTrimmedSubjetsPtFrac5SmallR30";
-  subjetIndex["TopoTrimmedPtFrac5SmallR30"] = "jet_AntiKt10LCTopoTrimmedPtFrac5SmallR30_TrimmedSubjetsPtFrac5SmallR30_index";
-  //TrimmedPtFrac5SmallR20
-  AlgoList[4]="TrimPt5r20";
-  AlgoNames[4] = "TopoTrimmedPtFrac5SmallR20";
-  AlgoPrefix[4] = "AntiKt10";
-  subjetMap["TopoTrimmedPtFrac5SmallR20"] = "TopoTrimmedSubjetsPtFrac5SmallR20";
-  subjetIndex["TopoTrimmedPtFrac5SmallR20"] = "jet_AntiKt10LCTopoTrimmedPtFrac5SmallR20_TrimmedSubjetsPtFrac5SmallR20_index";
-  //PrunedCaRcutFactor50Zcut10
-  AlgoList[5]="PrunRf50Z10";
-  AlgoNames[5] = "TopoPrunedCaRcutFactor50Zcut10";
-  AlgoPrefix[5] = "AntiKt10";
-  //PrunedCaRcutFactor50Zcut20
-  AlgoList[6]="PrunRf50Z20";
-  AlgoNames[6] = "TopoPrunedCaRcutFactor50Zcut20";
-  AlgoPrefix[3] = "AntiKt10";
-
-  //reclustering
-  AlgoList[7]="ReclusAK2";
-  AlgoNames[7] = "AntiKt2LCTopo";
-  AlgoPrefix[7] = "AntiKt2";
-  AlgoList[8]="ReclusAK3";
-  AlgoNames[8] = "AntiKt3LCTopo";
-  AlgoPrefix[8] = "AntiKt3";
-  AlgoList[9]="ReclusAK4";
-  AlgoNames[9] = "AntiKt4LCTopo";
-  AlgoPrefix[9] = "AntiKt4";
-  //
-  AlgoList[10]="LeadTruthJet"; //for pt reweighting
-  AlgoList[11]="LeadTruthJet_finebin"; //to show off
-    
-  binLabel[0]="CA12 Truth RecoMatch";
-  binLabel[1]="CA12 Split-Filt (0.67, 0.09, variable)";
-  binLabel[2]="CA12 Split-Filt (1.0, 0.04, 0.3)";
-  binLabel[3]="CA12 Trimmed (0.05, 0.3)";
-  binLabel[4]="CA12 Trimmed (0.05, 0.2)";
-  binLabel[5]="CA12 Pruned (0.5, 0.1)";
-  binLabel[6]="CA12 Pruned (0.5, 0.2)";
-  binLabel[7]="AK10 Reclustered (from AK2)";
-  binLabel[8]="AK10 Reclustered (from AK3)";
-  binLabel[9]="AK10 Reclustered (from AK4)";
+void defineStrings(/*TString *AlgoList, TString *binLabel,*/ TString *pTbins, TString *finePtBins){//, std::map<std::string, std::string> subjetMap){
 
   pTbins[0]="inclusive";
   pTbins[1]="gtr1000";
@@ -411,26 +365,6 @@ void defineStrings(TString *AlgoList, TString *binLabel, TString *pTbins, TStrin
   finePtBins[9]="2250to2500";
   finePtBins[10]="2500to2750";
   finePtBins[11]="2750to3000";
-  
-  AlgoListN[0]="Truth CA12 matched to a reco ungroomed jet";
-  //SplitFilteredMu67SmallR0YCut9
-  AlgoListN[1]="CA12 Split Filtered jets, #mu=0.67, y_{cut}=0.09, R_{subjet} variable";
-  //SplitFilteredMu100SmallR30YCut4
-  AlgoListN[2]="CA12 Split Filtered jets, #mu=1.0, y_{cut}=0.04, R_{subjet}=0.3";
-  //TrimmedPtFrac5SmallR30
-  AlgoListN[3]="CA12 Trimmed jets, f_{cut}=0.05, R_{subjet}=0.3";
-  //TrimmedPtFrac5SmallR20
-  AlgoListN[4]="CA12 Trimmed jets, f_{cut}=0.05, R_{subjet}=0.2";
-  //PrunedCaRcutFactor50Zcut10
-  AlgoListN[5]="CA12 Pruned jets, R_{cut}=0.5, Z_{cut}=0.1";
-  //PrunedCaRcutFactor50Zcut20
-  AlgoListN[6]="CA12 Pruned jets, R_{cut}=0.5, Z_{cut}=0.2";
-  AlgoListN[7]="Reclustering AntiKt10 from AntiKt2 jets";
-  AlgoListN[8]="Reclustering AntiKt10 from AntiKt3 jets";
-  AlgoListN[9]="Reclustering AntiKt10 from AntiKt4 jets";
-
-  AlgoListN[10]="Leading truth CA12 jet (unmatched)"; //for pt reweighting
-  AlgoListN[11]="Leading truth CA12 jet (unmatched)"; //to show off
 
   pTbinsN[0]="Inclusive p_{T}^{CA12}";
   pTbinsN[1]="p_{T}^{CA12} > 1000 GeV";
