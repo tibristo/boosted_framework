@@ -160,6 +160,8 @@ struct Algorithms algorithms;
 /////
 
 std::string fileid_global;
+std::string treeName;
+
 
 TFile *inputFile[2];
 TTree *inputTree[2];

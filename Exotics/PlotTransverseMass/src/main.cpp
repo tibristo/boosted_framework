@@ -88,6 +88,7 @@ int main( int argc, char * argv[] ) {
       ("mpv", po::value<bool>(&getMPVFlag)->default_value(false),"Find the MPV")
       ("fileid", po::value<string>(&fileid)->default_value(""),"Add an identifier to the output folder/ file names")
       ("bkg-frac", po::value<bool>(&checkBkgFrac)->default_value(false),"Check the background fraction in the signal")
+      ("tree-name", po::value<string>(&treeName)->default_value("physics"),"Name of tree to be read in from input file")
       ;
         
     po::options_description cmdline_options;
@@ -189,14 +190,14 @@ int main( int argc, char * argv[] ) {
   std::string alg_in = vm["algorithm"].as<string>();
   std::string alg_in_orig = vm["algorithm"].as<string>();
 
-  inputTChain[sampleType::BACKGROUND] = new TChain("physics");
+  inputTChain[sampleType::BACKGROUND] = new TChain(treeName.c_str());
   for (vector<string>::iterator it = inputBkgFiles.begin(); it != inputBkgFiles.end(); it++)
     {
       inputTChain[sampleType::BACKGROUND]->Add((*it).c_str());
       std::cout << "bkg file added: " << (*it) << std::endl;
     }
 
-  inputTChain[sampleType::SIGNAL] = new TChain("physics");
+  inputTChain[sampleType::SIGNAL] = new TChain(treeName.c_str());
   for (vector<string>::iterator it = inputSigFiles.begin(); it != inputSigFiles.end(); it++)
     {
       inputTChain[sampleType::SIGNAL]->Add((*it).c_str());
@@ -1814,7 +1815,7 @@ void makeMassWindowFile(bool applyMassWindow,bool extendedVars, std::string & al
 	  mass_min = BottomEdgeMassWindow[j];
 
 	  TFile * outfile = new TFile(std::string(algorithms.AlgoNames[i]+fileid_global+"/"+ss_fname.str()).c_str(),"RECREATE");	  
-	  TTree * outTree = new TTree("physics","physics");
+	  TTree * outTree = new TTree(treeName.c_str(),treeName.c_str());
 
 	  resetOutputVariables();
 	  setOutputBranches(outTree, algorithms.AlgoNames[i], i, extendedVars);
