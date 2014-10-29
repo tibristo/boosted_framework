@@ -144,5 +144,54 @@
   <SubjetIndexBranch></SubjetIndexBranch>
   <BinLabel></BinLabel>
 </algorithm>
+
+<algorithm>
+  <Algorithm>AntiKt10LCTopoPrunedCaRcutFactor50Zcut10Jets</Algorithm>
+  <GroomingAlgorithm>TopoPrunedCaRcutFactor50Zcut10Jets</GroomingAlgorithm>
+  <JetAlgorithm>AntiKt10</JetAlgorithm>
+  <Abbreviation>LeadTruthJet_finebin</Abbreviation>
+  <PlotLabel>Leading truth CA12 jet (unmatched)</PlotLabel>
+  <Type>pruned</Type>
+  <SubjetGroomingAlgorithm></SubjetGroomingAlgorithm>
+  <SubjetIndexBranch></SubjetIndexBranch>
+  <BinLabel></BinLabel>
+</algorithm>
+
+<algorithm>
+  <Algorithm>AntiKt10LCTopoSplitFilteredMu100SmallR30YCut4Jets</Algorithm>
+  <GroomingAlgorithm>TopoSplitFilteredMu100SmallR30YCut4Jets</GroomingAlgorithm>
+  <JetAlgorithm>AntiKt10</JetAlgorithm>
+  <Abbreviation>LeadTruthJet_finebin</Abbreviation>
+  <PlotLabel>Leading truth CA12 jet (unmatched)</PlotLabel>
+  <Type></Type>
+  <SubjetGroomingAlgorithm></SubjetGroomingAlgorithm>
+  <SubjetIndexBranch></SubjetIndexBranch>
+  <BinLabel></BinLabel>
+</algorithm>
+
+<algorithm>
+  <Algorithm>AntiKt10LCTopoTrimmedPtFrac5SmallR30Jets</Algorithm>
+  <GroomingAlgorithm>TopoTrimmedPtFrac5SmallR30Jets</GroomingAlgorithm>
+  <JetAlgorithm>AntiKt10</JetAlgorithm>
+  <Abbreviation>LeadTruthJet_finebin</Abbreviation>
+  <PlotLabel>Leading truth CA12 jet (unmatched)</PlotLabel>
+  <Type></Type>
+  <SubjetGroomingAlgorithm></SubjetGroomingAlgorithm>
+  <SubjetIndexBranch></SubjetIndexBranch>
+  <BinLabel></BinLabel>
+</algorithm>
+
+
+<algorithm>
+  <Algorithm>CamKt12LCTopoSplitFilteredMu100SmallR30YCut4Jets</Algorithm>
+  <GroomingAlgorithm>TopoSplitFilteredMu100SmallR30YCut4Jets</GroomingAlgorithm>
+  <JetAlgorithm>CamKt12</JetAlgorithm>
+  <Abbreviation>LeadTruthJet_finebin</Abbreviation>
+  <PlotLabel>Leading truth CA12 jet (unmatched)</PlotLabel>
+  <Type></Type>
+  <SubjetGroomingAlgorithm></SubjetGroomingAlgorithm>
+  <SubjetIndexBranch></SubjetIndexBranch>
+  <BinLabel></BinLabel>
+</algorithm>
 </algorithms>
 </config>
