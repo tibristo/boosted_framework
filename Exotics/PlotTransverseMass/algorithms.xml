@@ -123,7 +123,7 @@
 
 <algorithm>
   <Algorithm>LeadTruthJet</Algorithm>
-  <GroomingAlgorithm></GroomingAlgorithm>
+  <GroomingAlgorithm>Truth</GroomingAlgorithm>
   <JetAlgorithm>CamKt12</JetAlgorithm>
   <Abbreviation>LeadTruthJet</Abbreviation>
   <PlotLabel>Leading truth CA12 jet (unmatched)</PlotLabel>
@@ -135,7 +135,7 @@
 
 <algorithm>
   <Algorithm>LeadTruthJetfinebin</Algorithm>
-  <GroomingAlgorithm></GroomingAlgorithm>
+  <GroomingAlgorithm>Truth</GroomingAlgorithm>
   <JetAlgorithm></JetAlgorithm>
   <Abbreviation>LeadTruthJet_finebin</Abbreviation>
   <PlotLabel>Leading truth CA12 jet (unmatched)</PlotLabel>
