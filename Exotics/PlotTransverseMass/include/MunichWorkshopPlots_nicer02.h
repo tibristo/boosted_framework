@@ -182,7 +182,7 @@ UInt_t mc_channel_number  = 0;
 UInt_t mc_channel_number_out  = 0;
 UInt_t runNumberOut = 0;
 UInt_t runNumberIn = 0;
-bool emfracAvail = false; // putting this in on the 29th of October 2014 - how long until I fix this???? :D
+bool emfracAvail = true; // putting this in on the 29th of October 2014 - how long until I fix this???? :D
 
 //QCD split filtering with Y cut 9
 vector<float> * qcd_CA12_truth_pt = 0;
