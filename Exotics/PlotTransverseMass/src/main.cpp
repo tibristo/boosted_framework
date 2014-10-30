@@ -1797,7 +1797,7 @@ void makeMassWindowFile(bool applyMassWindow,bool extendedVars, std::string & al
 
       signal = false;
       std::stringstream ss;
-      ss << algorithms.AlgoNames[i] << "_" << i << "_" << pTbins[j];
+      ss << algorithms.AlgoNames[i] << "_" << pTbins[j];
       // loop through background and signal
       for (int k = 0; k < 2; k++)
 	{
@@ -2914,7 +2914,8 @@ void createPtReweightFile(TH1F * bkg, TH1F * sig, std::string & fname)
 	  std::cout << "oh no, we've been rumbled!  We have no signal in this bin and now we have to reweight by over 9000! But actually we're just going to make it 0." << std::endl;
 	  weight = 0;
 	}
-      out << bkg->GetXaxis()->GetBinLowEdge(b) << "," << weight << endl;     
+      //out << bkg->GetXaxis()->GetBinLowEdge(b) << "," << weight << endl;     
+      out << bkg->GetXaxis()->GetBinLowEdge(b) << "," << bkg->GetBinContent(b) << "," << sig->GetBinContent(b) << endl;     
     }
   out.close();
   
