@@ -182,6 +182,10 @@ UInt_t mc_channel_number  = 0;
 UInt_t mc_channel_number_out  = 0;
 UInt_t runNumberOut = 0;
 UInt_t runNumberIn = 0;
+Float_t avgIntpXingOut = 0;
+Float_t avgIntpXingIn = 0;
+Int_t nvtxIn = 0;
+Int_t nvtxOut = 0;
 bool emfracAvail = true; // putting this in on the 29th of October 2014 - how long until I fix this???? :D
 
 //QCD split filtering with Y cut 9

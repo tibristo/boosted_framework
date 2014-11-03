@@ -1960,7 +1960,7 @@ void makeMassWindowFile(bool applyMassWindow,bool extendedVars, std::string & al
 	      leadGroomedIndex = chosenLeadGroomedIndex;
 	      leadTruthIndex = chosenLeadTruthJetIndex;
 	      leadTopoIndex = chosenLeadTopoJetIndex;
-	      runNumberOut = runNumberIn;
+
 
 	      mass = (*var_m_vec[2])[leadGroomedIndex]/1000.0 ;
 
@@ -2032,34 +2032,6 @@ void makeMassWindowFile(bool applyMassWindow,bool extendedVars, std::string & al
 		}
 	    
 	      setOutputVariables(extendedVars, leadTruthIndex, leadTopoIndex, leadGroomedIndex, lead_subjet);
-
-	      if (k_factors.count(long(mc_channel_number)) > 0 )
-		{
-		  var_k_factor = k_factors[long(mc_channel_number)];
-		}
-	      else
-		{
-		  var_k_factor = 1.0;
-		  //std::cout << "Warning: k-factor not known for " << mc_channel_number << endl;
-		}
-	      if (filt_eff.count(long(mc_channel_number)) > 0 )
-		{
-		  var_filter_eff = filt_eff[long(mc_channel_number)];
-		}
-	      else
-		{
-		  var_filter_eff = 1.0;
-		  //std::cout << "Warning: filter eff not known for " << mc_channel_number << endl;
-		}
-	      if (xs.count(long(mc_channel_number)) > 0)
-		{
-		  var_xs = xs[long(mc_channel_number)];
-		}
-	      else
-		{
-		  var_xs = 1.0;
-		  //std::cout << "Warning: xs not known for " << mc_channel_number << endl;
-		}
 
 	      outTree->Fill();
 	      pt_reweight->Fill((*jet_pt_truth)[chosenLeadTruthJetIndex]/1000.0);
@@ -2139,6 +2111,8 @@ vector<std::string> getListOfJetBranches(std::string &algorithm)
   // need to add some essential ones in case they get forgotten in that config file :)
   branches.push_back("RunNumber");
   branches.push_back("mc_channel_number");
+  branches.push_back("vxp_n");
+  branches.push_back("averageIntPerXing");
   branches.push_back("mc_event_weight");
   in.close();
   return branches;
@@ -2207,6 +2181,8 @@ void setJetsBranches(TChain * tree, std::string &groomalgo, bool signal, std::st
 
   tree->SetBranchAddress("mc_event_weight",&mc_event_weight);
   tree->SetBranchAddress("mc_channel_number", &mc_channel_number);
+  tree->SetBranchAddress("vxp_n", &nvtxIn);
+  tree->SetBranchAddress("averageIntPerXing",&avgIntpXingIn);
   tree->SetBranchAddress("RunNumber", &runNumberIn);
 
   TObjArray * brancharray = tree->GetListOfBranches();
@@ -2539,6 +2515,38 @@ void setOutputVariables(bool extendedVars, int jet_idx_truth, int jet_idx_topo, 
   int jet_idx = 0;
   mc_event_weight_out = mc_event_weight;
   mc_channel_number_out = mc_channel_number;
+  runNumberOut = runNumberIn;
+  nvtxOut = nvtxIn;
+  avgIntpXingOut = avgIntpXingIn;
+
+  if (k_factors.count(long(mc_channel_number)) > 0 )
+    {
+      var_k_factor = k_factors[long(mc_channel_number)];
+    }
+  else
+    {
+      var_k_factor = 1.0;
+      //std::cout << "Warning: k-factor not known for " << mc_channel_number << endl;
+    }
+  if (filt_eff.count(long(mc_channel_number)) > 0 )
+    {
+      var_filter_eff = filt_eff[long(mc_channel_number)];
+    }
+  else
+    {
+      var_filter_eff = 1.0;
+      //std::cout << "Warning: filter eff not known for " << mc_channel_number << endl;
+    }
+  if (xs.count(long(mc_channel_number)) > 0)
+    {
+      var_xs = xs[long(mc_channel_number)];
+    }
+  else
+    {
+      var_xs = 1.0;
+      //std::cout << "Warning: xs not known for " << mc_channel_number << endl;
+    }
+
   
   for (int x = 0; x < jetType::MAX ; x++)
     {
@@ -2703,6 +2711,8 @@ void setOutputBranches(TTree * tree, std::string & groomalgo, std::string & groo
 
   tree->Branch("mc_event_weight",&mc_event_weight_out,"mc_event_weight/F");
   tree->Branch("mc_channel_number", &mc_channel_number_out,"mc_channel_number/I");
+  tree->Branch("vxp_n", &nvtxOut, "vxp_n/I");
+  tree->Branch("averageIntPerXing",&avgIntpXingOut,"averageIntPerXing/F");
 
   for (int i = 0; i < jetType::MAX; i++) // truth, topo, groomed
     {
