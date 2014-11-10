@@ -97,11 +97,11 @@ void plotVariables(TTree * tree, vector<std::string> & branches);
 std::vector<std::string> getListOfBranches(std::string &algorithm);
 //void make68Plots(int algidx, TChain * bkg, TChain * sig);
 void makeMassWindowFile(bool applyMassWindow, bool extendedVars, std::string & algorithm);
-void setJetsBranches(TChain * tree, std::string & algorithm, bool signal, std::string & groomIdx, bool extendedVars);
-void addJetsBranches(TTree * tree, std::string & algorithm, bool signal);
-void addSubJets(TTree * tree, std::string & algorithm, bool signal, std::string & groomIdx);
+void setJetsBranches(TChain * tree, std::string & algorithm, std::string & groomIdx, bool extendedVars);
+void addJetsBranches(TTree * tree, std::string & algorithm);
+void addSubJets(TTree * tree, std::string & algorithm, std::string & groomIdx);
 //void getBranchesSelection(TTree * tree, std::string & algorithm);
-void setSelectionVectors(bool signal, std::string & algorithm);
+void setSelectionVectors();
 void runAlgorithm(TChain *inputTree, TChain *inputTree1, TString groomAlgo, std::string & groomAlgoIndex, bool massHistos);
 vector<std::string> getListOfJetBranches(std::string & algorithm);
 void initVectors(bool extendedVars);
@@ -120,7 +120,7 @@ void readWeights();
 void createPtReweightFile(TH1F * bkg, TH1F * sig, std::string & fname);
 
 enum class groomAlgoEnum{groomZero, TopoSplitFilteredMu67SmallR0YCut9, TopoSplitFilteredMu100SmallR30YCut4, TopoTrimmedPtFrac5SmallR30, TopoTrimmedPtFrac5SmallR20, TopoPrunedCaRcutFactor50Zcut10, TopoPrunedCaRcutFactor50Zcut20, AntiKt2LCTopo, AntiKt3LCTopo, AntiKt4LCTopo};
-enum sampleType{BACKGROUND, SIGNAL};
+enum sampleType{BACKGROUND,SIGNAL};
 enum jetType{TRUTH,TOPO,GROOMED,MAX};
 enum histType{TRUTHJET,GROOMEDJET,LEADTRUTHJET};
 //groomAlgo options:
@@ -161,7 +161,7 @@ struct Algorithms algorithms;
 
 std::string fileid_global;
 std::string treeName;
-
+std::string branchesFile;
 
 TFile *inputFile[2];
 TTree *inputTree[2];
