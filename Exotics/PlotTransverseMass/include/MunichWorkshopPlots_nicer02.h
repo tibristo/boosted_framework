@@ -122,6 +122,8 @@ void overlapRemoval(bool extendedVars);
 int eventSelection();
 bool leptonSelection(int lepType);
 void setLeptons(TChain * tree, TObjArray * list);
+void addLeptonBranches(TChain * tree);
+void setLeptonVectors();
 
 enum class groomAlgoEnum{groomZero, TopoSplitFilteredMu67SmallR0YCut9, TopoSplitFilteredMu100SmallR30YCut4, TopoTrimmedPtFrac5SmallR30, TopoTrimmedPtFrac5SmallR20, TopoPrunedCaRcutFactor50Zcut10, TopoPrunedCaRcutFactor50Zcut20, AntiKt2LCTopo, AntiKt3LCTopo, AntiKt4LCTopo};
 enum sampleType{BACKGROUND,SIGNAL};
@@ -457,11 +459,21 @@ Float_t var_ktycut2_vec;
 
 // electrons in
 std::vector<TLorentzVector> * var_electrons_vec;
+std::vector<TLorentzVector> electrons;
+std::vector<Float_t> * var_electronX_vec;
+std::vector<Float_t> * var_electronY_vec;
+std::vector<Float_t> * var_electronZ_vec;
+std::vector<Float_t> * var_electronT_vec;
 std::vector<float> * var_el_ptcone20_vec;
 std::vector<float> * var_el_etcone20_vec;
 
 // muons in
 std::vector<TLorentzVector> * var_muons_vec;
+std::vector<TLorentzVector> muons;
+std::vector<Float_t> * var_muonX_vec;
+std::vector<Float_t> * var_muonY_vec;
+std::vector<Float_t> * var_muonZ_vec;
+std::vector<Float_t> * var_muonT_vec;
 std::vector<float> * var_mu_ptcone20_vec;
 std::vector<float> * var_mu_etcone20_vec;
 std::vector<float> * var_mu_charge_vec;

@@ -1907,6 +1907,7 @@ void makeMassWindowFile(bool applyMassWindow,bool extendedVars, std::string & al
 		    continue;
 		}
 
+	      setLeptonVectors();
 	      // do overlap removal before looking for jets
 	      overlapRemoval(extendedVars);
 	      int lepType = eventSelection();
@@ -2136,10 +2137,18 @@ vector<std::string> getListOfJetBranches(std::string &algorithm)
 
   // need to add leptons
   branches.push_back("electrons");
+  branches.push_back("electronX");
+  branches.push_back("electronY");
+  branches.push_back("electronZ");
+  branches.push_back("electronT");
   branches.push_back("el_ptcone20");
   branches.push_back("el_etcone20");
 
   branches.push_back("muons");
+  branches.push_back("muonX");
+  branches.push_back("muonY");
+  branches.push_back("muonZ");
+  branches.push_back("muonT");
   branches.push_back("mu_ptcone20");
   branches.push_back("mu_etcone20");
   branches.push_back("mu_charge");
@@ -2213,6 +2222,22 @@ void setLeptons(TChain * tree, TObjArray * list)
     tree->SetBranchAddress("electrons", &var_electrons_vec);
   else
     std::cout << "missing branch electrons, might cause unexpected behaviour" << std::endl;
+  if (list->FindObject("electronX"))
+    tree->SetBranchAddress("electronX", &var_electronX_vec);
+  else
+    std::cout << "missing branch electronX, might cause unexpected behaviour" << std::endl;
+  if (list->FindObject("electronY"))
+    tree->SetBranchAddress("electronY", &var_electronY_vec);
+  else
+    std::cout << "missing branch electronY, might cause unexpected behaviour" << std::endl;
+  if (list->FindObject("electronZ"))
+    tree->SetBranchAddress("electronZ", &var_electronZ_vec);
+  else
+    std::cout << "missing branch electronZ, might cause unexpected behaviour" << std::endl;
+  if (list->FindObject("electronT"))
+    tree->SetBranchAddress("electronT", &var_electronT_vec);
+  else
+    std::cout << "missing branch electronT, might cause unexpected behaviour" << std::endl;
   if (list->FindObject("el_ptcone20"))
     tree->SetBranchAddress("el_ptcone20", &var_el_ptcone20_vec);
   else
@@ -2226,6 +2251,22 @@ void setLeptons(TChain * tree, TObjArray * list)
     tree->SetBranchAddress("muons", &var_muons_vec);
   else
     std::cout << "missing branch muons, might cause unexpected behaviour" << std::endl;
+  if (list->FindObject("muonX"))
+    tree->SetBranchAddress("muonX", &var_muonX_vec);
+  else
+    std::cout << "missing branch muonX, might cause unexpected behaviour" << std::endl;
+  if (list->FindObject("muonY"))
+    tree->SetBranchAddress("muonY", &var_muonY_vec);
+  else
+    std::cout << "missing branch muonY, might cause unexpected behaviour" << std::endl;
+  if (list->FindObject("muonZ"))
+    tree->SetBranchAddress("muonZ", &var_muonZ_vec);
+  else
+    std::cout << "missing branch muonZ, might cause unexpected behaviour" << std::endl;
+  if (list->FindObject("muonT"))
+    tree->SetBranchAddress("muonT", &var_muonT_vec);
+  else
+    std::cout << "missing branch muonT, might cause unexpected behaviour" << std::endl;
   if (list->FindObject("mu_ptcone20"))
     tree->SetBranchAddress("mu_ptcone20", &var_mu_ptcone20_vec);
   else
@@ -2318,7 +2359,7 @@ void overlapRemoval(bool extendedVars)
 {
   for (int it = 0 ; it < (*var_pt_vec[jetType::GROOMED]).size(); it++)
     {
-      for (std::vector<TLorentzVector>::iterator el = var_electrons_vec->begin(); el != var_electrons_vec->end(); el++)
+      for (std::vector<TLorentzVector>::iterator el = electrons.begin(); el != electrons.end(); el++)
 	{
 	  float dR = DeltaR((*var_eta_vec[jetType::GROOMED])[it], (*var_phi_vec[jetType::GROOMED])[it], (*el).Eta(), (*el).Phi());
 	  // dR < 0.8 remove jet from collection
@@ -2338,14 +2379,17 @@ int eventSelection()
   int lepType = leptonType::FAIL;
   // 2 electrons or 2 muons of opposite charge
   float mll;
-  if (var_electrons_vec->size() == 2)
+  
+  if (electrons.size() == 2)
     {
-      mll = ((*var_electrons_vec)[0]+(*var_electrons_vec)[1]).M()*GEV;
+      mll = (electrons.at(0)+electrons.at(1)).M();
       lepType = leptonType::ELECTRON;
     }
-  else if (var_muons_vec->size() == 2 && (*var_mu_charge_vec)[0]*(*var_mu_charge_vec)[1] == -1)
+  else if (muons.size() == 2 && (*var_mu_charge_vec)[0]*(*var_mu_charge_vec)[1] == -1)
     {
-      mll = ((*var_muons_vec)[0]+(*var_muons_vec)[1]).M()*GEV;
+      //std::cout << muons[0].Et() << std::endl;
+      mll = (muons.at(0)+muons.at(1)).M();
+      //std::cout << "mll: " << mll << std::endl;
       lepType = leptonType::MUON;
     }
   else
@@ -2355,7 +2399,8 @@ int eventSelection()
   // |mll-91| < 25 gev
   if (fabs(mll-91*GEV) >= 25*GEV)
     {
-      return lepType;
+      //std::cout << "failing mass cut" << std::endl;
+      return leptonType::FAIL;
     }
 
   return lepType;
@@ -2372,28 +2417,28 @@ bool leptonSelection(int lepType)
       // et > 25 GeV
       for (int idx = 0; idx < 2; idx++)
 	{
-	  if ((*var_electrons_vec)[idx].Et() <= 25*GEV)
+	  if (electrons[idx].Et() <= 25*GEV)
 	    {
-	      std::cout << var_electrons_vec->size() << std::endl;
-	      std::cout << "Failed electron ET cut" <<std::endl;
-	      std::cout << (*var_electrons_vec)[idx].Et() <<std::endl;
-	      std::cout << (*var_electrons_vec)[idx].M() <<std::endl;
+	      //std::cout << var_electrons_vec->size() << std::endl;
+	      //std::cout << "Failed electron ET cut" <<std::endl;
+	      std::cout << electrons[idx].Et() <<std::endl;
+	      //std::cout << var_electrons_vec <<std::endl;
 	      return false;
 	    }
 	  // eta < 2.47
-	  if (fabs((*var_electrons_vec)[idx].Eta()) >= 2.47)
+	  if (fabs(electrons[idx].Eta()) >= 2.47)
 	    {
 	      //std::cout << "Failed electron eta cut" <<std::endl;
 	      return false;
 	    }
 	  // ptcone20/pt < 0.15
-	  if ((*var_el_ptcone20_vec)[idx]/(*var_electrons_vec)[idx].Pt() >= 0.15)
+	  if ((*var_el_ptcone20_vec)[idx]/electrons[idx].Pt() >= 0.15)
 	    {
 	      //std::cout << "Failed electron ptcone20/pt cut" <<std::endl;
 	      return false;
 	    }
 	  // etcone20/et < 0.3
-	  if ((*var_el_etcone20_vec)[idx]/(*var_electrons_vec)[idx].Et() >= 0.3)
+	  if ((*var_el_etcone20_vec)[idx]/electrons[idx].Et() >= 0.3)
 	    {
 	      //std::cout << "Failed electron etcone20/et cut" <<std::endl;
 	      return false;
@@ -2406,25 +2451,25 @@ bool leptonSelection(int lepType)
       // pt > 25 gev
       for (int idx = 0; idx < 2; idx++)
 	{
-	  if ((*var_muons_vec)[idx].Pt() <= 25*GEV)
+	  if (muons[idx].Pt() <= 25*GEV)
 	    {
 	      //std::cout << "Failed muon pt cut" <<std::endl;
 	      return false;
 	    }
 	  // eta < 2.5
-	  if (fabs((*var_muons_vec)[idx].Eta()) >= 2.5)
+	  if (fabs(muons[idx].Eta()) >= 2.5)
 	    {
 	      //std::cout << "Failed muon eta cut" <<std::endl;
 	      return false;
 	    }
 	  // ptcone20/pt <  0.15
-	  if ((*var_mu_ptcone20_vec)[idx]/(*var_muons_vec)[idx].Pt() >= 0.15)
+	  if ((*var_mu_ptcone20_vec)[idx]/muons[idx].Pt() >= 0.15)
 	    {
 	      //std::cout << "Failed muon ptcone20/pt cut" <<std::endl;
 	      return false;
 	    }
 	  // etcone20/et < 0.3
-	  if ((*var_mu_etcone20_vec)[idx]/(*var_muons_vec)[idx].Et() >= 0.3)
+	  if ((*var_mu_etcone20_vec)[idx]/muons[idx].Et() >= 0.3)
 	    {
 	      //std::cout << "Failed muon etcone20/et cut" <<std::endl;
 	      return false;
@@ -2663,11 +2708,11 @@ void addSubJets(TTree * tree, std::string & groomalgo, std::string &  groomIdx)
 
 void addLeptonBranches(TTree * tree)
 {
-  tree->Branch("electrons", &var_electrons);
+  tree->Branch("electrons",&var_electrons);
   tree->Branch("el_ptcone20", &var_el_ptcone20, "el_ptcone20/F");
   tree->Branch("el_etcone20", &var_el_etcone20, "el_etcone20/F");
 
-  tree->Branch("muons", &var_muons);
+  tree->Branch("muons",  &var_muons);
   tree->Branch("mu_ptcone20", &var_mu_ptcone20, "mu_ptcone20/F");
   tree->Branch("mu_etcone20", &var_mu_etcone20, "mu_eptcone20/F");
   tree->Branch("mu_charge", &var_mu_charge, "mu_charge/F");
@@ -2761,16 +2806,45 @@ void initVectors(bool extendedVars)
   var_subjets_phi_vec = 0;
   
   var_electrons_vec = 0;
+  var_electronX_vec = 0;
+  var_electronY_vec = 0;
+  var_electronZ_vec = 0;
+  var_electronT_vec = 0;
   var_el_ptcone20_vec = 0;
   var_el_etcone20_vec = 0;
 
   var_muons_vec = 0;
+  var_muonX_vec = 0;
+  var_muonY_vec = 0;
+  var_muonZ_vec = 0;
+  var_muonT_vec = 0;
   var_mu_ptcone20_vec = 0;
   var_mu_etcone20_vec = 0;
   var_mu_charge_vec = 0;
 
 
 } // initVEctors
+
+
+void setLeptonVectors()
+{
+  //if (var_electronX_vec->size() == 2 && (*var_electronX_vec)[0] != -999.0 && (*var_electronX_vec)[1] != -999.0)
+  //{
+      for (int x = 0; x < var_electronX_vec->size(); x++)
+	{
+	  TLorentzVector e = TLorentzVector((*var_electronX_vec)[x], (*var_electronY_vec)[x], (*var_electronZ_vec)[x], (*var_electronT_vec)[x]);
+	  electrons.push_back(e);
+	}
+      //}
+      //if (var_muonX_vec->size() == 2 && (*var_muonX_vec)[0] != -999.0 && (*var_muonX_vec)[1] != -999.0)
+      //{
+      for (int x = 0; x < var_muonX_vec->size(); x++)
+	{
+	  muons.push_back(TLorentzVector((*var_muonX_vec)[x], (*var_muonY_vec)[x], (*var_muonZ_vec)[x], (*var_muonT_vec)[x]));
+	}
+      //}
+
+} // setLeptonVectors()
 
 void setOutputVariables(bool extendedVars, int jet_idx_truth, int jet_idx_topo, int jet_idx_groomed, int subjet_idx)
 {
@@ -2904,11 +2978,13 @@ void setOutputVariables(bool extendedVars, int jet_idx_truth, int jet_idx_topo, 
     }
 
   // store output leptons
-  var_electrons = (*var_electrons_vec);
+  //var_electrons = (*var_electrons_vec);
+  var_electrons = electrons;
   var_el_ptcone20 = (*var_el_ptcone20_vec);
   var_el_etcone20 = (*var_el_etcone20_vec);
 
-  var_muons = (*var_muons_vec);
+  //var_muons = (*var_muons_vec);
+  var_muons = muons;
   var_mu_ptcone20 = (*var_mu_ptcone20_vec);
   var_mu_etcone20 = (*var_mu_etcone20_vec);
   var_mu_charge= (*var_mu_charge_vec);
@@ -2922,6 +2998,8 @@ void clearOutputVariables()
   var_massdrop = 0;
   var_yt = 0;
 
+  electrons.clear();
+  muons.clear();
   var_E.clear();
   var_pt.clear();
   var_m.clear();
@@ -2969,10 +3047,10 @@ void clearOutputVariables()
 void resetOutputVariables()
 {
   clearOutputVariables();
-  var_electrons.push_back(TLorentzVector(-999,-999,-999,0));
+  var_electrons.push_back(TLorentzVector());
   var_el_ptcone20.push_back(-999);
   var_el_etcone20.push_back(-999);
-  var_muons.push_back(TLorentzVector(-999,-999,-999,0));
+  var_muons.push_back(TLorentzVector());
   var_mu_ptcone20.push_back(-999);
   var_mu_etcone20.push_back(-999);
   var_mu_charge.push_back(-999);
@@ -3080,7 +3158,8 @@ void setOutputBranches(TTree * tree, std::string & groomalgo, std::string & groo
       tree->Branch(std::string(jetType+"Tau21").c_str(),&var_Tau21.at(2),std::string(jetType+"Tau21/F").c_str());  
 
     }
-  
+
+  addLeptonBranches(tree);
 } // setOutputBranches
 
 
