@@ -21,6 +21,7 @@
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/xml_parser.hpp>
 #include <boost/foreach.hpp>
+//#include "LinkDef.h"
 using namespace boost::algorithm;
 using namespace std;
 namespace po = boost::program_options;
@@ -37,8 +38,10 @@ ostream& operator<<(ostream& os, const vector<T>& v)
 int main( int argc, char * argv[] ) {
   //subjets = true; // should be set from command line argument TODO
   gROOT->ProcessLine("#include <vector>");
+  gROOT->LoadMacro( "include/TLorentzVectorDict.h+" );
   gInterpreter->GenerateDictionary("std::vector<std::vector<int> >", "vector");
   gInterpreter->GenerateDictionary("vector<vector<double> >", "vector");
+
   
   AtlasStyle();
   
@@ -90,6 +93,7 @@ int main( int argc, char * argv[] ) {
       ("bkg-frac", po::value<bool>(&checkBkgFrac)->default_value(false),"Check the background fraction in the signal")
       ("tree-name", po::value<string>(&treeName)->default_value("physics"),"Name of tree to be read in from input file")
       ("branches-file", po::value<string>(&branchesFile)->default_value(""),"Name of file containing branches, otherwise Alg_branches.txt is used. Becareful with this, because if the branches are not read in then when any of them are used later on a segfault will occur, so make sure there is one that it will use.")
+      ("xAOD", po::value<bool>(&xAOD)->default_value(false),"Indicate if we are running over xAOD output.")
       ;
         
     po::options_description cmdline_options;
@@ -422,7 +426,7 @@ void getMassHistograms(TTree *inputTree, TTree *inputTree1, TString groomAlgo, s
       for (int n=0; n<(*qcd_CA12_topo_pt).size(); n++){
 	TLorentzVector tempJet;
 	float emfractmp = 0.5;
-	if (emfracAvail)
+	if (!xAOD)
 	  emfractmp = (*qcd_CA12_topo_emfrac)[n];
 	if (emfractmp<0.99 && (*qcd_CA12_topo_pt)[n]/1000>15.0){
 	  tempJet.SetPtEtaPhiE((*qcd_CA12_topo_pt)[n], (*qcd_CA12_topo_eta)[n], (*qcd_CA12_topo_phi)[n], (*qcd_CA12_topo_E)[n]);
@@ -472,7 +476,7 @@ void getMassHistograms(TTree *inputTree, TTree *inputTree1, TString groomAlgo, s
       int chosenTopoJetIndex=-99;
       float emfractmp = 0.5;
       for (int i=0; i<(*qcd_CA12_topo_pt).size(); i++){
-	if (emfracAvail)
+	if (!xAOD)
 	  emfractmp = (*qcd_CA12_topo_emfrac)[i];
 	if (!hasTopoJet && emfractmp<0.99 && fabs((*qcd_CA12_topo_eta)[i])<1.2) {
 	  chosenTopoJetIndex=i;
@@ -530,7 +534,7 @@ void getMassHistograms(TTree *inputTree, TTree *inputTree1, TString groomAlgo, s
 
     for (int i=0; i<(*qcd_CA12_groomed_pt).size(); i++){
       float emfractmp = 0.5;
-      if (emfracAvail)
+      if (!xAOD)
 	emfractmp = (*qcd_CA12_groomed_emfrac)[i];
       if (chosenLeadTruthJetIndex>=0 && chosenLeadGroomedIndex<0 && DeltaR((*qcd_CA12_truth_eta)[chosenLeadTruthJetIndex],(*qcd_CA12_truth_phi)[chosenLeadTruthJetIndex],(*qcd_CA12_groomed_eta)[i],(*qcd_CA12_groomed_phi)[i])<0.9 && emfractmp<0.99 && fabs((*qcd_CA12_groomed_eta)[i])<1.2){
 	// && (*qcd_CA12_groomed_pt)[i]/1000>100.0 ){ 
@@ -657,7 +661,7 @@ void getMassHistograms(TTree *inputTree, TTree *inputTree1, TString groomAlgo, s
       vector<TLorentzVector> small_jets;
       for (int n=0; n<(*Wp_CA12_topo_pt).size(); n++){
 	float emfractmp = 0.5;
-	if (emfracAvail)
+	if (!xAOD)
 	  emfractmp = (*Wp_CA12_topo_emfrac)[n];
 	TLorentzVector tempJet;
 	if (emfractmp<0.99){
@@ -703,7 +707,7 @@ void getMassHistograms(TTree *inputTree, TTree *inputTree1, TString groomAlgo, s
       int chosenTopoJetIndex=-99;
       for (int i=0; i<(*Wp_CA12_topo_pt).size(); i++){
 	float emfractmp = 0.5;
-	if (emfracAvail)
+	if (!xAOD)
 	  emfractmp = (*Wp_CA12_topo_emfrac)[i];
 	if (!hasTopoJet && emfractmp<0.99 && fabs((*Wp_CA12_topo_eta)[i])<1.2) {
 	  chosenTopoJetIndex=i;
@@ -758,7 +762,7 @@ void getMassHistograms(TTree *inputTree, TTree *inputTree1, TString groomAlgo, s
     int chosenLeadGroomedIndex=-99;
     for (int i=0; i<(*Wp_CA12_groomed_pt).size(); i++){
       float emfractmp = 0.5;
-      if (emfracAvail)
+      if (!xAOD)
 	emfractmp = (*Wp_CA12_groomed_emfrac)[i]; 
       if (chosenLeadTruthJetIndex>=0 && chosenLeadGroomedIndex<0 && DeltaR((*Wp_CA12_truth_eta)[chosenLeadTruthJetIndex],(*Wp_CA12_truth_phi)[chosenLeadTruthJetIndex],(*Wp_CA12_groomed_eta)[i],(*Wp_CA12_groomed_phi)[i])<0.9 && emfractmp<0.99 && fabs((*Wp_CA12_groomed_eta)[i])<1.2){
 	//  && (*Wp_CA12_groomed_pt)[i]/1000>100.0 ){ 	
@@ -1893,6 +1897,7 @@ void makeMassWindowFile(bool applyMassWindow,bool extendedVars, std::string & al
 	      setSelectionVectors(); // again reading from tree, but just setting jet_pt_x whatever
 	      // which makes it easier to use later on.
 	      resetOutputVariables(); 
+	     
 
 	      if (n%1000==0)
 		std::cout << "Entry: "<< n << " / " << entries <<  std::endl;
@@ -1901,6 +1906,7 @@ void makeMassWindowFile(bool applyMassWindow,bool extendedVars, std::string & al
 		NEvents_weighted[mc_channel_number] += mc_event_weight;
 	      else
 		NEvents_weighted[mc_channel_number] = mc_event_weight;
+
 
 	      // what about reclustered jets?! argggg
 	      int chosenLeadTruthJetIndex=-99;
@@ -1916,6 +1922,21 @@ void makeMassWindowFile(bool applyMassWindow,bool extendedVars, std::string & al
 		  if ((*jet_pt_truth)[0]/1000.0 < ptrange[j].first || (*jet_pt_truth)[0]/1000.0 > ptrange[j].second)
 		    continue;
 		}
+
+	      // do overlap removal before looking for jets
+	      overlapRemoval(extendedVars);
+	      int lepType = eventSelection();
+	      if (lepType == leptonType::FAIL)
+		{
+		  //std::cout << "Failed event selection" << std::endl;
+		  continue;
+		}
+	      
+	      if (!leptonSelection(lepType))
+		{
+		  //std::cout << "Failed lepton selection" << std::endl;
+		  continue;
+		}
 	      
 	      if (algorithms.AlgoType[groomAlgoIndex].find("truthmatch") != std::string::npos)
 		{
@@ -1926,7 +1947,7 @@ void makeMassWindowFile(bool applyMassWindow,bool extendedVars, std::string & al
 		  for (int jet_i=0; jet_i<(*jet_pt_topo).size(); jet_i++)
 		    {
 		      float emfractmp = 0.5;
-		      if (emfracAvail)
+		      if (!xAOD)
 			emfractmp = (*jet_emfrac_topo)[jet_i];
 		      if (!hasTopoJet && emfractmp<0.99 && fabs((*jet_eta_topo)[jet_i])<1.2) 
 			{
@@ -1957,7 +1978,7 @@ void makeMassWindowFile(bool applyMassWindow,bool extendedVars, std::string & al
 	      for (int jet_i=0; jet_i<(*jet_pt_groomed).size(); jet_i++)
 		{
 		  float emfractmp = 0.5;
-		  if (emfracAvail)
+		  if (!xAOD)
 		    emfractmp = (*jet_emfrac_groomed)[jet_i];
 		  if (chosenLeadGroomedIndex<0 && DeltaR((*jet_eta_truth)[chosenLeadTruthJetIndex],(*jet_phi_truth)[chosenLeadTruthJetIndex],(*jet_eta_groomed)[jet_i],(*jet_phi_groomed)[jet_i])<0.9 && emfractmp<0.99 && fabs((*jet_eta_groomed)[jet_i])<1.2)
 		    {
@@ -2128,6 +2149,16 @@ vector<std::string> getListOfJetBranches(std::string &algorithm)
   branches.push_back("vxp_n");
   branches.push_back("averageIntPerXing");
   branches.push_back("mc_event_weight");
+
+  // need to add leptons
+  branches.push_back("electrons");
+  branches.push_back("el_ptcone20");
+  branches.push_back("el_etcone20");
+
+  branches.push_back("muons");
+  branches.push_back("mu_ptcone20");
+  branches.push_back("mu_etcone20");
+  branches.push_back("mu_charge");
   in.close();
   return branches;
 } // getListOfBranches()
@@ -2138,20 +2169,26 @@ vector<std::string> getListOfJetBranches(std::string &algorithm)
 std::string returnJetType(std::string & samplePrefix, std::string & groomalgo, bool addLC, int i)
 {
   std::string jetType = "";
+  std::string xaod = "";
+  // right now we have an issue with xAOD where it adds "Jets" before _variable, so we need a quick fix for this
+  if (xAOD)
+    {
+      xaod = "Jets";
+    }
   switch (i)
     {
     case 0: // truth
-      jetType="jet_CamKt12Truth_";
+      jetType="jet_CamKt12Truth"+xaod+"_";
       break;
     case 1: // topo
       if (addLC)
-	jetType = "jet_" + samplePrefix + "LCTopo_";
+	jetType = "jet_" + samplePrefix + "LCTopo"+xaod+"_";
       else
-	jetType = "jet_" + samplePrefix + "Topo_";
+	jetType = "jet_" + samplePrefix + "Topo"+xaod+"_";
       break;
     default: // groomed
       if (addLC)
-	jetType = "jet_" + samplePrefix +"LC" + groomalgo + "_";
+	jetType = "jet_" + samplePrefix +"LC" + groomalgo+"_";
       else
 	jetType = "jet_" + samplePrefix + groomalgo + "_"; 	  
     }
@@ -2184,6 +2221,240 @@ void addJetsBranches(TTree * tree, std::string & groomalgo)
   //tree->Branch("NEvents_weighted",&NEvents_weighted,"NEvents_weighted/F");
 }// addJetsBranches
 
+
+void setLeptons(TChain * tree, TObjArray * list)
+{
+  // electrons
+  if (list->FindObject("electrons"))
+    tree->SetBranchAddress("electrons", &var_electrons_vec);
+  else
+    std::cout << "missing branch electrons, might cause unexpected behaviour" << std::endl;
+  if (list->FindObject("el_ptcone20"))
+    tree->SetBranchAddress("el_ptcone20", &var_el_ptcone20_vec);
+  else
+    std::cout << "missing branch el_etcone20, might cause unexpected behaviour" << std::endl;
+  if (list->FindObject("el_etcone20"))
+    tree->SetBranchAddress("el_etcone20", &var_el_etcone20_vec);
+  else
+    std::cout << "missing branch el_etcone20, might cause unexpected behaviour" << std::endl;
+  //muons
+  if (list->FindObject("muons"))
+    tree->SetBranchAddress("muons", &var_muons_vec);
+  else
+    std::cout << "missing branch muons, might cause unexpected behaviour" << std::endl;
+  if (list->FindObject("mu_ptcone20"))
+    tree->SetBranchAddress("mu_ptcone20", &var_mu_ptcone20_vec);
+  else
+    std::cout << "missing branch mu_ptcone20, might cause unexpected behaviour" << std::endl;
+  if (list->FindObject("mu_etcone20"))
+    tree->SetBranchAddress("mu_etcone20", &var_mu_etcone20_vec);
+  else
+    std::cout << "missing branch mu_etcone20, might cause unexpected behaviour" << std::endl;
+  if (list->FindObject("mu_charge"))
+    tree->SetBranchAddress("mu_charge", &var_mu_charge_vec);
+  else
+    std::cout << "missing branch mu_charge, might cause unexpected behaviour" << std::endl;
+
+} // setLeptons
+
+
+void eraseJet(int jet, bool extendedVars)
+{
+  int i = jetType::GROOMED;
+  // erasing an element/ range that doesn't exist it will cause undefined behaviour so need to check first
+  if (var_E_vec[i] != NULL && var_E_vec[i]->size() > jet)
+    var_E_vec[i]->erase(var_E_vec[i]->begin()+jet);
+  if (var_pt_vec[i] != NULL && var_pt_vec[i]->size() > jet)
+    var_pt_vec[i]->erase(var_pt_vec[i]->begin()+jet);
+  if (var_m_vec[i] != NULL && var_m_vec[i]->size() > jet)
+    var_m_vec[i]->erase(var_m_vec[i]->begin()+jet);
+  if (var_eta_vec[i] != NULL && var_eta_vec[i]->size() > jet)
+    var_eta_vec[i]->erase(var_eta_vec[i]->begin()+jet);
+  if (var_phi_vec[i] != NULL && var_phi_vec[i]->size() > jet)
+    var_phi_vec[i]->erase(var_phi_vec[i]->begin()+jet);
+  if (var_emfrac_vec[i] != NULL && var_emfrac_vec[i]->size() > jet)
+    var_emfrac_vec[i]->erase(var_emfrac_vec[i]->begin()+jet);
+  if (var_constit_index[i] != NULL && var_constit_index[i]->size() > jet)
+    var_constit_index[i]->erase(var_constit_index[i]->begin()+jet);
+  if (var_Tau1_vec[i] != NULL && var_Tau1_vec[i]->size() > jet)
+    var_Tau1_vec[i]->erase(var_Tau1_vec[i]->begin()+jet);
+  if (var_Tau2_vec[i] != NULL && var_Tau2_vec[i]->size() > jet)
+    var_Tau2_vec[i]->erase(var_Tau2_vec[i]->begin()+jet);
+  if (var_Tau3_vec[i] != NULL && var_Tau3_vec[i]->size() > jet)
+    var_Tau3_vec[i]->erase(var_Tau3_vec[i]->begin()+jet);
+  if (var_WIDTH_vec[i] != NULL && var_WIDTH_vec[i]->size() > jet)
+    var_WIDTH_vec[i]->erase(var_WIDTH_vec[i]->begin()+jet);
+  if (var_SPLIT12_vec[i] != NULL && var_SPLIT12_vec[i]->size() > jet)
+    var_SPLIT12_vec[i]->erase(var_SPLIT12_vec[i]->begin()+jet);
+  if (var_SPLIT23_vec[i] != NULL && var_SPLIT23_vec[i]->size() > jet)
+    var_SPLIT23_vec[i]->erase(var_SPLIT23_vec[i]->begin()+jet);
+  if (var_SPLIT34_vec[i] != NULL && var_SPLIT34_vec[i]->size() > jet)
+    var_SPLIT34_vec[i]->erase(var_SPLIT34_vec[i]->begin()+jet);
+  if (var_Dip12_vec[i] != NULL && var_Dip12_vec[i]->size() > jet)
+    var_Dip12_vec[i]->erase(var_Dip12_vec[i]->begin()+jet);
+  if (var_Dip13_vec[i] != NULL && var_Dip13_vec[i]->size() > jet)
+    var_Dip13_vec[i]->erase(var_Dip13_vec[i]->begin()+jet);
+  if (var_Dip23_vec[i] != NULL && var_Dip23_vec[i]->size() > jet)
+    var_Dip23_vec[i]->erase(var_Dip23_vec[i]->begin()+jet);
+  if (var_DipExcl12_vec[i] != NULL && var_DipExcl12_vec[i]->size() > jet)
+    var_DipExcl12_vec[i]->erase(var_DipExcl12_vec[i]->begin()+jet);
+  if (var_PlanarFlow_vec[i] != NULL && var_PlanarFlow_vec[i]->size() > jet)
+    var_PlanarFlow_vec[i]->erase(var_PlanarFlow_vec[i]->begin()+jet);
+  if (var_Angularity_vec[i] != NULL && var_Angularity_vec[i]->size() > jet)
+    var_Angularity_vec[i]->erase(var_Angularity_vec[i]->begin()+jet);
+  if (var_QW_vec[i] != NULL && var_QW_vec[i]->size() > jet)
+    var_QW_vec[i]->erase(var_QW_vec[i]->begin()+jet);
+  if (var_PullMag_vec[i] != NULL && var_PullMag_vec[i]->size() > jet)
+    var_PullMag_vec[i]->erase(var_PullMag_vec[i]->begin()+jet);
+  if (var_PullPhi_vec[i] != NULL && var_PullPhi_vec[i]->size() > jet)
+    var_PullPhi_vec[i]->erase(var_PullPhi_vec[i]->begin()+jet);
+  if (var_Pull_C00_vec[i] != NULL && var_Pull_C00_vec[i]->size() > jet)
+    var_Pull_C00_vec[i]->erase(var_Pull_C00_vec[i]->begin()+jet);
+  if (var_Pull_C01_vec[i] != NULL && var_Pull_C01_vec[i]->size() > jet)
+    var_Pull_C01_vec[i]->erase(var_Pull_C01_vec[i]->begin()+jet);
+  if (var_Pull_C10_vec[i] != NULL && var_Pull_C10_vec[i]->size() > jet)
+    var_Pull_C10_vec[i]->erase(var_Pull_C10_vec[i]->begin()+jet);
+  if (var_Pull_C11_vec[i] != NULL && var_Pull_C11_vec[i]->size() > jet)
+    var_Pull_C11_vec[i]->erase(var_Pull_C11_vec[i]->begin()+jet);
+  
+  if (extendedVars)
+    {
+      if (var_TauWTA1_vec[i] != NULL && var_TauWTA1_vec[i]->size() > jet)
+	var_TauWTA1_vec[i]->erase(var_TauWTA1_vec[i]->begin()+jet);
+      if (var_TauWTA2_vec[i] != NULL && var_TauWTA2_vec[i]->size() > jet)
+	var_TauWTA2_vec[i]->erase(var_TauWTA2_vec[i]->begin()+jet);
+      if (var_ZCUT12_vec[i] != NULL && var_ZCUT12_vec[i]->size() > jet)
+	var_ZCUT12_vec[i]->erase(var_ZCUT12_vec[i]->begin()+jet);
+    }
+  
+} // eraseJet
+
+
+void overlapRemoval(bool extendedVars)
+{
+  for (int it = 0 ; it < (*var_pt_vec[jetType::GROOMED]).size(); it++)
+    {
+      for (std::vector<TLorentzVector>::iterator el = var_electrons_vec->begin(); el != var_electrons_vec->end(); el++)
+	{
+	  float dR = DeltaR((*var_eta_vec[jetType::GROOMED])[it], (*var_phi_vec[jetType::GROOMED])[it], (*el).Eta(), (*el).Phi());
+	  // dR < 0.8 remove jet from collection
+	  if (dR < 0.8)
+	    {
+	      eraseJet(it, extendedVars);
+
+	      it--; // correct?
+	    }
+	}
+    }
+  
+} // overlapRemoval
+
+int eventSelection()
+{
+  int lepType = leptonType::FAIL;
+  // 2 electrons or 2 muons of opposite charge
+  float mll;
+  if (var_electrons_vec->size() == 2)
+    {
+      mll = ((*var_electrons_vec)[0]+(*var_electrons_vec)[1]).M()*GEV;
+      lepType = leptonType::ELECTRON;
+    }
+  else if (var_muons_vec->size() == 2 && (*var_mu_charge_vec)[0]*(*var_mu_charge_vec)[1] == -1)
+    {
+      mll = ((*var_muons_vec)[0]+(*var_muons_vec)[1]).M()*GEV;
+      lepType = leptonType::MUON;
+    }
+  else
+    {
+      return lepType;
+    }
+  // |mll-91| < 25 gev
+  if (fabs(mll-91*GEV) >= 25*GEV)
+    {
+      return lepType;
+    }
+
+  return lepType;
+  
+}//eventSelection
+
+
+bool leptonSelection(int lepType)
+{
+  bool pass = true;
+  if (lepType == leptonType::ELECTRON)
+    {
+      // electron selection
+      // et > 25 GeV
+      for (int idx = 0; idx < 2; idx++)
+	{
+	  if ((*var_electrons_vec)[idx].Et() <= 25*GEV)
+	    {
+	      std::cout << var_electrons_vec->size() << std::endl;
+	      std::cout << "Failed electron ET cut" <<std::endl;
+	      std::cout << (*var_electrons_vec)[idx].Et() <<std::endl;
+	      std::cout << (*var_electrons_vec)[idx].M() <<std::endl;
+	      return false;
+	    }
+	  // eta < 2.47
+	  if (fabs((*var_electrons_vec)[idx].Eta()) >= 2.47)
+	    {
+	      //std::cout << "Failed electron eta cut" <<std::endl;
+	      return false;
+	    }
+	  // ptcone20/pt < 0.15
+	  if ((*var_el_ptcone20_vec)[idx]/(*var_electrons_vec)[idx].Pt() >= 0.15)
+	    {
+	      //std::cout << "Failed electron ptcone20/pt cut" <<std::endl;
+	      return false;
+	    }
+	  // etcone20/et < 0.3
+	  if ((*var_el_etcone20_vec)[idx]/(*var_electrons_vec)[idx].Et() >= 0.3)
+	    {
+	      //std::cout << "Failed electron etcone20/et cut" <<std::endl;
+	      return false;
+	    }
+	} // for loop idx
+    } // if leptype = electron
+  else if (lepType == leptonType::MUON)
+    {
+      // muons
+      // pt > 25 gev
+      for (int idx = 0; idx < 2; idx++)
+	{
+	  if ((*var_muons_vec)[idx].Pt() <= 25*GEV)
+	    {
+	      //std::cout << "Failed muon pt cut" <<std::endl;
+	      return false;
+	    }
+	  // eta < 2.5
+	  if (fabs((*var_muons_vec)[idx].Eta()) >= 2.5)
+	    {
+	      //std::cout << "Failed muon eta cut" <<std::endl;
+	      return false;
+	    }
+	  // ptcone20/pt <  0.15
+	  if ((*var_mu_ptcone20_vec)[idx]/(*var_muons_vec)[idx].Pt() >= 0.15)
+	    {
+	      //std::cout << "Failed muon ptcone20/pt cut" <<std::endl;
+	      return false;
+	    }
+	  // etcone20/et < 0.3
+	  if ((*var_mu_etcone20_vec)[idx]/(*var_muons_vec)[idx].Et() >= 0.3)
+	    {
+	      //std::cout << "Failed muon etcone20/et cut" <<std::endl;
+	      return false;
+	    }
+	} // for loop idx
+    } // elif lepttype = muon
+  else 
+    return false;
+
+  return pass;
+} //leptonSelection
+
+
+
 void setJetsBranches(TChain * tree, std::string &groomalgo,  std::string & groomIdx, bool extendedVars)
 {
   std::string samplePrefix = "";
@@ -2200,10 +2471,12 @@ void setJetsBranches(TChain * tree, std::string &groomalgo,  std::string & groom
   TObjArray * brancharray = tree->GetListOfBranches();
   if (brancharray->FindObject("RunNumber"))
     tree->SetBranchAddress("RunNumber", &runNumberIn);
-  if (brancharray->FindObject("vxp_n"))
-    tree->SetBranchAddress("vxp_n", &nvtxIn);
+  if (brancharray->FindObject("nVertices"))
+    tree->SetBranchAddress("nVertices", &nvtxIn);
   if (brancharray->FindObject("averageIntPerXing"))
     tree->SetBranchAddress("averageIntPerXing",&avgIntpXingIn);
+
+  setLeptons(tree, brancharray);
 
   for (int i = 0; i < jetType::MAX; i++) // truth, topo, groomed
     {
@@ -2404,6 +2677,19 @@ void addSubJets(TTree * tree, std::string & groomalgo, std::string &  groomIdx)
 } //addSubJets()
 
 
+void addLeptonBranches(TTree * tree)
+{
+  tree->Branch("electrons", &var_electrons);
+  tree->Branch("el_ptcone20", &var_el_ptcone20, "el_ptcone20/F");
+  tree->Branch("el_etcone20", &var_el_etcone20, "el_etcone20/F");
+
+  tree->Branch("muons", &var_muons);
+  tree->Branch("mu_ptcone20", &var_mu_ptcone20, "mu_ptcone20/F");
+  tree->Branch("mu_etcone20", &var_mu_etcone20, "mu_eptcone20/F");
+  tree->Branch("mu_charge", &var_mu_charge, "mu_charge/F");
+
+} // addLeptonBranches
+
 //void getBranchesSelection(TTree * tree, std::string & algorithm)
 void setSelectionVectors()
 {  
@@ -2489,6 +2775,16 @@ void initVectors(bool extendedVars)
   var_subjets_m_vec = 0;
   var_subjets_eta_vec = 0;
   var_subjets_phi_vec = 0;
+  
+  var_electrons_vec = 0;
+  var_el_ptcone20_vec = 0;
+  var_el_etcone20_vec = 0;
+
+  var_muons_vec = 0;
+  var_mu_ptcone20_vec = 0;
+  var_mu_etcone20_vec = 0;
+  var_mu_charge_vec = 0;
+
 
 } // initVEctors
 
@@ -2559,7 +2855,7 @@ void setOutputVariables(bool extendedVars, int jet_idx_truth, int jet_idx_topo, 
 	var_eta[x]=(*var_eta_vec[x])[jet_idx];
       if (var_phi_vec[x] != NULL)
 	var_phi[x]=(*var_phi_vec[x])[jet_idx];
-      if (x!=0 && emfracAvail)
+      if (x!=0 && !xAOD)
 	var_emfrac[x]=(*var_emfrac_vec[x])[jet_idx];
       if (var_Tau1_vec[x] != NULL)
 	var_Tau1[x]=(*var_Tau1_vec[x])[jet_idx];
@@ -2623,6 +2919,17 @@ void setOutputVariables(bool extendedVars, int jet_idx_truth, int jet_idx_topo, 
       var_subjets_phi = (*var_subjets_phi_vec)[subjet_idx];
     }
 
+  // store output leptons
+  var_electrons = (*var_electrons_vec);
+  var_el_ptcone20 = (*var_el_ptcone20_vec);
+  var_el_etcone20 = (*var_el_etcone20_vec);
+
+  var_muons = (*var_muons_vec);
+  var_mu_ptcone20 = (*var_mu_ptcone20_vec);
+  var_mu_etcone20 = (*var_mu_etcone20_vec);
+  var_mu_charge= (*var_mu_charge_vec);
+
+
 } //setOutputVariables
 
 void clearOutputVariables()
@@ -2664,11 +2971,27 @@ void clearOutputVariables()
   var_ZCUT12.clear();
 
 
+  var_electrons.clear();
+  var_el_ptcone20.clear();
+  var_el_etcone20.clear();
+  var_muons.clear();
+  var_mu_ptcone20.clear();
+  var_mu_etcone20.clear();
+  var_mu_charge.clear();
+  
+
 } // clearOutputVariables
 
 void resetOutputVariables()
 {
   clearOutputVariables();
+  var_electrons.push_back(TLorentzVector(-999,-999,-999,0));
+  var_el_ptcone20.push_back(-999);
+  var_el_etcone20.push_back(-999);
+  var_muons.push_back(TLorentzVector(-999,-999,-999,0));
+  var_mu_ptcone20.push_back(-999);
+  var_mu_etcone20.push_back(-999);
+  var_mu_charge.push_back(-999);
   for (int i = 0; i < jetType::MAX; i++)
     {
 
