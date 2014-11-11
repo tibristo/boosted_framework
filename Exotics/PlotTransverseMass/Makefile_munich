@@ -21,8 +21,9 @@ SRCDIR  	= src
 INCDIR   	= include
 OBJDIR   	= build
 EXEDIR  	= bin
-SRCS    	:= src/main.cpp #$(shell find $(SRCDIR) -name '*.$(SRCEXT)')
-OBJS    	:= build/main.o #$(patsubst $(SRCDIR)/%.$(SRCEXT),$(OBJDIR)/%.o,$(SRCS))
+SRCS    	:= src/main.cpp # src/LinkDefDict.cpp #$(shell find $(SRCDIR) -name '*.$(SRCEXT)')
+
+OBJS    	:= build/main.o #build/LinkDefDict.o #$(patsubst $(SRCDIR)/%.$(SRCEXT),$(OBJDIR)/%.o,$(SRCS))
 
 GARBAGE  = $(OBJDIR)/main.o $(EXEDIR)/$(EXENAME)
 INCDIR+=-I/home/tim/Programs/fastjet-install/include
@@ -34,6 +35,7 @@ RANLIB       = ranlib
 CXXFLAGS    += -I$(INCDIR) $(ROOTCFLAGS) #-I$(GSLINC)
 LINKFLAGS    = -g $(shell root-config --nonew) $(shell root-config --ldflags) -Wl,--no-as-needed
 endif
+
 
 # OS X
 ifeq "$(UNAME)" "Darwin"
@@ -55,6 +57,14 @@ $(EXEDIR)/$(EXENAME) : $(OBJS)
 
 $(OBJDIR)/main.o : $(SRCDIR)/main.$(SRCEXT)
 	$(CXX) $(CXXFLAGS) -c $< -o $@
+
+$(SRCDIR)/LinkDefDict.cpp: include/LinkDef.h
+	rootcint $(SRCDIR)/LinkDefDict.cpp -c include/LinkDef.h
+
+$(OBJDIR)/LinkDefDict.o: $(SRCDIR)/LinkDefDict.cpp $(DEPS) include/LinkDef.h
+	$(CXX) $(CXXFLAGS) -o $@ $< $(ROOTCFLAGS) $(CFLAGS)
+
+
 
 clean   :
 	$(RM) $(GARBAGE)

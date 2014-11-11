@@ -118,11 +118,16 @@ void scaleHists();
 void setAddress(TChain * tree, std::string  name, std::vector<Float_t> * var_vec);
 void readWeights();
 void createPtReweightFile(TH1F * bkg, TH1F * sig, std::string & fname);
+void overlapRemoval(bool extendedVars);
+int eventSelection();
+bool leptonSelection(int lepType);
+void setLeptons(TChain * tree, TObjArray * list);
 
 enum class groomAlgoEnum{groomZero, TopoSplitFilteredMu67SmallR0YCut9, TopoSplitFilteredMu100SmallR30YCut4, TopoTrimmedPtFrac5SmallR30, TopoTrimmedPtFrac5SmallR20, TopoPrunedCaRcutFactor50Zcut10, TopoPrunedCaRcutFactor50Zcut20, AntiKt2LCTopo, AntiKt3LCTopo, AntiKt4LCTopo};
 enum sampleType{BACKGROUND,SIGNAL};
 enum jetType{TRUTH,TOPO,GROOMED,MAX};
 enum histType{TRUTHJET,GROOMEDJET,LEADTRUTHJET};
+enum leptonType{FAIL,ELECTRON,MUON};
 //groomAlgo options:
 //TopoSplitFilteredMu67SmallR0YCut9   - 1
 //TopoSplitFilteredMu100SmallR30YCut4  - 2
@@ -162,6 +167,7 @@ struct Algorithms algorithms;
 std::string fileid_global;
 std::string treeName;
 std::string branchesFile;
+float GEV = 1000.;
 
 TFile *inputFile[2];
 TTree *inputTree[2];
@@ -184,10 +190,10 @@ UInt_t runNumberOut = 0;
 UInt_t runNumberIn = 0;
 Float_t avgIntpXingOut = 0;
 Float_t avgIntpXingIn = 0;
-Int_t nvtxIn = 0;
-Int_t nvtxOut = 0;
-bool emfracAvail = true; // putting this in on the 29th of October 2014 - how long until I fix this???? :D
-
+// xaod expects UInt_t, but D3PDs Int_t. This is annoying and will cause problems
+UInt_t nvtxIn = 0;
+UInt_t nvtxOut = 0;
+bool xAOD = false;
 //QCD split filtering with Y cut 9
 vector<float> * qcd_CA12_truth_pt = 0;
 vector<float> * qcd_CA12_truth_eta = 0;
@@ -448,6 +454,19 @@ Float_t var_massFraction_vec;
 Float_t var_ktycut2_vec;
 
 
+
+// electrons in
+std::vector<TLorentzVector> * var_electrons_vec;
+std::vector<float> * var_el_ptcone20_vec;
+std::vector<float> * var_el_etcone20_vec;
+
+// muons in
+std::vector<TLorentzVector> * var_muons_vec;
+std::vector<float> * var_mu_ptcone20_vec;
+std::vector<float> * var_mu_etcone20_vec;
+std::vector<float> * var_mu_charge_vec;
+
+
 std::map<int, std::vector<std::vector < int>  > * > var_constit_index;
 
 std::vector<std::vector <int> > * subjet_index;
@@ -492,6 +511,18 @@ std::vector<Float_t> var_Pull_C01;
 std::vector<Float_t> var_Pull_C10;
 std::vector<Float_t> var_Pull_C11;
 std::vector<Float_t> var_Tau21;
+
+
+// electrons out
+std::vector<TLorentzVector> var_electrons;
+std::vector<float> var_el_ptcone20;
+std::vector<float> var_el_etcone20;
+
+// muons out
+std::vector<TLorentzVector> var_muons;
+std::vector<float> var_mu_ptcone20;
+std::vector<float> var_mu_etcone20;
+std::vector<float> var_mu_charge;
 
 // these variables are only stored for the subjets of the groomed jets, so we don't need a vector
 Float_t var_subjets_E;
