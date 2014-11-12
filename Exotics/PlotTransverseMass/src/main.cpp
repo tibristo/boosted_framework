@@ -26,7 +26,7 @@ using namespace boost::algorithm;
 using namespace std;
 namespace po = boost::program_options;
 
-bool ComparePt(TLorentzVector a, TLorentzVector b) { return a.Pt() > b.Pt(); }
+bool ComparePt(TLorentzVector & a, TLorentzVector & b) { return a.Pt() > b.Pt(); }
 
 template<class T>
 ostream& operator<<(ostream& os, const vector<T>& v)
@@ -36,13 +36,13 @@ ostream& operator<<(ostream& os, const vector<T>& v)
 }
 
 int main( int argc, char * argv[] ) {
-  //subjets = true; // should be set from command line argument TODO
+
   gROOT->ProcessLine("#include <vector>");
+  // so that we can use vector<TLorentzVector> in ROOT
   gROOT->LoadMacro( "include/TLorentzVectorDict.h+" );
   gInterpreter->GenerateDictionary("std::vector<std::vector<int> >", "vector");
   gInterpreter->GenerateDictionary("vector<vector<double> >", "vector");
 
-  
   AtlasStyle();
   
   bool makePtPlotsFlag = false;
@@ -183,10 +183,13 @@ int main( int argc, char * argv[] ) {
       return 1;
     }    
 
+  // read in algorithm config
   algorithms.load("algorithms.xml");
 
+  // whether we want to create the mass histograms
   bool massHistos = applyMassWindowFlag;
 
+  // file identifier that gets appended to output files.
   fileid_global = fileid;
 
   vector<string> inputBkgFiles = vm["background-file"].as<vector<string> > ();
@@ -195,6 +198,7 @@ int main( int argc, char * argv[] ) {
   std::string alg_in = vm["algorithm"].as<string>();
   std::string alg_in_orig = vm["algorithm"].as<string>();
 
+  // set up the TChains for the signal and background files.
   inputTChain[sampleType::BACKGROUND] = new TChain(treeName.c_str());
   for (vector<string>::iterator it = inputBkgFiles.begin(); it != inputBkgFiles.end(); it++)
     {
@@ -209,108 +213,102 @@ int main( int argc, char * argv[] ) {
       std::cout << "sig file added: " << (*it) << std::endl;
     }
 
+  // create a lower case version of the algorithm name
   std::transform(alg_in.begin(), alg_in.end(), alg_in.begin(), ::tolower);
-  vector<int> subset;
+  std::cout << alg_in_orig << std::endl;
 
   int nArg = 1; // TODO: this will need to be changed when moving from a system where only one algorithm is run at once
 
   // right now the idea of filteridx, Xidx is not fully complete... The code as it stands runs on one type of algorithm at once, but 
   // I would like it to run on a number of types.  This is why this is here.  It used to do this in fact, before switching stuff around
 
-  std::cout << alg_in_orig << std::endl;
-  //for (std::map<std::string,std::string>::iterator it = algorithms.AlgoNames.begin(); it!= algorithms.AlgoNames.end(); it++){
-  //std::cout << (*it) << std::endl;
-  //}
-
+  // check if we have a configuration for this algorithm
   if (algorithms.AlgoNames.find(alg_in_orig) == algorithms.AlgoNames.end())
     {
       std::cout << "Algorithm not defined in config file!" << std::endl;
       return 1;
     }
-  
-  
-  
-  //}
+ 
+  // read in the event weights
   readWeights();
+  // set up some of the strings for the ptBins
   defineStrings(pTbins, finePtBins);
+  // create histograms that will be filled later on
   createHistos(alg_in_orig);
-  
-  // TODO: option to run all algorithms of one type????
 
-  runAlgorithm(inputTChain[sampleType::BACKGROUND], inputTChain[sampleType::SIGNAL], algorithms.AlgoNames[alg_in_orig], alg_in_orig, massHistos);
-  
-
-  //Plot things
-  //Normalise all histograms of interest
-  // this is not the right way to do the normalisation according to this - https://twiki.cern.ch/twiki/bin/viewauth/AtlasProtected/BoostedBosonTaggingD3PD#MC_only_studies
-
-  // NEvents = Sum[mcevt_weight[0][0]*PileupWeight
-  // Note, for NEvents for SherpaW + jets we need to call getNormSherpaW() because the weighting is slightly different
-  // Normalization = CrossSection(at NLO) * Luminosity / NEvents
-
-
-  if (scaleHistsFlag)
+  // run the code to fill the mass histograms
+  if (massHistos)
     {
-      scaleHists();
-    } // end scaleHists if
+      runAlgorithm(inputTChain[sampleType::BACKGROUND], inputTChain[sampleType::SIGNAL], algorithms.AlgoNames[alg_in_orig], alg_in_orig, massHistos);
   
-
-
-  if (makePlotsFlag)
-    {
-      makePlots(alg_in_orig);
-    }
-
-  //1. Get the MPV
-
-  if (getMPVFlag)
-    {
-      getMPV();
-    }
-  
-  //2. Get the mass window which gives 68% W mass efficiency 
-
-  if (applyMassWindowFlag)
-    {
-      for (int j=0; j<nPtBins; j++){
-	Qw(WidthMassWindow[j],TopEdgeMassWindow[j],Wprime_Lead_CA12_mass[1][j], 0.68);
-	BottomEdgeMassWindow[j]=TopEdgeMassWindow[j]-WidthMassWindow[j];    
-      }
+      //Normalise all histograms of interest
+      if (scaleHistsFlag)
+	{
+	  scaleHists();
+	} // end scaleHists if
+ 
+      //Plot things
+      if (makePlotsFlag)
+	{
+	  makePlots(alg_in_orig);
+	}
       
-      for (int j=0; j<nFineBins; j++){
-	Qw(WidthMassWindow_finePt[j],TopEdgeMassWindow_finePt[j],Wprime_finePtBin_mass[1][j], 0.68);
-	BottomEdgeMassWindow_finePt[j]=TopEdgeMassWindow_finePt[j]-WidthMassWindow_finePt[j];    
-      }
-
-    }
-    
-
-  //3. Check background fraction in this window  
-  if (checkBkgFrac)
-    {
-	for (int j=0; j<nPtBins; j++){
-	  QCDfrac[j]=qcd_Lead_CA12_mass[histType::GROOMEDJET][j]->Integral(qcd_Lead_CA12_mass[histType::GROOMEDJET][j]->FindBin(BottomEdgeMassWindow[j]),qcd_Lead_CA12_mass[histType::GROOMEDJET][j]->FindBin(TopEdgeMassWindow[j]));
-
+      //1. Get the MPV
+      if (getMPVFlag)
+	{
+	  getMPV();
 	}
+  
+      //2. Get the mass window which gives 68% W mass efficiency 
+      if (applyMassWindowFlag)
+	{
+	  for (int j=0; j<nPtBins; j++){
+	    Qw(WidthMassWindow[j],TopEdgeMassWindow[j],Wprime_Lead_CA12_mass[1][j], 0.68);
+	    BottomEdgeMassWindow[j]=TopEdgeMassWindow[j]-WidthMassWindow[j];    
+	  }
+	  
+	  for (int j=0; j<nFineBins; j++){
+	    Qw(WidthMassWindow_finePt[j],TopEdgeMassWindow_finePt[j],Wprime_finePtBin_mass[1][j], 0.68);
+	    BottomEdgeMassWindow_finePt[j]=TopEdgeMassWindow_finePt[j]-WidthMassWindow_finePt[j];    
+	  }
+	  
+	}
+      
+      //3. Check background fraction in the 68% mass window  
+      if (checkBkgFrac)
+	{
+	  for (int j=0; j<nPtBins; j++){
+	    QCDfrac[j]=qcd_Lead_CA12_mass[histType::GROOMEDJET][j]->Integral(qcd_Lead_CA12_mass[histType::GROOMEDJET][j]->FindBin(BottomEdgeMassWindow[j]),qcd_Lead_CA12_mass[histType::GROOMEDJET][j]->FindBin(TopEdgeMassWindow[j]));
+	    
+	  }
 	
-	for (int j=0; j<nFineBins; j++){
-	  QCDfrac_finePt[j]=qcd_finePtBin_mass[histType::GROOMEDJET][j]->Integral(qcd_finePtBin_mass[histType::GROOMEDJET][j]->FindBin(BottomEdgeMassWindow_finePt[j]),qcd_finePtBin_mass[histType::GROOMEDJET][j]->FindBin(TopEdgeMassWindow_finePt[j]));
+	  for (int j=0; j<nFineBins; j++){
+	    QCDfrac_finePt[j]=qcd_finePtBin_mass[histType::GROOMEDJET][j]->Integral(qcd_finePtBin_mass[histType::GROOMEDJET][j]->FindBin(BottomEdgeMassWindow_finePt[j]),qcd_finePtBin_mass[histType::GROOMEDJET][j]->FindBin(TopEdgeMassWindow_finePt[j]));
+	  }
+	  
 	}
 
-    }
+      if (makePtPlotsFlag)
+	makePtPlots(alg_in_orig);
+    } // if massHists
 
-
-
-  if (makePtPlotsFlag)
-    makePtPlots(alg_in_orig);
-
+  // make an output file
   makeMassWindowFile(applyMassWindowFlag, extendedVars, alg_in_orig);
 
   return 0;
 }
 
 
-
+/*
+ * Return the delta R between two objects in eta/phi space.
+ *
+ * @param eta1 Eta of first object
+ * @param phi1 Phi of first object
+ * @param eta2 Eta of second object
+ * @param phi2 Phi of second object
+ *
+ * @return delta R between two objects.
+ */
 float DeltaR(float eta1,float phi1,float eta2,float phi2){ 
   // we could actually inline this function
   float deltaPhi = TMath::Abs(phi1-phi2);
@@ -320,7 +318,13 @@ float DeltaR(float eta1,float phi1,float eta2,float phi2){
   return TMath::Sqrt(deltaEta*deltaEta + deltaPhi*deltaPhi);
 }
 
-
+/*
+ * Calculate the most probable value in a histogram.
+ *
+ * @param histo Pointer to the TH1F.
+ *
+ * @return most probable value.
+ */
 double mpv(TH1F* histo){
   double maxc=0.0001;
   int bin_maxc=0;
@@ -333,12 +337,12 @@ double mpv(TH1F* histo){
     }
   }
   double mostprob = histo->GetBinCenter(bin_maxc);
-  //cout<<"MPV: "<<mostprob<<endl;                    
-                                  
   return mostprob;
 }
 
-
+/*
+ *
+ */
 void Qw(double &minWidth, double &topEdge, TH1F* histo, double frac){
   
   minWidth = 100000.0;
@@ -368,7 +372,9 @@ void Qw(double &minWidth, double &topEdge, TH1F* histo, double frac){
   }  
 }
 
-
+/*
+ *
+ */
 void runAlgorithm(TChain *inputTree, TChain *inputTree1, TString groomAlgo, std::string & groomAlgoIndex, bool massHistos)//, int fileidx)
 {
   if (!massHistos)
@@ -383,7 +389,9 @@ void runAlgorithm(TChain *inputTree, TChain *inputTree1, TString groomAlgo, std:
   deleteVectors();
 }
 
-
+/*
+ *
+ */
 void getMassHistograms(TTree *inputTree, TTree *inputTree1, TString groomAlgo, std::string & groomAlgoIndex){
   
   cout<<"getBranches() for " << groomAlgo <<endl;
@@ -823,7 +831,9 @@ void getMassHistograms(TTree *inputTree, TTree *inputTree1, TString groomAlgo, s
 }
 
 
-
+/*
+ *
+ */
 void createHistos(std::string & alg){
 
   //create my histograms
@@ -879,7 +889,9 @@ void createHistos(std::string & alg){
 
 } // createHistos
 
-
+/*
+ * Initialise all of the qcd and WPrime variables that are used for reading in from the input files.
+ */
 void initializeVariables(){
 
   qcd_CA12_truth_pt = 0;
@@ -904,8 +916,6 @@ void initializeVariables(){
   
   qcd_mc_channel_number = 0; 
   qcd_mc_event_weight = 0; 
-
-
 
   //Wprime split filtering both cuts
 
@@ -1008,7 +1018,9 @@ vector<TLorentzVector> Recluster(vector<TLorentzVector> small_jets, double PTcut
 }
 
 
-
+/*
+ * Delete the wprime and qcd vectors used for reading in from the file.
+ */
 void deleteVectors(){
 
 
@@ -1029,6 +1041,14 @@ void deleteVectors(){
 
 }
 
+/*
+ * Set up the input branches for the wprime vs qcd comparison for truth and groomed algorithm.
+ *
+ * @param inputTree Pointer to input background TTree.
+ * @param inputTree1 Pointer to input signal TTree.
+ * @param groomAlgo Abbreviated name of the grooming algorithm.
+ * @param groomAlgoIndex The full name of the algorithm that is used to access the algorithms maps.
+ */
 void getBranches(TTree *inputTree, TTree *inputTree1, TString groomAlgo, std::string & groomAlgoIndex){
 
   //if not reclustering
@@ -1150,17 +1170,20 @@ void getBranches(TTree *inputTree, TTree *inputTree1, TString groomAlgo, std::st
     
 
   }
+} //getBranches()
 
+/*
+ * Create a ROC curve for signal and background histograms.  This is stored in a TGraph which is passed by reference.
+ *
+ * @param type 1 is signal vs bkg rej and 2 is the inverse of this.
+ * @param S Input signal histogram.
+ * @param B Input background histogram.
+ * @param curve Reference to TGraph.  This will store the ROC.
+ * @param name Name of ROC.
+ * @param draw Flag indicating if the ROC should be drawn and saved to file.
+ */
+void makeROC(int type, TH1F *&S, TH1F *&B, TGraph &curve, TString name, bool draw){
 
- 
-}
-
-
-void makeROC(int type, TH1F *&S, TH1F *&B, TGraph &curve, TString name, bool draw){//, TGraph &curve_up, TGraph &curve_do){
-  //Usage:
-  //TH1D *S = new TH1D();
-  //TH1D *B = new TH1D();
-  //...Fill S and B with signal (S) and background (B)
   //Need S and B to have the same number of bins!
   //TH1D *curve = new TH1D("","",M,0,1); where M is however fine you want the ROC curve binning to be.
   //ROC(S,B,curve);
@@ -1270,20 +1293,20 @@ void makeROC(int type, TH1F *&S, TH1F *&B, TGraph &curve, TString name, bool dra
 
   return;
 
-}
+} //makeROC
 
 
-
+/*
+ * Create mass plots.
+ * 
+ * @param algo The name of the grooming algorithm being run.
+ */
 void makePlots(std::string & algo){
   ////////PLOT THINGS -> This should go into it's own class or at the very least it's own method, TODO
 
   // CANVAS FOR THE MASS PLOTS
   
   for (int i=0; i<3; i++){//-2; i++){
-  //for (int ii=0; ii<nAlgos; ii++){//-2; i++){
-    //std::cout << "ii: " << ii << std::endl;
-    //int i = algoMap[ii];
-    //std::cout << "i: " << i << std::endl;
     std::string alg_idx;
     switch (i)
       {
@@ -1484,7 +1507,10 @@ void makePlots(std::string & algo){
     }
 } // end makePlots()
 
-
+/*
+ * Create plots in pT bins.
+ * @param algo The name of the grooming algorithm being run.
+ */
 void makePtPlots(std::string & algo){
 
   // Now I want to make plots which enclose all those information, for each pT bin
@@ -1775,7 +1801,14 @@ void makePtPlots(std::string & algo){
 
 } // end makePtPlots()
 
-
+/*
+ * Create an ntuple storing variables related to the grooming algorithm being run.  Some selections are run here too - event selection, 
+ * jet and lepton selection, pT cuts.
+ *
+ * @param applyMassWindow Flag if any mass window cuts should be applied.
+ * @param extendedVars Flag if TauWTA1/1 and ZCUT12 are being used.
+ * @param algorithm The name of the algorithm being run.
+ */
 void makeMassWindowFile(bool applyMassWindow,bool extendedVars, std::string & algorithm)
 {
   std::cout << "starting make mass window output files " << std::endl;
@@ -1815,6 +1848,9 @@ void makeMassWindowFile(bool applyMassWindow,bool extendedVars, std::string & al
 	  signal = k == 1? false : true;
 	  // Initialise all the vectors to.. something 
 	  initVectors(extendedVars);
+
+	  mass_max = TopEdgeMassWindow[j];
+	  mass_min = BottomEdgeMassWindow[j];
 	  
 	  int tchainIdx = signal ? sampleType::SIGNAL : sampleType::BACKGROUND;
 	  std::stringstream ss_fname; // store the name of the output file and include the i and j indices!
@@ -1849,8 +1885,6 @@ void makeMassWindowFile(bool applyMassWindow,bool extendedVars, std::string & al
 	    }
 	  setJetsBranches(inputTChain[tchainIdx], algorithms.AlgoNames[i], i, extendedVars); //set all of the branches for the output tree for the jets	  
 
-	  mass_max = TopEdgeMassWindow[j];
-	  mass_min = BottomEdgeMassWindow[j];
 
 	  TFile * outfile = new TFile(std::string(algorithms.AlgoNames[i]+fileid_global+"/"+ss_fname.str()).c_str(),"RECREATE");	  
 	  TTree * outTree = new TTree(treeName.c_str(),treeName.c_str());
@@ -1860,7 +1894,7 @@ void makeMassWindowFile(bool applyMassWindow,bool extendedVars, std::string & al
 
 	  if (subjetscalc || subjetspre)
 	    addSubJets(outTree, algorithms.AlgoNames[i], i);
-	  addJetsBranches(outTree, algorithms.AlgoNames[i]);
+	  addInfoBranches(outTree);
 
 	  long entries = (long)inputTChain[tchainIdx]->GetEntries();
 
@@ -1868,12 +1902,14 @@ void makeMassWindowFile(bool applyMassWindow,bool extendedVars, std::string & al
 	  // do a lot of tuning of the scale factor regions later on!
 	  pt_reweight = new TH1F(std::string("pt_reweight"+bkg).c_str(),std::string("pt_reweight_"+bkg).c_str(), 200, 0, 3500);
 	  
-	  double mass = 0;
+
 
 	  NEvents = entries;
 	  NEvents_weighted.clear();
 
 	  std::cout << "total entries: " << entries << std::endl;
+
+	  double mass = 0;
 	  for (long n = 0; n < entries; n++)
 	    {
 	      inputTChain[tchainIdx]->GetEntry(n);
@@ -1896,7 +1932,7 @@ void makeMassWindowFile(bool applyMassWindow,bool extendedVars, std::string & al
 	      int chosenLeadTruthJetIndex=-99;
 	      int chosenLeadTopoJetIndex=-99;
 
-	       if ((*jet_pt_truth)[0] / 1000.0 < 100)// || (*jet_m_truth)[0]/1000.0 < 100) 
+	       if ((*jet_pt_truth)[0] / 1000.0 < 100)
 		{
        		  continue;
 		}
@@ -1907,19 +1943,19 @@ void makeMassWindowFile(bool applyMassWindow,bool extendedVars, std::string & al
 		    continue;
 		}
 
+	      // setup the TLVs for the leptons
 	      setLeptonVectors();
 	      // do overlap removal before looking for jets
 	      overlapRemoval(extendedVars);
+	      //apply event selection
 	      int lepType = eventSelection();
 	      if (lepType == leptonType::FAIL)
 		{
-		  //std::cout << "Failed event selection" << std::endl;
 		  continue;
 		}
 	      
 	      if (!leptonSelection(lepType))
 		{
-		  //std::cout << "Failed lepton selection" << std::endl;
 		  continue;
 		}
 	      
@@ -1956,6 +1992,7 @@ void makeMassWindowFile(bool applyMassWindow,bool extendedVars, std::string & al
 	      
 	      chosenLeadTruthJetIndex = algorithms.AlgoType[groomAlgoIndex].find("truthmatch") != std::string::npos ? chosenLeadTruthJetIndex : 0;
 
+	      // veto the event if we have no good truth jets.
 	      if (chosenLeadTruthJetIndex < 0)
 		continue;
 	      //Now I have which events to make my pt reweight with, and to match to, etc
@@ -1981,6 +2018,7 @@ void makeMassWindowFile(bool applyMassWindow,bool extendedVars, std::string & al
 
 	      mass = (*var_m_vec[2])[leadGroomedIndex]/1000.0 ;
 
+	      // if we are not applying a mass window we do not apply any mass cuts
 	      if (applyMassWindow && (mass > mass_max && mass < mass_min))
 		{
 		  continue;
@@ -1988,6 +2026,7 @@ void makeMassWindowFile(bool applyMassWindow,bool extendedVars, std::string & al
 
 	      int lead_subjet = 0;
 
+	      // if we are calculating the subjet variables: massdrop and momentum balance
 	      if (subjetscalc)
 		{
 
@@ -1999,19 +2038,16 @@ void makeMassWindowFile(bool applyMassWindow,bool extendedVars, std::string & al
 		    {
 		      var_massdrop = -999;
 		      var_yt = -999;
-		      //break;
 		    }
 		  else
 		    {
 		      lead_subjet = subjet_leading.first;
 		    
-		      double pt1 =  (*var_subjets_pt_vec)[subjet_leading.first];
 		      double pt2 =  (*var_subjets_pt_vec)[subjet_leading.second];
 		      double eta_1 =  (*var_subjets_eta_vec)[subjet_leading.first];
 		      double eta_2 =  (*var_subjets_eta_vec)[subjet_leading.second];
 		      double phi_1 = (*var_subjets_phi_vec)[subjet_leading.first];
 		      double phi_2 = (*var_subjets_phi_vec)[subjet_leading.second];
-		      double e1 = (*var_subjets_E_vec)[subjet_leading.first];
 		    
 		      double subjet_mass =  (*var_subjets_m_vec)[subjet_leading.first];
 		    
@@ -2085,7 +2121,14 @@ void makeMassWindowFile(bool applyMassWindow,bool extendedVars, std::string & al
 
 } // makeMassWindowFile()
 
-
+/*
+ * Return the index of the two leading subjets (based on Pt).
+ *
+ * @param jet_idx The vector containing the indices of the subjets for a given jet.
+ * @param subjet_pt A pointer to the subjet_pt branch.
+ *
+ * @return pair of ints for the indices of the first and second leading subjets.
+ */
 std::pair<int,int> getTwoLeadingSubjets(std::vector<int> & jet_idx, std::vector<float> * subjet_pt)
 {
   // jet_idx contains the indices in the subjet vector for the subjets of jet i
@@ -2113,7 +2156,14 @@ std::pair<int,int> getTwoLeadingSubjets(std::vector<int> & jet_idx, std::vector<
   return std::make_pair(max,sec);
 }
 
-
+/*
+ * Read in a list of the branches we would like to use.  This comes from an input file specified in the config file. Some
+ * essential branches are added in case they are not in the input file.
+ *
+ * @param algorithm The name of the algorithm being run.  If this is a valid branches file it will use this variable
+ *        as a filename, otherwise it will use algorithm+"_branches.txt".
+ * @return vector of strings containing all of the branches.
+ */
 vector<std::string> getListOfJetBranches(std::string &algorithm)
 {
   // Ideally we want this stored in an XML file, but for now it'll have to be a standard text file because I'm short on time!
@@ -2123,7 +2173,7 @@ vector<std::string> getListOfJetBranches(std::string &algorithm)
   
   ifstream in(filename);
   string line;
-  // what OBto do about branches that have * in them?
+  // what to do about branches that have * in them?
   while (getline(in, line))
     {
       branches.push_back(rtrim(line));
@@ -2141,6 +2191,9 @@ vector<std::string> getListOfJetBranches(std::string &algorithm)
   branches.push_back("electronY");
   branches.push_back("electronZ");
   branches.push_back("electronT");
+  branches.push_back("el_pt");
+  branches.push_back("el_eta");
+  branches.push_back("el_phi");
   branches.push_back("el_ptcone20");
   branches.push_back("el_etcone20");
 
@@ -2149,6 +2202,9 @@ vector<std::string> getListOfJetBranches(std::string &algorithm)
   branches.push_back("muonY");
   branches.push_back("muonZ");
   branches.push_back("muonT");
+  branches.push_back("mu_pt");
+  branches.push_back("mu_eta");
+  branches.push_back("mu_phi");
   branches.push_back("mu_ptcone20");
   branches.push_back("mu_etcone20");
   branches.push_back("mu_charge");
@@ -2158,7 +2214,15 @@ vector<std::string> getListOfJetBranches(std::string &algorithm)
 
 
 
-
+/*
+ * Return the full name of the jet branch, excluding the variable name (pt, m, etc) at the end.  It adds the prefix and
+ * the abbreviated algorithm name together.
+ *
+ * @param samplePrefix The sample prefix - AntiKt10 or CamKt12 for example.
+ * @param groomalgo The shortened version of the grooming algorithm, excluding the prefix.
+ * @param addLC If "LC" needs to be added to the name.
+ * @param i The index of the type of jet - jetType::TRUTH/GROOMED/TOPO.
+ */
 std::string returnJetType(std::string & samplePrefix, std::string & groomalgo, bool addLC, int i)
 {
   std::string jetType = "";
@@ -2170,10 +2234,10 @@ std::string returnJetType(std::string & samplePrefix, std::string & groomalgo, b
     }
   switch (i)
     {
-    case 0: // truth
+    case jetType::TRUTH: // truth
       jetType="jet_CamKt12Truth"+xaod+"_";
       break;
-    case 1: // topo
+    case jetType::TOPO: // topo
       if (addLC)
 	jetType = "jet_" + samplePrefix + "LCTopo"+xaod+"_";
       else
@@ -2188,33 +2252,49 @@ std::string returnJetType(std::string & samplePrefix, std::string & groomalgo, b
   return jetType;
 } // returnJetType
 
-
+/*
+ * Return the full name of the subjet branch, excluding the variable name (pt, m, etc) at the end.  It adds the prefix and
+ * the abbreviated algorithm name together.
+ *
+ * @param samplePrefix The sample prefix - AntiKt10 or CamKt12 for example.
+ * @param groomalgo The shortened version of the grooming algorithm, excluding the prefix.
+ * @param addLC If "LC" needs to be added to the name.
+ */
 std::string returnSubJetType(std::string & samplePrefix, std::string & groomalgo, bool addLC)
 {
-  if (addLC)
+  if (addLC) //
     return std::string("jet_"+samplePrefix+"LC"+algorithms.subjetMap[groomalgo]+"_");
   return std::string("jet_"+samplePrefix+algorithms.subjetMap[groomalgo]+"_");
 
 }// return subjettype
 
 
-
-void addJetsBranches(TTree * tree, std::string & groomalgo)
+/*
+ * Adds essential output branches to the output file.
+ *
+ * @param tree Pointer to the output TTree.
+ */
+void addInfoBranches(TTree * tree)
 {
   tree->Branch("leadTruthIndex",&leadTruthIndex, "leadTruthIndex/I");
   tree->Branch("leadTopoIndex",&leadTopoIndex, "leadTopoIndex/I");
   tree->Branch("leadGroomedIndex",&leadGroomedIndex, "leadGroomedIndex/I");
-  //tree->Branch("pt_reweight",&pt_reweight, "pt_reweight/F");
+
   tree->Branch("normalisation",&normalisation, "normalisation/F");
   tree->Branch("NEvents",&NEvents,"NEvents/I");
   tree->Branch("RunNumber",&runNumberOut, "RunNumber/I");
   tree->Branch("k_factor", &var_k_factor, "k_factor/F");
   tree->Branch("filter_eff", &var_filter_eff, "filter_eff/F");
   tree->Branch("xs", &var_xs, "xs/F");
-  //tree->Branch("NEvents_weighted",&NEvents_weighted,"NEvents_weighted/F");
-}// addJetsBranches
 
+}// addInfoBranches
 
+/*
+ * Set the branch addresses for the leptons being read in.
+ *
+ * @param tree Pointer to the TChain being read in.
+ * @param list Pointer to TObjArray that contains all of teh branches in the tree.
+ */
 void setLeptons(TChain * tree, TObjArray * list)
 {
   // electrons
@@ -2238,6 +2318,18 @@ void setLeptons(TChain * tree, TObjArray * list)
     tree->SetBranchAddress("electronT", &var_electronT_vec);
   else
     std::cout << "missing branch electronT, might cause unexpected behaviour" << std::endl;
+  if (list->FindObject("el_pt"))
+    tree->SetBranchAddress("el_pt", &var_electronPt_vec);
+  else
+    std::cout << "missing branch el_pt, might cause unexpected behaviour" << std::endl;
+  if (list->FindObject("el_eta"))
+    tree->SetBranchAddress("el_eta", &var_electronEta_vec);
+  else
+    std::cout << "missing branch el_eta, might cause unexpected behaviour" << std::endl;
+  if (list->FindObject("el_phi"))
+    tree->SetBranchAddress("el_phi", &var_electronPhi_vec);
+  else
+    std::cout << "missing branch el_phi, might cause unexpected behaviour" << std::endl;
   if (list->FindObject("el_ptcone20"))
     tree->SetBranchAddress("el_ptcone20", &var_el_ptcone20_vec);
   else
@@ -2267,6 +2359,18 @@ void setLeptons(TChain * tree, TObjArray * list)
     tree->SetBranchAddress("muonT", &var_muonT_vec);
   else
     std::cout << "missing branch muonT, might cause unexpected behaviour" << std::endl;
+  if (list->FindObject("mu_pt"))
+    tree->SetBranchAddress("mu_pt", &var_muonPt_vec);
+  else
+    std::cout << "missing branch mu_pt, might cause unexpected behaviour" << std::endl;
+  if (list->FindObject("mu_eta"))
+    tree->SetBranchAddress("mu_eta", &var_muonEta_vec);
+  else
+    std::cout << "missing branch mu_eta, might cause unexpected behaviour" << std::endl;
+  if (list->FindObject("mu_phi"))
+    tree->SetBranchAddress("mu_phi", &var_muonPhi_vec);
+  else
+    std::cout << "missing branch mu_phi, might cause unexpected behaviour" << std::endl;
   if (list->FindObject("mu_ptcone20"))
     tree->SetBranchAddress("mu_ptcone20", &var_mu_ptcone20_vec);
   else
@@ -2282,7 +2386,12 @@ void setLeptons(TChain * tree, TObjArray * list)
 
 } // setLeptons
 
-
+/*
+ * Erase a jet from the groomed jet collection.  It erases this entry from all jet variable collections.
+ *
+ * @param jet Integer giving position of the jet to be erased in the jet collection.
+ * @param extendedVars Flag indicating if TauWTA1/2 and ZCUT12 are being used.
+ */
 void eraseJet(int jet, bool extendedVars)
 {
   int i = jetType::GROOMED;
@@ -2354,7 +2463,11 @@ void eraseJet(int jet, bool extendedVars)
   
 } // eraseJet
 
-
+/*
+ * Overlap removal between jets and electrons, removes any (groomed) jet that overlaps with an electron.
+ *
+ * @param extendedVars Flag indicating if TauWTA1/2 and ZCUT12 are available.
+ */
 void overlapRemoval(bool extendedVars)
 {
   for (int it = 0 ; it < (*var_pt_vec[jetType::GROOMED]).size(); it++)
@@ -2366,30 +2479,43 @@ void overlapRemoval(bool extendedVars)
 	  if (dR < 0.8)
 	    {
 	      eraseJet(it, extendedVars);
-
-	      it--; // correct?
+	      it--;
 	    }
 	}
     }
   
 } // overlapRemoval
 
+/*
+ * Set the invariant mass of the two leptons and jet.
+ */
+void setLLJMass(int jetidx)
+{
+  // set the invariant mass of the two leptons and jet
+  TLorentzVector j = TLorentzVector();
+  j.SetPtEtaPhiE((*var_pt_vec[jetidx]));
+  var_mllj = (j+var_leptons[0]+var_leptons[1]).M();
+} // setLLJMass
+
+/*
+ * Apply basic event selection - two opposite charge muons or two electrons and the invariant mass of the 
+ * two leptons minus the Z mass must be < 25 GeV
+ *
+ * @return leptonType::FAIL, ELECTRON or MUON.
+*/
 int eventSelection()
 {
   int lepType = leptonType::FAIL;
   // 2 electrons or 2 muons of opposite charge
-  float mll;
   
   if (electrons.size() == 2)
     {
-      mll = (electrons.at(0)+electrons.at(1)).M();
+      var_mll = (electrons.at(0)+electrons.at(1)).M();
       lepType = leptonType::ELECTRON;
     }
   else if (muons.size() == 2 && (*var_mu_charge_vec)[0]*(*var_mu_charge_vec)[1] == -1)
     {
-      //std::cout << muons[0].Et() << std::endl;
-      mll = (muons.at(0)+muons.at(1)).M();
-      //std::cout << "mll: " << mll << std::endl;
+      var_mll = (muons.at(0)+muons.at(1)).M();
       lepType = leptonType::MUON;
     }
   else
@@ -2397,9 +2523,8 @@ int eventSelection()
       return lepType;
     }
   // |mll-91| < 25 gev
-  if (fabs(mll-91*GEV) >= 25*GEV)
+  if (fabs(var_mll-91*GEV) >= 25*GEV)
     {
-      //std::cout << "failing mass cut" << std::endl;
       return leptonType::FAIL;
     }
 
@@ -2407,7 +2532,34 @@ int eventSelection()
   
 }//eventSelection
 
+/**
+ * Method to return a vector with dummy charges for electron events where we have no charge info.
+ *
+ * @param size Number of dummy entries to insert.  Generally this is two.
+ *
+ * @return vector<float> of size electrons.size()
+ */
+std::vector<float> dummyCharge(int size)
+{
+  vector<float> vec;
+  for (int i  = 0; i < size; i++)
+    {
+      vec.push_back(-999);
+    }
+  return vec;
+} //dummyCharge
 
+/*
+ * Apply lepton selection. 
+ * If it is an electron event (2 electrons) we want to have:
+ * Et >25 GeV, ptcone20/pt < 0.15, etcone20/et < 0.3 and |eta|<2.47.
+ * If it is a muon event (2 muons) we want to have:
+ * Pt >25 GeV, ptcone20/pt < 0.15, etcone20/et < 0.3 and |eta|<2.5.
+ *
+ * @param lepType The type of event, which is either leptonType::ELECTRON or leptonType::MUON
+ *
+ * @return Whether or not lepton selection is passed.
+ */
 bool leptonSelection(int lepType)
 {
   bool pass = true;
@@ -2419,31 +2571,32 @@ bool leptonSelection(int lepType)
 	{
 	  if (electrons[idx].Et() <= 25*GEV)
 	    {
-	      //std::cout << var_electrons_vec->size() << std::endl;
-	      //std::cout << "Failed electron ET cut" <<std::endl;
-	      std::cout << electrons[idx].Et() <<std::endl;
-	      //std::cout << var_electrons_vec <<std::endl;
 	      return false;
 	    }
 	  // eta < 2.47
 	  if (fabs(electrons[idx].Eta()) >= 2.47)
 	    {
-	      //std::cout << "Failed electron eta cut" <<std::endl;
 	      return false;
 	    }
 	  // ptcone20/pt < 0.15
 	  if ((*var_el_ptcone20_vec)[idx]/electrons[idx].Pt() >= 0.15)
 	    {
-	      //std::cout << "Failed electron ptcone20/pt cut" <<std::endl;
 	      return false;
 	    }
 	  // etcone20/et < 0.3
 	  if ((*var_el_etcone20_vec)[idx]/electrons[idx].Et() >= 0.3)
 	    {
-	      //std::cout << "Failed electron etcone20/et cut" <<std::endl;
 	      return false;
 	    }
 	} // for loop idx
+      
+      // we haven't returned false, so set the output variables 
+      var_leptons = electrons;
+      var_ptcone20 = (*var_el_ptcone20_vec);
+      var_etcone20 = (*var_el_etcone20_vec);
+      var_charge = dummyCharge(electrons.size());
+      var_isElectronEvent = 1;
+      
     } // if leptype = electron
   else if (lepType == leptonType::MUON)
     {
@@ -2453,28 +2606,31 @@ bool leptonSelection(int lepType)
 	{
 	  if (muons[idx].Pt() <= 25*GEV)
 	    {
-	      //std::cout << "Failed muon pt cut" <<std::endl;
 	      return false;
 	    }
 	  // eta < 2.5
 	  if (fabs(muons[idx].Eta()) >= 2.5)
 	    {
-	      //std::cout << "Failed muon eta cut" <<std::endl;
 	      return false;
 	    }
 	  // ptcone20/pt <  0.15
 	  if ((*var_mu_ptcone20_vec)[idx]/muons[idx].Pt() >= 0.15)
 	    {
-	      //std::cout << "Failed muon ptcone20/pt cut" <<std::endl;
 	      return false;
 	    }
 	  // etcone20/et < 0.3
 	  if ((*var_mu_etcone20_vec)[idx]/muons[idx].Et() >= 0.3)
 	    {
-	      //std::cout << "Failed muon etcone20/et cut" <<std::endl;
 	      return false;
 	    }
 	} // for loop idx
+
+      // set the output variables
+      var_leptons = muons;
+      var_ptcone20 = (*var_mu_ptcone20_vec);
+      var_etcone20 = (*var_mu_etcone20_vec);
+      var_charge= (*var_mu_charge_vec);  
+      var_isElectronEvent = 0;
     } // elif lepttype = muon
   else 
     return false;
@@ -2483,11 +2639,19 @@ bool leptonSelection(int lepType)
 } //leptonSelection
 
 
-
+/*
+ * Set all of the branch addresses for the jets we are reading in.  If a branch is missing in the tree it is not set and a warning is given.
+ * 
+ * @param tree A pointer to the TChain that is being read in.
+ * @param groomalgo The shortened name of the algorithm being used, like TopoSplitFiltered
+ * @param groomIdx The full name of the algorithm.
+ * @param extendedVars Flag indicating if the TauWTA1/2 and ZCUT12 variables should be used - they are not in every sample.
+ */
 void setJetsBranches(TChain * tree, std::string &groomalgo,  std::string & groomIdx, bool extendedVars)
 {
   std::string samplePrefix = "";
-  bool addLC = false;
+  TObjArray * brancharray = tree->GetListOfBranches();
+  bool addLC = false; // we use this variable to indicate whether "LC" should be in the algorithm string
   samplePrefix = algorithms.AlgoPrefix[groomIdx];
   
   if (algorithms.AlgoType[groomIdx].find("recluster") == std::string::npos) // we're doing reclustering
@@ -2497,7 +2661,6 @@ void setJetsBranches(TChain * tree, std::string &groomalgo,  std::string & groom
   tree->SetBranchAddress("mc_channel_number", &mc_channel_number);
 
 
-  TObjArray * brancharray = tree->GetListOfBranches();
   if (brancharray->FindObject("RunNumber"))
     tree->SetBranchAddress("RunNumber", &runNumberIn);
   if (brancharray->FindObject("nVertices"))
@@ -2619,7 +2782,6 @@ void setJetsBranches(TChain * tree, std::string &groomalgo,  std::string & groom
       else
 	std::cout << "branch not found: " << std::string(jetType+"Pull_C11") << std::endl;
 
-
       if (extendedVars)
 	{
 	  if(brancharray->FindObject(std::string(jetType+"TauWTA1").c_str()))
@@ -2636,13 +2798,12 @@ void setJetsBranches(TChain * tree, std::string &groomalgo,  std::string & groom
 	    std::cout << "branch not found: " << std::string(jetType+"ZCUT12") << std::endl;
 	}
 
-
     } // end for loop over topo/truth/groom
 
   std::string jetType = returnJetType( samplePrefix, groomalgo, addLC, 2); //set to truth/ topo/ groomed
-  if (subjetspre)
-    {
 
+  if (subjetspre) // if the sample has the pre-calculated subjet variables
+    {
       if(brancharray->FindObject(std::string(jetType+"config_massFraction").c_str() ) )
 	tree->SetBranchAddress(std::string(jetType+"config_massFraction").c_str(),&var_massFraction_vec);
       else
@@ -2653,15 +2814,12 @@ void setJetsBranches(TChain * tree, std::string &groomalgo,  std::string & groom
 	std::cout << "branch not found: " << std::string(jetType+"config_ktycut2") << std::endl;
     }
 
-
-
-
-  if (!subjetscalc)
+  if (!subjetscalc) // if the sample has the subjet branches available to create massdrop and yt
     return;
 
-
   std::string subjetType = returnSubJetType(samplePrefix, groomIdx, addLC);
-  
+
+  // set the branch status and address for the branch name that has the subjets for the grooming algorithm
   tree->SetBranchStatus(std::string(algorithms.subjetIndex[groomIdx]).c_str(),1);
   tree->SetBranchAddress(std::string(algorithms.subjetIndex[groomIdx]).c_str(),&subjet_index);
 
@@ -2679,11 +2837,19 @@ void setJetsBranches(TChain * tree, std::string &groomalgo,  std::string & groom
   
 }//setJetsBranches
 
+
+
+/*
+ * Add the sub-jet branches to the output file.
+ * @param tree A TChain pointer for the output file.
+ * @param groomalgo A shortened version of the algorithm name.
+ * @param groomIdx The full algorithm name. It is used as a key in the algorithms maps.
+ */
 void addSubJets(TTree * tree, std::string & groomalgo, std::string &  groomIdx)
 {
 
-  std::string samplePrefix = "";
-  bool addLC = false;
+  std::string samplePrefix = ""; // AntiKt10/ CamKt12 for example
+  bool addLC = false; // some algorithms have "LC" in their name
   samplePrefix = algorithms.AlgoPrefix[groomIdx];
 
   if (algorithms.AlgoType[groomIdx].find("recluster") == std::string::npos) // we're doing reclustering
@@ -2706,20 +2872,33 @@ void addSubJets(TTree * tree, std::string & groomalgo, std::string &  groomIdx)
 } //addSubJets()
 
 
+/*
+ * Add the branches for the leptons in the output file.
+ *
+ * @param tree A TChain pointer to the output file.
+ */
 void addLeptonBranches(TTree * tree)
 {
-  tree->Branch("electrons",&var_electrons);
+  /*tree->Branch("electrons",&var_electrons);
   tree->Branch("el_ptcone20", &var_el_ptcone20, "el_ptcone20/F");
   tree->Branch("el_etcone20", &var_el_etcone20, "el_etcone20/F");
 
   tree->Branch("muons",  &var_muons);
   tree->Branch("mu_ptcone20", &var_mu_ptcone20, "mu_ptcone20/F");
-  tree->Branch("mu_etcone20", &var_mu_etcone20, "mu_eptcone20/F");
-  tree->Branch("mu_charge", &var_mu_charge, "mu_charge/F");
+  tree->Branch("mu_etcone20", &var_mu_etcone20, "mu_eptcone20/F");*/
+  tree->Branch("leptons",&var_leptons);
+  tree->Branch("ptcone20", &var_ptcone20, "ptcone20/F");
+  tree->Branch("etcone20", &var_etcone20, "etcone20/F");
+  tree->Branch("charge", &var_charge, "charge/F");
+  tree->Branch("mass_llj", &var_mllj, "mass_mllj/F");
+  tree->Branch("mll", &var_mll, "mll/F");
+  tree->Branch("isElectronEvent", &var_isElectronEvent, "isElectronEvent/I");
 
 } // addLeptonBranches
 
-//void getBranchesSelection(TTree * tree, std::string & algorithm)
+/*
+ * Set up some vectors for easier access to the eta, phi and pt of the truth, topo and groomed jets.
+ */
 void setSelectionVectors()
 {  
  
@@ -2740,6 +2919,11 @@ void setSelectionVectors()
  
 }// setSelectionVectors()
 
+/*
+ * Initialise all of the vectors used for reading in the input TTree.
+ *
+ * @param extendedVars Indicate whether or not TauWTA1/2 and ZCUT12 should be read.
+ */
 void initVectors(bool extendedVars)
 {
 
@@ -2810,6 +2994,9 @@ void initVectors(bool extendedVars)
   var_electronY_vec = 0;
   var_electronZ_vec = 0;
   var_electronT_vec = 0;
+  var_electronPhi_vec = 0;
+  var_electronEta_vec = 0;
+  var_electronPt_vec = 0;
   var_el_ptcone20_vec = 0;
   var_el_etcone20_vec = 0;
 
@@ -2818,37 +3005,80 @@ void initVectors(bool extendedVars)
   var_muonY_vec = 0;
   var_muonZ_vec = 0;
   var_muonT_vec = 0;
+  var_muonPt_vec = 0;
+  var_muonEta_vec = 0;
+  var_muonPhi_vec = 0;
   var_mu_ptcone20_vec = 0;
   var_mu_etcone20_vec = 0;
   var_mu_charge_vec = 0;
 
-
 } // initVEctors
 
-
+/*
+ * Setup the TLVs for the electrons and muons.  Pending an investigation by me (Tim), these will be created from the pt, eta and phi variables
+ * for each of the leptons.
+ */
 void setLeptonVectors()
 {
-  //if (var_electronX_vec->size() == 2 && (*var_electronX_vec)[0] != -999.0 && (*var_electronX_vec)[1] != -999.0)
-  //{
-      for (int x = 0; x < var_electronX_vec->size(); x++)
+
+  int elsize = 0;
+  if (var_electronX_vec != NULL)
+    elsize = var_electronX_vec->size();
+  else if (var_electronPt_vec != NULL)
+    elsize = var_electronPt_vec->size();
+
+  for (int x = 0; x < elsize; x++) // loop through all electrons
+    {
+      if (var_electronPt_vec != NULL)
+	{
+	  TLorentzVector e = TLorentzVector();
+	  e.SetPtEtaPhiM((*var_electronPt_vec)[x], (*var_electronEta_vec)[x], (*var_electronPhi_vec)[x], ELMASS);
+	  electrons.push_back(e);
+	}
+      else if (var_electronX_vec != NULL)
 	{
 	  TLorentzVector e = TLorentzVector((*var_electronX_vec)[x], (*var_electronY_vec)[x], (*var_electronZ_vec)[x], (*var_electronT_vec)[x]);
 	  electrons.push_back(e);
 	}
-      //}
-      //if (var_muonX_vec->size() == 2 && (*var_muonX_vec)[0] != -999.0 && (*var_muonX_vec)[1] != -999.0)
-      //{
-      for (int x = 0; x < var_muonX_vec->size(); x++)
+    }
+
+  int musize = 0;
+  if (var_muonX_vec != NULL)
+    musize = var_muonX_vec->size();
+  else if (var_muonPt_vec != NULL)
+    musize = var_muonPt_vec->size();
+  TLorentzVector m = TLorentzVector();
+  for (int x = 0; x < musize; x++)
+    {
+      if (var_muonPt_vec != NULL)
 	{
-	  muons.push_back(TLorentzVector((*var_muonX_vec)[x], (*var_muonY_vec)[x], (*var_muonZ_vec)[x], (*var_muonT_vec)[x]));
+	  m.SetPtEtaPhiM((*var_muonPt_vec)[x], (*var_muonEta_vec)[x], (*var_muonPhi_vec)[x], MUMASS);
+	  muons.push_back(m);
 	}
-      //}
+      else if (var_muonX_vec !=  NULL)
+	{
+	  m.SetXYZT((*var_muonX_vec)[x], (*var_muonY_vec)[x], (*var_muonZ_vec)[x], (*var_muonT_vec)[x]);
+	  muons.push_back(m);
+	}
+    }
+  
 
 } // setLeptonVectors()
 
+
+/*
+ * Set all of the output variables.  These are set to variables calculated per event or to variables read in. 
+ * This also sets the weights for the output file.
+ *
+ * @param extendedVars Flag indicating if TauWTA1/2 and ZCUT12 are being used.
+ * @param jet_idx_truth The index of the truth jet being used.
+ * @param jet_idx_topo The index of the topo jet being used.
+ * @param jet_idx_groomed The index of the groomed jet being used.
+ * @param subjet_idx The index of the groomed jet within the subjet collection.
+ */
 void setOutputVariables(bool extendedVars, int jet_idx_truth, int jet_idx_topo, int jet_idx_groomed, int subjet_idx)
 {
-  //clearOutputVariables();
+
   int jet_idx = 0;
   mc_event_weight_out = mc_event_weight;
   mc_channel_number_out = mc_channel_number;
@@ -2856,51 +3086,41 @@ void setOutputVariables(bool extendedVars, int jet_idx_truth, int jet_idx_topo, 
   nvtxOut = nvtxIn;
   avgIntpXingOut = avgIntpXingIn;
 
+  // default weights
+  var_k_factor = 1.0;  
+  var_filter_eff = 1.0;
+  var_xs = 1.0;
   if (k_factors.count(long(mc_channel_number)) > 0 )
     {
       var_k_factor = k_factors[long(mc_channel_number)];
     }
-  else
-    {
-      var_k_factor = 1.0;
-      //std::cout << "Warning: k-factor not known for " << mc_channel_number << endl;
-    }
+
   if (filt_eff.count(long(mc_channel_number)) > 0 )
     {
       var_filter_eff = filt_eff[long(mc_channel_number)];
     }
-  else
-    {
-      var_filter_eff = 1.0;
-      //std::cout << "Warning: filter eff not known for " << mc_channel_number << endl;
-    }
+
   if (xs.count(long(mc_channel_number)) > 0)
     {
       var_xs = xs[long(mc_channel_number)];
     }
-  else
-    {
-      var_xs = 1.0;
-      //std::cout << "Warning: xs not known for " << mc_channel_number << endl;
-    }
-
   
   for (int x = 0; x < jetType::MAX ; x++)
     {
       switch (x)
 	{
-	case 0:
+	case jetType::TRUTH:
 	  jet_idx = jet_idx_truth;
 	  break;
-	case 1:
+	case jetType::TOPO:
 	  jet_idx = jet_idx_topo;
 	  break;
-	case 2:
+	case jetType::GROOMED:
 	  jet_idx = jet_idx_groomed;
 	  break;
 	}
       
-      if (jet_idx == -99)
+      if (jet_idx == -99) // mostly just topo jets
 	continue;
       
       if (var_E_vec[x] != NULL)
@@ -2962,8 +3182,6 @@ void setOutputVariables(bool extendedVars, int jet_idx_truth, int jet_idx_topo, 
 	  var_TauWTA1[x]=(*var_TauWTA1_vec[x])[jet_idx];
 	  var_TauWTA2[x]=(*var_TauWTA2_vec[x])[jet_idx];
 	  var_ZCUT12[x]=(*var_ZCUT12_vec[x])[jet_idx];
-	  //var_massFraction[x]=(*var_massFraction_vec[x])[jet_idx];
-	  //var_ytcut2[x]=(*var_ZCUT12_vec[x])[jet_idx];
 	}
     } // end for loop
 
@@ -2979,7 +3197,7 @@ void setOutputVariables(bool extendedVars, int jet_idx_truth, int jet_idx_topo, 
 
   // store output leptons
   //var_electrons = (*var_electrons_vec);
-  var_electrons = electrons;
+  /*var_electrons = electrons;
   var_el_ptcone20 = (*var_el_ptcone20_vec);
   var_el_etcone20 = (*var_el_etcone20_vec);
 
@@ -2987,16 +3205,24 @@ void setOutputVariables(bool extendedVars, int jet_idx_truth, int jet_idx_topo, 
   var_muons = muons;
   var_mu_ptcone20 = (*var_mu_ptcone20_vec);
   var_mu_etcone20 = (*var_mu_etcone20_vec);
-  var_mu_charge= (*var_mu_charge_vec);
+  var_mu_charge= (*var_mu_charge_vec);*/
 
 
 } //setOutputVariables
 
+
+
+/*
+ * Clear all of the variables used for the output file.
+ */
 void clearOutputVariables()
 {
 
   var_massdrop = 0;
   var_yt = 0;
+  var_isElectronEvent = 0;
+  var_mllj = 0;
+  var_mll = 0;
 
   electrons.clear();
   muons.clear();
@@ -3033,30 +3259,34 @@ void clearOutputVariables()
   var_ZCUT12.clear();
 
 
-  var_electrons.clear();
+  /*var_electrons.clear();
   var_el_ptcone20.clear();
-  var_el_etcone20.clear();
-  var_muons.clear();
-  var_mu_ptcone20.clear();
-  var_mu_etcone20.clear();
-  var_mu_charge.clear();
+  var_el_etcone20.clear();*/
+  var_leptons.clear();
+  var_ptcone20.clear();
+  var_etcone20.clear();
+  var_charge.clear();
   
 
 } // clearOutputVariables
 
+
+/*
+ * Reset all of the variables that are written to the output file.  All variables are set to a default value.
+ */
 void resetOutputVariables()
 {
   clearOutputVariables();
-  var_electrons.push_back(TLorentzVector());
+  /*var_electrons.push_back(TLorentzVector());
   var_el_ptcone20.push_back(-999);
-  var_el_etcone20.push_back(-999);
-  var_muons.push_back(TLorentzVector());
-  var_mu_ptcone20.push_back(-999);
-  var_mu_etcone20.push_back(-999);
-  var_mu_charge.push_back(-999);
+  var_el_etcone20.push_back(-999);*/
+  var_leptons.push_back(TLorentzVector());
+  var_ptcone20.push_back(-999);
+  var_etcone20.push_back(-999);
+  var_charge.push_back(-999);
+  
   for (int i = 0; i < jetType::MAX; i++)
     {
-
       var_E.push_back(-999);
       var_pt.push_back(-999);
       var_m.push_back(-999);
@@ -3091,12 +3321,19 @@ void resetOutputVariables()
     }
 } //resetOutputVariables
 
-
+/*
+ * Setup all of the branches for the jets and leptons in the output tree.
+ *
+ * @param tree A pointer to the output TTree.
+ * @param groomalgo The shortened version of the grooming algorithm.
+ * @param groomIdx The full grooming algorithm name, used as a key in the algorithms maps.
+ * @param extendedVars Flag indicating if TauWTA1/2 and ZCUT12 should be used.
+ */
 void setOutputBranches(TTree * tree, std::string & groomalgo, std::string & groomIdx, bool extendedVars)
 {
 
-  std::string samplePrefix = "";
-  bool addLC = false;
+  std::string samplePrefix = ""; // AntiKt10 for example
+  bool addLC = false; // some algorithms have the string "LC" in them.
   samplePrefix = algorithms.AlgoPrefix[groomIdx];
 
   if (algorithms.AlgoType[groomIdx].find("recluster") == std::string::npos) // we're doing reclustering
@@ -3109,7 +3346,7 @@ void setOutputBranches(TTree * tree, std::string & groomalgo, std::string & groo
 
   for (int i = 0; i < jetType::MAX; i++) // truth, topo, groomed
     {
-      
+     
       std::string jetType = returnJetType(samplePrefix, groomalgo, addLC,i); //set to truth/ topo/ groomed
 
       tree->Branch(std::string(jetType+"E").c_str(),&var_E.at(i),std::string(jetType+"E/F").c_str());
@@ -3117,7 +3354,7 @@ void setOutputBranches(TTree * tree, std::string & groomalgo, std::string & groo
       tree->Branch(std::string(jetType+"m").c_str(),&var_m.at(i),std::string(jetType+"m/F").c_str());
       tree->Branch(std::string(jetType+"eta").c_str(),&var_eta.at(i),std::string(jetType+"eta/F").c_str());
       tree->Branch(std::string(jetType+"phi").c_str(),&var_phi.at(i),std::string(jetType+"phi/F").c_str());
-      if (i != 0)
+      if (i != jetType::TRUTH) // emfrac doesn't exist for truth jets
 	tree->Branch(std::string(jetType+"emfrac").c_str(),&var_emfrac.at(i),std::string(jetType+"emfrac"+"/F").c_str());
       tree->Branch(std::string(jetType+"Tau1").c_str(),&var_Tau1.at(i),std::string(jetType+"Tau1/F").c_str());
       tree->Branch(std::string(jetType+"Tau2").c_str(),&var_Tau2.at(i),std::string(jetType+"Tau2/F").c_str());
@@ -3152,23 +3389,23 @@ void setOutputBranches(TTree * tree, std::string & groomalgo, std::string & groo
 	  tree->Branch(std::string(jetType+"TauWTA2/TauWTA1").c_str(),&var_TauWTA2TauWTA1.at(2),std::string(jetType+"TauWTA2TauWTA1/F").c_str());  
 	  
 	}
-
+      // add a calculated variable Tau2/Tau1
       tree->Branch(std::string(returnJetType(samplePrefix, groomalgo, addLC,0)+"Tau21").c_str(),&var_Tau21.at(0),std::string(jetType+"Tau21/F").c_str());
       tree->Branch(std::string(returnJetType(samplePrefix, groomalgo, addLC,1)+"Tau21").c_str(),&var_Tau21.at(1),std::string(jetType+"Tau21/F").c_str());
       tree->Branch(std::string(jetType+"Tau21").c_str(),&var_Tau21.at(2),std::string(jetType+"Tau21/F").c_str());  
 
     }
 
+  // add the lepton branches
   addLeptonBranches(tree);
 } // setOutputBranches
 
 
-
+/*
+ * Normalise all of the histograms for Wprime and QCD samples.
+ */
 void scaleHists()
 {
-  //for (int ii=0; ii<nAlgos; ii++){//-1; ii++){
-  //int i = algoMap[ii]; // this is here because we don't always run all algorithms, just a subsample...
-	
 
     Wprime_Lead_CA12_scaled_pt->Scale(1.0/Wprime_Lead_CA12_scaled_pt->Integral());
 
@@ -3186,19 +3423,14 @@ void scaleHists()
 	  Wprime_finePtBin_mass[i][j]->Scale(1.0/Wprime_finePtBin_mass[i][j]->Integral());
 	}	
       }
-    //qcd_PtReweight->Scale(1.0/qcd_PtReweight->Integral());
-    //Wp_PtReweight->Scale(1.0/Wp_PtReweight->Integral());
-
-		
-    //}
 
 } // scaleHists
 
-
+/*
+ * Calculate the most probable value for the WPrime sample.
+ */
 void getMPV()
 {
-  //for (int ii=0; ii<nAlgos; ii++){//-1; ii++){
-  //int i = algoMap[ii];
     for (int j=0; j<nPtBins; j++){
       myMPV[j]=mpv(Wprime_Lead_CA12_mass[histType::GROOMEDJET][j]);
     }
@@ -3206,9 +3438,16 @@ void getMPV()
     for (int j=0; j<nFineBins; j++){
       myMPV_finePt[j]=mpv(Wprime_finePtBin_mass[histType::GROOMEDJET][j]);
     }
-    //}
 } //getMPV
 
+
+/*
+ * Check if the branch exists in a tree and then set the address if it does.
+ *
+ * @param tree A TChain pointer to the input file.
+ * @param name Name of the branch.
+ * @param var_vec A pointer to a vector of Float_t that is the variable used to read in from the tree.
+ */
 void setAddress(TChain * tree, std::string name, std::vector<Float_t> * var_vec)
 {
   if(tree->GetListOfBranches()->FindObject(name.c_str()) )
@@ -3219,26 +3458,30 @@ void setAddress(TChain * tree, std::string name, std::vector<Float_t> * var_vec)
 } //setAddress
 
 
+/*
+ * read in the weights for the different samples.  Weights are based on RunNumbers, the file should have
+ * RunNumber,SampleName,xs,k-factor,filter-efficiency
+ * weights come from these two twiki pages: https://twiki.cern.ch/twiki/bin/viewauth/AtlasProtected/BosonTaggingPaper2012#7th_July_2014_Mixture_with_small and https://twiki.cern.ch/twiki/bin/view/AtlasProtected/BoostedBosonTaggingD3PD#Properly_normalizing_MC_samples
+ */
 void readWeights()
 {
-  // read in the weights for the different samples.  Weights are based on RunNumbers, the file should have
-  // RunNumber,SampleName,xs,k-factor,filter-efficiency
-  // weights come from these two twiki pages: https://twiki.cern.ch/twiki/bin/viewauth/AtlasProtected/BosonTaggingPaper2012#7th_July_2014_Mixture_with_small and https://twiki.cern.ch/twiki/bin/view/AtlasProtected/BoostedBosonTaggingD3PD#Properly_normalizing_MC_samples
   ifstream wf ("weightings_input.csv");
   string line;
   std::cout << "reading weights" << std::endl;
   while (getline( wf, line))
     {
-      trim(line);
-      std::vector<std::string> strs;
+      trim(line); // remove trailing whitespace
+      std::vector<std::string> strs; // use this to hold the vector obtained by splitting the input line
       boost::split(strs, line, boost::is_any_of(","));
-      //std::cout << strs.size() << std::endl;
+
       int cntr = 0;
       long runNumber = 0;
+      // iterate through the elements in strs vector/ tokens in the input line
       for (std::vector<std::string>::iterator it = strs.begin(); it != strs.end(); it ++)
 	{
 	  switch (cntr)
 	    {
+	      // runnumber
 	    case 0:
 	      try
 		{
@@ -3252,9 +3495,11 @@ void readWeights()
 	      filt_eff[runNumber] = 1;
 	      xs[runNumber] = 1;
 	      break;
+	      // This will be the sample name, but not using it right now.
 	    case 1:
 	      // This will be the sample name, but not using it right now.
 	      break;
+	      // cross section
 	    case 2:
 	      try
 		{
@@ -3265,6 +3510,7 @@ void readWeights()
 		  std::cout << "error converting to xs:" << *it << std::endl;
 		}
 	      break;
+	      // k factor
 	    case 3:
 	      try
 		{
@@ -3275,6 +3521,7 @@ void readWeights()
 		  std::cout << "error converting to k-factor:" << *it << std::endl;
 		}
 	      break;
+	      // filter efficiency
 	    case 4:
 	      try
 		{
@@ -3291,7 +3538,6 @@ void readWeights()
 	      
 	    }
 	  cntr++;
-	  //std::cout << (*it) << std::endl;
 	}
     }
 
@@ -3299,16 +3545,23 @@ void readWeights()
   
 } // readWeights
 
+
+/* 
+ * Create an output file containing a number of datapoints for each algorithm + pt range.
+ * each datapoint contains bkg/signal for each bin in bkg and sig arguments
+ * this output file will be read in by the plotting code later and used for reweighting the signal sample
+ * 
+ * @param bkg Pointer to background TH1F.
+ * @param sig Pointer to signal TH1F.
+ * @param fname Name of output reweight file.
+ */
 void createPtReweightFile(TH1F * bkg, TH1F * sig, std::string & fname)
 {
-  // create an output file containing a number of datapoints for each algorithm + pt range.
-  // each datapoint contains bkg/signal for each bin in bkg and sig arguments
-  // this output file will be read in by the plotting code later and used for reweighting the signal sample
   int bins = bkg->GetNbinsX();
-  std::cout << "number of bins: " << bins << std::endl;
   ofstream out(fname);
   double weight;
-  for (int b = 1; b <= bins; b++)
+
+  for (int b = 1; b <= bins; b++) // loop through all bins
     {
       weight = bkg->GetBinContent(b);
       if (sig->GetBinContent(b) != 0)
@@ -3318,21 +3571,26 @@ void createPtReweightFile(TH1F * bkg, TH1F * sig, std::string & fname)
 	  std::cout << "oh no, we've been rumbled!  We have no signal in this bin and now we have to reweight by over 9000! But actually we're just going to make it 0." << std::endl;
 	  weight = 0;
 	}
-      //out << bkg->GetXaxis()->GetBinLowEdge(b) << "," << weight << endl;     
       out << bkg->GetXaxis()->GetBinLowEdge(b) << "," << bkg->GetBinContent(b) << "," << sig->GetBinContent(b) << endl;     
     }
-  out.close();
-  
+  out.close();  
 } // end createPtReweightHistogram
 
 
-// loads algorithms from config file
+/*
+ * Loads algorithm config from algorithms.xml.  It sets up maps for each algorithm for the abbreviation, the plot label, type of 
+ * algorithm (pruned/trimmed/splitfiltered), the subjet grooming algorithm name (sometimes different), subjet index branch and bin
+ * label.
+ *
+ * @param filename The filename of the configuration file.
+ */
 void Algorithms::load(const std::string & filename)
 {
   // Create an empty property tree object
   using boost::property_tree::ptree;
   ptree pt;
 
+  // read in xml
   read_xml(filename,pt);
   BOOST_FOREACH( ptree::value_type & v, pt.get_child("config.algorithms"))
     {
@@ -3342,7 +3600,7 @@ void Algorithms::load(const std::string & filename)
 	  std::string groomalgo = v.second.get<std::string>("GroomingAlgorithm","");
 	  if (groomalgo == "")
 	    {
-	      groomalgo = name.substr(name.find("Topo"),name.length()-1);
+	      groomalgo = name.substr(name.find("Topo"),name.length()-1); // shortened version of name, - AntiKt10 for eg.
 	    }
 	  AlgoNames[name] = groomalgo;
 	  std::string jetalgo = v.second.get<std::string>("JetAlgorithm","");
@@ -3350,7 +3608,7 @@ void Algorithms::load(const std::string & filename)
 	    {
 	      jetalgo = name.substr(0,name.find("Topo"));
 	      if (jetalgo.find("LC") != std::string::npos)
-		jetalgo.erase(jetalgo.end()-2,jetalgo.end());
+		jetalgo.erase(jetalgo.end()-2,jetalgo.end()); // erase LC from the name
 	    }
 	  AlgoPrefix[name] = jetalgo;
 	  AlgoList[name] = v.second.get<std::string>("Abbreviation","");
