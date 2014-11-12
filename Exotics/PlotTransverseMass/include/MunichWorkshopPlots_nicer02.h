@@ -98,7 +98,7 @@ std::vector<std::string> getListOfBranches(std::string &algorithm);
 //void make68Plots(int algidx, TChain * bkg, TChain * sig);
 void makeMassWindowFile(bool applyMassWindow, bool extendedVars, std::string & algorithm);
 void setJetsBranches(TChain * tree, std::string & algorithm, std::string & groomIdx, bool extendedVars);
-void addJetsBranches(TTree * tree, std::string & algorithm);
+void addInfoBranches(TTree * tree_;
 void addSubJets(TTree * tree, std::string & algorithm, std::string & groomIdx);
 //void getBranchesSelection(TTree * tree, std::string & algorithm);
 void setSelectionVectors();
@@ -124,6 +124,7 @@ bool leptonSelection(int lepType);
 void setLeptons(TChain * tree, TObjArray * list);
 void addLeptonBranches(TChain * tree);
 void setLeptonVectors();
+std::vector<float> dummyCharge(int size);
 
 enum class groomAlgoEnum{groomZero, TopoSplitFilteredMu67SmallR0YCut9, TopoSplitFilteredMu100SmallR30YCut4, TopoTrimmedPtFrac5SmallR30, TopoTrimmedPtFrac5SmallR20, TopoPrunedCaRcutFactor50Zcut10, TopoPrunedCaRcutFactor50Zcut20, AntiKt2LCTopo, AntiKt3LCTopo, AntiKt4LCTopo};
 enum sampleType{BACKGROUND,SIGNAL};
@@ -170,6 +171,8 @@ std::string fileid_global;
 std::string treeName;
 std::string branchesFile;
 float GEV = 1000.;
+float ELMASS = 0.511;
+float MUMASS = 105.7;
 
 TFile *inputFile[2];
 TTree *inputTree[2];
@@ -464,6 +467,10 @@ std::vector<Float_t> * var_electronX_vec;
 std::vector<Float_t> * var_electronY_vec;
 std::vector<Float_t> * var_electronZ_vec;
 std::vector<Float_t> * var_electronT_vec;
+std::vector<Float_t> * var_electronPt_vec;
+std::vector<Float_t> * var_electronEta_vec;
+std::vector<Float_t> * var_electronPhi_vec;
+//std::vector<Float_t> * var_electronT_vec;
 std::vector<float> * var_el_ptcone20_vec;
 std::vector<float> * var_el_etcone20_vec;
 
@@ -474,6 +481,9 @@ std::vector<Float_t> * var_muonX_vec;
 std::vector<Float_t> * var_muonY_vec;
 std::vector<Float_t> * var_muonZ_vec;
 std::vector<Float_t> * var_muonT_vec;
+std::vector<Float_t> * var_muonPt_vec;
+std::vector<Float_t> * var_muonEta_vec;
+std::vector<Float_t> * var_muonPhi_vec;
 std::vector<float> * var_mu_ptcone20_vec;
 std::vector<float> * var_mu_etcone20_vec;
 std::vector<float> * var_mu_charge_vec;
@@ -525,16 +535,22 @@ std::vector<Float_t> var_Pull_C11;
 std::vector<Float_t> var_Tau21;
 
 
-// electrons out
-std::vector<TLorentzVector> var_electrons;
-std::vector<float> var_el_ptcone20;
-std::vector<float> var_el_etcone20;
+// leptons out
+std::vector<TLorentzVector> var_leptons;
+std::vector<float> var_ptcone20;
+std::vector<float> var_etcone20;
+Float_t var_mllj;
+Float_t var_mll;
+
+Int_t var_isElectronEvent = false;
 
 // muons out
+/*
 std::vector<TLorentzVector> var_muons;
 std::vector<float> var_mu_ptcone20;
 std::vector<float> var_mu_etcone20;
-std::vector<float> var_mu_charge;
+*/
+std::vector<float> var_charge;
 
 // these variables are only stored for the subjets of the groomed jets, so we don't need a vector
 Float_t var_subjets_E;
