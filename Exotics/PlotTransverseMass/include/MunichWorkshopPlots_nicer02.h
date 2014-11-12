@@ -1,9 +1,3 @@
-///
-/// STILL TO DO: 
-/// 
-/// 
-/// * add other jet algorithms once available
-/// 
 
 #include <TH1F.h>
 #include "TChain.h"
@@ -20,7 +14,7 @@
 #include <cstdlib>
 #include <map>
 #include <cmath>
-#include "TH1F.h"
+
 #include "TROOT.h"
 #include "TInterpreter.h"
 #include "TPostScript.h"
@@ -33,13 +27,6 @@
 #include "TLatex.h"
 #include "TLorentzVector.h"
 //FASTJET INCLUDES
-/*#include "fastjet/ClusterSequence.hh"
-#include "fastjet/PseudoJet.hh"
-#include "fastjet/PseudoJetStructureBase.hh"
-#include "fastjet/JetDefinition.hh"
-#include "fastjet/"
-#include "fastjet/"
-#include "fastjet/"*/
 
 #include "fastjet/AreaDefinition.hh"
 #include "fastjet/ClusterSequence.hh"
@@ -98,12 +85,12 @@ std::vector<std::string> getListOfBranches(std::string &algorithm);
 //void make68Plots(int algidx, TChain * bkg, TChain * sig);
 void makeMassWindowFile(bool applyMassWindow, bool extendedVars, std::string & algorithm);
 void setJetsBranches(TChain * tree, std::string & algorithm, std::string & groomIdx, bool extendedVars);
-void addInfoBranches(TTree * tree_;
+void addInfoBranches(TTree * tree);
 void addSubJets(TTree * tree, std::string & algorithm, std::string & groomIdx);
 //void getBranchesSelection(TTree * tree, std::string & algorithm);
 void setSelectionVectors();
 void runAlgorithm(TChain *inputTree, TChain *inputTree1, TString groomAlgo, std::string & groomAlgoIndex, bool massHistos);
-vector<std::string> getListOfJetBranches(std::string & algorithm);
+vector<std::pair<std::string,int> > getListOfJetBranches(std::string & algorithm, TObjArray * brancharray);
 void initVectors(bool extendedVars);
 std::pair<int,int> getTwoLeadingSubjets(std::vector<int> & indices, std::vector<float> * subjets);
 std::string returnJetType(std::string & samplePrefix, std::string & groomalgo, bool addLC, int idx);
@@ -131,17 +118,6 @@ enum sampleType{BACKGROUND,SIGNAL};
 enum jetType{TRUTH,TOPO,GROOMED,MAX};
 enum histType{TRUTHJET,GROOMEDJET,LEADTRUTHJET};
 enum leptonType{FAIL,ELECTRON,MUON};
-//groomAlgo options:
-//TopoSplitFilteredMu67SmallR0YCut9   - 1
-//TopoSplitFilteredMu100SmallR30YCut4  - 2
-//TopoTrimmedPtFrac5SmallR30 - 3
-// TopoTrimmedPtFrac5SmallR20 - 4
-// TopoPrunedCaRcutFactor50Zcut10 - 5
-// TopoPrunedCaRcutFactor50Zcut20 - 6
-
-//AntiKt2LCTopo - 7
-//AntiKt3LCTopo - 8
-//AntiKt4LCTopo - 9
 
 vector<int> algoMap; // stores the algorithm used for inputTree[x] in the case that we are not using all the input types - split/filter, trim, prune and recluster
 std::map<int, int> fileMap; // stores the index of the input file for each grooming algorithm
@@ -461,7 +437,7 @@ Float_t var_ktycut2_vec;
 
 
 // electrons in
-std::vector<TLorentzVector> * var_electrons_vec;
+vector<TLorentzVector> * var_electrons_vec;
 std::vector<TLorentzVector> electrons;
 std::vector<Float_t> * var_electronX_vec;
 std::vector<Float_t> * var_electronY_vec;
@@ -471,8 +447,8 @@ std::vector<Float_t> * var_electronPt_vec;
 std::vector<Float_t> * var_electronEta_vec;
 std::vector<Float_t> * var_electronPhi_vec;
 //std::vector<Float_t> * var_electronT_vec;
-std::vector<float> * var_el_ptcone20_vec;
-std::vector<float> * var_el_etcone20_vec;
+std::vector<Float_t> * var_el_ptcone20_vec;
+std::vector<Float_t> * var_el_etcone20_vec;
 
 // muons in
 std::vector<TLorentzVector> * var_muons_vec;
