@@ -41,6 +41,7 @@ endif
 ifeq "$(UNAME)" "Darwin"
 RANLIB       = ranlib
 CXXFLAGS    += -I$(INCDIR) $(ROOTCFLAGS) `/home/tim/Programs/fastjet-install/bin/fastjet-config --cxxflags` -I/usr/local/include
+
 #
 #-I$(GSLINC)
 LINKFLAGS    =
@@ -48,6 +49,7 @@ endif
 
 ##Libraries
 LIBS       += $(ROOTLIBS) -lThread `/home/tim/Programs/fastjet-install/bin/fastjet-config --libs` -L/usr/local/lib -lboost_filesystem -lboost_system -lboost_program_options
+
 
 ##Targets
 all : $(EXEDIR)/$(EXENAME)
@@ -57,13 +59,6 @@ $(EXEDIR)/$(EXENAME) : $(OBJS)
 
 $(OBJDIR)/main.o : $(SRCDIR)/main.$(SRCEXT)
 	$(CXX) $(CXXFLAGS) -c $< -o $@
-
-$(SRCDIR)/LinkDefDict.cpp: include/LinkDef.h
-	rootcint $(SRCDIR)/LinkDefDict.cpp -c include/LinkDef.h
-
-$(OBJDIR)/LinkDefDict.o: $(SRCDIR)/LinkDefDict.cpp $(DEPS) include/LinkDef.h
-	$(CXX) $(CXXFLAGS) -o $@ $< $(ROOTCFLAGS) $(CFLAGS)
-
 
 
 clean   :

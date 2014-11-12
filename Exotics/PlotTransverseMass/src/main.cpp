@@ -1,14 +1,14 @@
 ///
-///F. A. Dias (flavia.dias@cern.ch)
-///Analysis code for Jet Substructure - Munich workshop
-///September 2014
+///T. Bristow and F. A. Dias (flavia.dias@cern.ch)
+///Analysis code for Jet Substructure 
+///
 ///
 ///v0.1 - August 14th, 2014
 ///v0.2 - August 25th, 2014
 ///v0.3 - August 26th, 2014
 ///v0.4 - August 30th, 2014
 ///
-/// usage: bin/PlotsMunichWorkshop QCD_SplitFiltered.root Wprime_SplitFiltered.root QCD_Trim.root Wprime_Trim.root QCD_Prune.root Wprime_Prune.root QCD_Reclust.root Wprime_Reclust.root
+///v whatevs 
 ///
 
 #include "MunichWorkshopPlots_nicer02.h"
@@ -26,23 +26,20 @@ using namespace boost::algorithm;
 using namespace std;
 namespace po = boost::program_options;
 
-bool ComparePt(TLorentzVector & a, TLorentzVector & b) { return a.Pt() > b.Pt(); }
+bool ComparePt(TLorentzVector a, TLorentzVector b) { return a.Pt() > b.Pt(); }
 
 template<class T>
 ostream& operator<<(ostream& os, const vector<T>& v)
 {
   copy(v.begin(), v.end(), ostream_iterator<T>(os, " ")); 
   return os;
-}
+  }
 
 int main( int argc, char * argv[] ) {
 
-  gROOT->ProcessLine("#include <vector>");
+  //gROOT->ProcessLine("#include <vector>");
   // so that we can use vector<TLorentzVector> in ROOT
   gROOT->LoadMacro( "include/TLorentzVectorDict.h+" );
-  gInterpreter->GenerateDictionary("std::vector<std::vector<int> >", "vector");
-  gInterpreter->GenerateDictionary("vector<vector<double> >", "vector");
-
   AtlasStyle();
   
   bool makePtPlotsFlag = false;
@@ -953,7 +950,7 @@ void initializeVariables(){
   nEvt1_4 = 0;
 
    
-}
+} //initialiseVariables
 
 
 //FOR RECLUSTERING
@@ -1818,23 +1815,23 @@ void makeMassWindowFile(bool applyMassWindow,bool extendedVars, std::string & al
   bool signal = false;
 
   // need branches for specific algorithms because otherwise we end up with a million branches that we don't need
-  vector<std::string> branches;
+  vector<std::pair<std::string,int> > branches;
 
   std::string i = algorithm;//algoMap[ii];
     std::cout << "Doing mass window plots for " << algorithms.AlgoNames[i] << std::endl;
 
     std::string groomAlgoIndex = i;
     std::string prefix = "";
-
+    TObjArray * brancharray = inputTChain[0]->GetListOfBranches();
     if (branchesFile != "")
       {
 	std::cout << "branchesFile: " << branchesFile << std::endl;
-	branches = getListOfJetBranches(branchesFile);
+	branches = getListOfJetBranches(branchesFile, brancharray);
       }
     else
       {
 	std::cout << "branchesFile not defined" << std::endl;
-	branches = getListOfJetBranches(algorithms.AlgoNames[i]);
+	branches = getListOfJetBranches(algorithms.AlgoNames[i], brancharray);
       }
     // loop through the different pt bins. j == 0 is the inclusive one
     for (int j=0; j<1; j++){//nPtBins; j++){
@@ -1861,32 +1858,20 @@ void makeMassWindowFile(bool applyMassWindow,bool extendedVars, std::string & al
 
 	  inputTChain[tchainIdx]->GetEntries();
 
-	  try
+	  // turn off the branches we're not interested in
+	  for (std::vector<std::pair<string,int > >::iterator it = branches.begin(); it != branches.end(); it++)
 	    {
-	      inputTChain[tchainIdx]->SetBranchStatus("*",0);
-	    }
-	  catch (exception &e)
-	    {
-	      std::cout << "There is a missing algorithm in the tree" << std::endl;
-	      return;
-	    }
 
-	  // turn on the branches we're interested in
-	  for (std::vector<string>::iterator it = branches.begin(); it != branches.end(); it++)
-	    {
-	      if(!inputTChain[tchainIdx]->GetListOfBranches()->FindObject((*it).c_str())) {
-		std::cout << "could not find branch: " << (*it) << std::endl;
-	      }
-	      else
+	      if ((*it).second == 0)
 		{
-		  inputTChain[tchainIdx]->SetBranchStatus((*it).c_str(),1);
+		  inputTChain[tchainIdx]->SetBranchStatus((*it).first.c_str(),0);
 		}
 	      
 	    }
+
 	  setJetsBranches(inputTChain[tchainIdx], algorithms.AlgoNames[i], i, extendedVars); //set all of the branches for the output tree for the jets	  
 
-
-	  TFile * outfile = new TFile(std::string(algorithms.AlgoNames[i]+fileid_global+"/"+ss_fname.str()).c_str(),"RECREATE");	  
+	  TFile * outfile = new TFile(std::string(algorithms.AlgoNames[i]+fileid_global+"/"+ss_fname.str()).c_str(),"RECREATE");   
 	  TTree * outTree = new TTree(treeName.c_str(),treeName.c_str());
 
 	  resetOutputVariables();
@@ -1902,8 +1887,6 @@ void makeMassWindowFile(bool applyMassWindow,bool extendedVars, std::string & al
 	  // do a lot of tuning of the scale factor regions later on!
 	  pt_reweight = new TH1F(std::string("pt_reweight"+bkg).c_str(),std::string("pt_reweight_"+bkg).c_str(), 200, 0, 3500);
 	  
-
-
 	  NEvents = entries;
 	  NEvents_weighted.clear();
 
@@ -1944,7 +1927,7 @@ void makeMassWindowFile(bool applyMassWindow,bool extendedVars, std::string & al
 		}
 
 	      // setup the TLVs for the leptons
-	      setLeptonVectors();
+	      //setLeptonVectors();
 	      // do overlap removal before looking for jets
 	      overlapRemoval(extendedVars);
 	      //apply event selection
@@ -2010,7 +1993,9 @@ void makeMassWindowFile(bool applyMassWindow,bool extendedVars, std::string & al
 		} // end loop over jet_pt_groomed
 	      
 	      if (chosenLeadGroomedIndex == -99) // failed selection
-		continue;	      
+		{
+		  continue;	      
+		}
 	      
 	      leadGroomedIndex = chosenLeadGroomedIndex;
 	      leadTruthIndex = chosenLeadTruthJetIndex;
@@ -2085,7 +2070,6 @@ void makeMassWindowFile(bool applyMassWindow,bool extendedVars, std::string & al
 		}
 	    
 	      setOutputVariables(extendedVars, leadTruthIndex, leadTopoIndex, leadGroomedIndex, lead_subjet);
-
 	      outTree->Fill();
 	      pt_reweight->Fill((*jet_pt_truth)[chosenLeadTruthJetIndex]/1000.0);
 
@@ -2162,13 +2146,14 @@ std::pair<int,int> getTwoLeadingSubjets(std::vector<int> & jet_idx, std::vector<
  *
  * @param algorithm The name of the algorithm being run.  If this is a valid branches file it will use this variable
  *        as a filename, otherwise it will use algorithm+"_branches.txt".
- * @return vector of strings containing all of the branches.
+ * @return vector of pairs containing all of the branches and if they should be on or off.
  */
-vector<std::string> getListOfJetBranches(std::string &algorithm)
+vector<std::pair<std::string,int> > getListOfJetBranches(std::string &algorithm, TObjArray * brancharray)
 {
   // Ideally we want this stored in an XML file, but for now it'll have to be a standard text file because I'm short on time!
-  vector<string> branches;
+  vector<pair<string,int> > branches;
     
+  std::map<string, int> branchmap;
   std::string filename = algorithm.find("branches.txt") == std::string::npos ? algorithm+"_branches.txt" : algorithm;
   
   ifstream in(filename);
@@ -2176,39 +2161,53 @@ vector<std::string> getListOfJetBranches(std::string &algorithm)
   // what to do about branches that have * in them?
   while (getline(in, line))
     {
-      branches.push_back(rtrim(line));
+      trim(line);
+      branchmap[line] = 1;
     }
+
   // need to add some essential ones in case they get forgotten in that config file :)
-  branches.push_back("RunNumber");
-  branches.push_back("mc_channel_number");
-  branches.push_back("vxp_n");
-  branches.push_back("averageIntPerXing");
-  branches.push_back("mc_event_weight");
+  branchmap["RunNumber"] = 1;
+  branchmap["mc_channel_number"] = 1;
+  branchmap["vxp_n"] = 1;
+  branchmap["averageIntPerXing"] = 1;
+  branchmap["mc_event_weight"] = 1;
 
   // need to add leptons
-  branches.push_back("electrons");
-  branches.push_back("electronX");
-  branches.push_back("electronY");
-  branches.push_back("electronZ");
-  branches.push_back("electronT");
-  branches.push_back("el_pt");
-  branches.push_back("el_eta");
-  branches.push_back("el_phi");
-  branches.push_back("el_ptcone20");
-  branches.push_back("el_etcone20");
+  branchmap["electrons"] = 1;
+  branchmap["electronX"] = 1;
+  branchmap["electronY"] = 1;
+  branchmap["electronZ"] = 1;
+  branchmap["electronT"] = 1;
+  branchmap["el_pt"] = 1;
+  branchmap["el_eta"] = 1;
+  branchmap["el_phi"] = 1;
+  branchmap["el_ptcone20"] = 1;
+  branchmap["el_etcone20"] = 1;
 
-  branches.push_back("muons");
-  branches.push_back("muonX");
-  branches.push_back("muonY");
-  branches.push_back("muonZ");
-  branches.push_back("muonT");
-  branches.push_back("mu_pt");
-  branches.push_back("mu_eta");
-  branches.push_back("mu_phi");
-  branches.push_back("mu_ptcone20");
-  branches.push_back("mu_etcone20");
-  branches.push_back("mu_charge");
+  branchmap["muons"] = 1;
+  branchmap["muonX"] = 1;
+  branchmap["muonY"] = 1;
+  branchmap["muonZ"] = 1;
+  branchmap["muonT"] = 1;
+  branchmap["mu_pt"] = 1;
+  branchmap["mu_eta"] = 1;
+  branchmap["mu_phi"] = 1;
+  branchmap["mu_ptcone20"] = 1;
+  branchmap["mu_etcone20"] = 1;
+  branchmap["mu_charge"] = 1;
   in.close();
+
+  TIter it(brancharray);
+  TBranch * tb;
+  while (tb = (TBranch *) it.Next())
+    {
+      std::string name = tb->GetName();
+      trim(name);
+      if (branchmap.find(name) != branchmap.end() )
+	branches.push_back(make_pair(name, 1));
+      else
+	branches.push_back(make_pair(name, 0));
+    }
   return branches;
 } // getListOfBranches()
 
@@ -2225,7 +2224,7 @@ vector<std::string> getListOfJetBranches(std::string &algorithm)
  */
 std::string returnJetType(std::string & samplePrefix, std::string & groomalgo, bool addLC, int i)
 {
-  std::string jetType = "";
+  std::string jet = "";
   std::string xaod = "";
   // right now we have an issue with xAOD where it adds "Jets" before _variable, so we need a quick fix for this
   if (xAOD)
@@ -2235,21 +2234,21 @@ std::string returnJetType(std::string & samplePrefix, std::string & groomalgo, b
   switch (i)
     {
     case jetType::TRUTH: // truth
-      jetType="jet_CamKt12Truth"+xaod+"_";
+      jet="jet_CamKt12Truth"+xaod+"_";
       break;
     case jetType::TOPO: // topo
       if (addLC)
-	jetType = "jet_" + samplePrefix + "LCTopo"+xaod+"_";
+	jet = "jet_" + samplePrefix + "LCTopo"+xaod+"_";
       else
-	jetType = "jet_" + samplePrefix + "Topo"+xaod+"_";
+	jet = "jet_" + samplePrefix + "Topo"+xaod+"_";
       break;
     default: // groomed
       if (addLC)
-	jetType = "jet_" + samplePrefix +"LC" + groomalgo+"_";
+	jet = "jet_" + samplePrefix +"LC" + groomalgo+"_";
       else
-	jetType = "jet_" + samplePrefix + groomalgo + "_"; 	  
+	jet = "jet_" + samplePrefix + groomalgo + "_"; 	  
     }
-  return jetType;
+  return jet;
 } // returnJetType
 
 /*
@@ -2472,7 +2471,7 @@ void overlapRemoval(bool extendedVars)
 {
   for (int it = 0 ; it < (*var_pt_vec[jetType::GROOMED]).size(); it++)
     {
-      for (std::vector<TLorentzVector>::iterator el = electrons.begin(); el != electrons.end(); el++)
+      for (std::vector<TLorentzVector>::iterator el = var_electrons_vec->begin(); el != var_electrons_vec->end(); el++)
 	{
 	  float dR = DeltaR((*var_eta_vec[jetType::GROOMED])[it], (*var_phi_vec[jetType::GROOMED])[it], (*el).Eta(), (*el).Phi());
 	  // dR < 0.8 remove jet from collection
@@ -2492,8 +2491,9 @@ void overlapRemoval(bool extendedVars)
 void setLLJMass(int jetidx)
 {
   // set the invariant mass of the two leptons and jet
+  int t = jetType::GROOMED;
   TLorentzVector j = TLorentzVector();
-  j.SetPtEtaPhiE((*var_pt_vec[jetidx]));
+  j.SetPtEtaPhiE((*var_pt_vec[t])[jetidx], (*var_eta_vec[t])[jetidx], (*var_phi_vec[t])[jetidx] ,(*var_E_vec[t])[jetidx]);
   var_mllj = (j+var_leptons[0]+var_leptons[1]).M();
 } // setLLJMass
 
@@ -2508,14 +2508,14 @@ int eventSelection()
   int lepType = leptonType::FAIL;
   // 2 electrons or 2 muons of opposite charge
   
-  if (electrons.size() == 2)
+  if (var_electrons_vec->size() == 2)
     {
-      var_mll = (electrons.at(0)+electrons.at(1)).M();
+      var_mll = (var_electrons_vec->at(0)+var_electrons_vec->at(1)).M();
       lepType = leptonType::ELECTRON;
     }
-  else if (muons.size() == 2 && (*var_mu_charge_vec)[0]*(*var_mu_charge_vec)[1] == -1)
+  else if (var_muons_vec->size() == 2 && (*var_mu_charge_vec)[0]*(*var_mu_charge_vec)[1] == -1)
     {
-      var_mll = (muons.at(0)+muons.at(1)).M();
+      var_mll = (var_muons_vec->at(0)+var_muons_vec->at(1)).M();
       lepType = leptonType::MUON;
     }
   else
@@ -2569,32 +2569,32 @@ bool leptonSelection(int lepType)
       // et > 25 GeV
       for (int idx = 0; idx < 2; idx++)
 	{
-	  if (electrons[idx].Et() <= 25*GEV)
+	  if ((*var_electrons_vec)[idx].Et() <= 25*GEV)
 	    {
 	      return false;
 	    }
 	  // eta < 2.47
-	  if (fabs(electrons[idx].Eta()) >= 2.47)
+	  if (fabs((*var_electrons_vec)[idx].Eta()) >= 2.47)
 	    {
 	      return false;
 	    }
 	  // ptcone20/pt < 0.15
-	  if ((*var_el_ptcone20_vec)[idx]/electrons[idx].Pt() >= 0.15)
+	  if ((*var_el_ptcone20_vec)[idx]/(*var_electrons_vec)[idx].Pt() >= 0.15)
 	    {
 	      return false;
 	    }
 	  // etcone20/et < 0.3
-	  if ((*var_el_etcone20_vec)[idx]/electrons[idx].Et() >= 0.3)
+	  if ((*var_el_etcone20_vec)[idx]/(*var_electrons_vec)[idx].Et() >= 0.3)
 	    {
 	      return false;
 	    }
 	} // for loop idx
       
       // we haven't returned false, so set the output variables 
-      var_leptons = electrons;
+      var_leptons = (*var_electrons_vec);
       var_ptcone20 = (*var_el_ptcone20_vec);
       var_etcone20 = (*var_el_etcone20_vec);
-      var_charge = dummyCharge(electrons.size());
+      var_charge = dummyCharge(var_electrons_vec->size());
       var_isElectronEvent = 1;
       
     } // if leptype = electron
@@ -2604,29 +2604,29 @@ bool leptonSelection(int lepType)
       // pt > 25 gev
       for (int idx = 0; idx < 2; idx++)
 	{
-	  if (muons[idx].Pt() <= 25*GEV)
+	  if ((*var_muons_vec)[idx].Pt() <= 25*GEV)
 	    {
 	      return false;
 	    }
 	  // eta < 2.5
-	  if (fabs(muons[idx].Eta()) >= 2.5)
+	  if (fabs((*var_muons_vec)[idx].Eta()) >= 2.5)
 	    {
 	      return false;
 	    }
 	  // ptcone20/pt <  0.15
-	  if ((*var_mu_ptcone20_vec)[idx]/muons[idx].Pt() >= 0.15)
+	  if ((*var_mu_ptcone20_vec)[idx]/(*var_muons_vec)[idx].Pt() >= 0.15)
 	    {
 	      return false;
 	    }
 	  // etcone20/et < 0.3
-	  if ((*var_mu_etcone20_vec)[idx]/muons[idx].Et() >= 0.3)
+	  if ((*var_mu_etcone20_vec)[idx]/(*var_muons_vec)[idx].Et() >= 0.3)
 	    {
 	      return false;
 	    }
 	} // for loop idx
 
       // set the output variables
-      var_leptons = muons;
+      var_leptons = (*var_muons_vec);
       var_ptcone20 = (*var_mu_ptcone20_vec);
       var_etcone20 = (*var_mu_etcone20_vec);
       var_charge= (*var_mu_charge_vec);  
@@ -2668,6 +2668,7 @@ void setJetsBranches(TChain * tree, std::string &groomalgo,  std::string & groom
   if (brancharray->FindObject("averageIntPerXing"))
     tree->SetBranchAddress("averageIntPerXing",&avgIntpXingIn);
 
+  
   setLeptons(tree, brancharray);
 
   for (int i = 0; i < jetType::MAX; i++) // truth, topo, groomed
@@ -2879,13 +2880,6 @@ void addSubJets(TTree * tree, std::string & groomalgo, std::string &  groomIdx)
  */
 void addLeptonBranches(TTree * tree)
 {
-  /*tree->Branch("electrons",&var_electrons);
-  tree->Branch("el_ptcone20", &var_el_ptcone20, "el_ptcone20/F");
-  tree->Branch("el_etcone20", &var_el_etcone20, "el_etcone20/F");
-
-  tree->Branch("muons",  &var_muons);
-  tree->Branch("mu_ptcone20", &var_mu_ptcone20, "mu_ptcone20/F");
-  tree->Branch("mu_etcone20", &var_mu_etcone20, "mu_eptcone20/F");*/
   tree->Branch("leptons",&var_leptons);
   tree->Branch("ptcone20", &var_ptcone20, "ptcone20/F");
   tree->Branch("etcone20", &var_etcone20, "etcone20/F");
@@ -3109,13 +3103,13 @@ void setOutputVariables(bool extendedVars, int jet_idx_truth, int jet_idx_topo, 
     {
       switch (x)
 	{
-	case jetType::TRUTH:
+	case 0://jetType::TRUTH:
 	  jet_idx = jet_idx_truth;
 	  break;
-	case jetType::TOPO:
+	case 1://jetType::TOPO:
 	  jet_idx = jet_idx_topo;
 	  break;
-	case jetType::GROOMED:
+	case 2://jetType::GROOMED:
 	  jet_idx = jet_idx_groomed;
 	  break;
 	}
@@ -3195,19 +3189,6 @@ void setOutputVariables(bool extendedVars, int jet_idx_truth, int jet_idx_topo, 
       var_subjets_phi = (*var_subjets_phi_vec)[subjet_idx];
     }
 
-  // store output leptons
-  //var_electrons = (*var_electrons_vec);
-  /*var_electrons = electrons;
-  var_el_ptcone20 = (*var_el_ptcone20_vec);
-  var_el_etcone20 = (*var_el_etcone20_vec);
-
-  //var_muons = (*var_muons_vec);
-  var_muons = muons;
-  var_mu_ptcone20 = (*var_mu_ptcone20_vec);
-  var_mu_etcone20 = (*var_mu_etcone20_vec);
-  var_mu_charge= (*var_mu_charge_vec);*/
-
-
 } //setOutputVariables
 
 
@@ -3258,10 +3239,6 @@ void clearOutputVariables()
   var_TauWTA2.clear();
   var_ZCUT12.clear();
 
-
-  /*var_electrons.clear();
-  var_el_ptcone20.clear();
-  var_el_etcone20.clear();*/
   var_leptons.clear();
   var_ptcone20.clear();
   var_etcone20.clear();
@@ -3277,9 +3254,7 @@ void clearOutputVariables()
 void resetOutputVariables()
 {
   clearOutputVariables();
-  /*var_electrons.push_back(TLorentzVector());
-  var_el_ptcone20.push_back(-999);
-  var_el_etcone20.push_back(-999);*/
+
   var_leptons.push_back(TLorentzVector());
   var_ptcone20.push_back(-999);
   var_etcone20.push_back(-999);
@@ -3347,52 +3322,52 @@ void setOutputBranches(TTree * tree, std::string & groomalgo, std::string & groo
   for (int i = 0; i < jetType::MAX; i++) // truth, topo, groomed
     {
      
-      std::string jetType = returnJetType(samplePrefix, groomalgo, addLC,i); //set to truth/ topo/ groomed
+      std::string jetString = returnJetType(samplePrefix, groomalgo, addLC,i); //set to truth/ topo/ groomed
 
-      tree->Branch(std::string(jetType+"E").c_str(),&var_E.at(i),std::string(jetType+"E/F").c_str());
-      tree->Branch(std::string(jetType+"pt").c_str(),&var_pt.at(i),std::string(jetType+"pt/F").c_str());
-      tree->Branch(std::string(jetType+"m").c_str(),&var_m.at(i),std::string(jetType+"m/F").c_str());
-      tree->Branch(std::string(jetType+"eta").c_str(),&var_eta.at(i),std::string(jetType+"eta/F").c_str());
-      tree->Branch(std::string(jetType+"phi").c_str(),&var_phi.at(i),std::string(jetType+"phi/F").c_str());
+      tree->Branch(std::string(jetString+"E").c_str(),&var_E.at(i),std::string(jetString+"E/F").c_str());
+      tree->Branch(std::string(jetString+"pt").c_str(),&var_pt.at(i),std::string(jetString+"pt/F").c_str());
+      tree->Branch(std::string(jetString+"m").c_str(),&var_m.at(i),std::string(jetString+"m/F").c_str());
+      tree->Branch(std::string(jetString+"eta").c_str(),&var_eta.at(i),std::string(jetString+"eta/F").c_str());
+      tree->Branch(std::string(jetString+"phi").c_str(),&var_phi.at(i),std::string(jetString+"phi/F").c_str());
       if (i != jetType::TRUTH) // emfrac doesn't exist for truth jets
-	tree->Branch(std::string(jetType+"emfrac").c_str(),&var_emfrac.at(i),std::string(jetType+"emfrac"+"/F").c_str());
-      tree->Branch(std::string(jetType+"Tau1").c_str(),&var_Tau1.at(i),std::string(jetType+"Tau1/F").c_str());
-      tree->Branch(std::string(jetType+"Tau2").c_str(),&var_Tau2.at(i),std::string(jetType+"Tau2/F").c_str());
-      tree->Branch(std::string(jetType+"Tau3").c_str(),&var_Tau3.at(i),std::string(jetType+"Tau3/F").c_str());
-      tree->Branch(std::string(jetType+"WIDTH").c_str(),&var_WIDTH.at(i),std::string(jetType+"WIDTH/F").c_str());
-      tree->Branch(std::string(jetType+"SPLIT12").c_str(),&var_SPLIT12.at(i),std::string(jetType+"SPLIT12/F").c_str());
-      tree->Branch(std::string(jetType+"SPLIT23").c_str(),&var_SPLIT23.at(i),std::string(jetType+"SPLIT23/F").c_str());
-      tree->Branch(std::string(jetType+"SPLIT34").c_str(),&var_SPLIT34.at(i),std::string(jetType+"SPLIT34/F").c_str());
-      tree->Branch(std::string(jetType+"Dip12").c_str(),&var_Dip12.at(i),std::string(jetType+"Dip12/F").c_str());
-      tree->Branch(std::string(jetType+"Dip13").c_str(),&var_Dip13.at(i),std::string(jetType+"Dip13/F").c_str());
-      tree->Branch(std::string(jetType+"Dip23").c_str(),&var_Dip23.at(i),std::string(jetType+"Dip23/F").c_str());
-      tree->Branch(std::string(jetType+"DipExcl12").c_str(),&var_DipExcl12.at(i),std::string(jetType+"DipExcl12/F").c_str());
-      tree->Branch(std::string(jetType+"PlanarFlow").c_str(),&var_PlanarFlow.at(i),std::string(jetType+"PlanarFlow/F").c_str());
-      tree->Branch(std::string(jetType+"Angularity").c_str(),&var_Angularity.at(i),std::string(jetType+"Angularity/F").c_str());
-      tree->Branch(std::string(jetType+"QW").c_str(),&var_QW.at(i),std::string(jetType+"QW/F").c_str());
-      tree->Branch(std::string(jetType+"PullMag").c_str(),&var_PullMag.at(i),std::string(jetType+"PullMag/F").c_str());
-      tree->Branch(std::string(jetType+"PullPhi").c_str(),&var_PullPhi.at(i),std::string(jetType+"PullPhi/F").c_str());
-      tree->Branch(std::string(jetType+"Pull_C00").c_str(),&var_Pull_C00.at(i),std::string(jetType+"Pull_C00/F").c_str());
-      tree->Branch(std::string(jetType+"Pull_C01").c_str(),&var_Pull_C01.at(i),std::string(jetType+"Pull_C01/F").c_str());
-      tree->Branch(std::string(jetType+"Pull_C10").c_str(),&var_Pull_C10.at(i),std::string(jetType+"Pull_C10/F").c_str());
-      tree->Branch(std::string(jetType+"Pull_C11").c_str(),&var_Pull_C11.at(i),std::string(jetType+"Pull_C11/F").c_str());
+	tree->Branch(std::string(jetString+"emfrac").c_str(),&var_emfrac.at(i),std::string(jetString+"emfrac"+"/F").c_str());
+      tree->Branch(std::string(jetString+"Tau1").c_str(),&var_Tau1.at(i),std::string(jetString+"Tau1/F").c_str());
+      tree->Branch(std::string(jetString+"Tau2").c_str(),&var_Tau2.at(i),std::string(jetString+"Tau2/F").c_str());
+      tree->Branch(std::string(jetString+"Tau3").c_str(),&var_Tau3.at(i),std::string(jetString+"Tau3/F").c_str());
+      tree->Branch(std::string(jetString+"WIDTH").c_str(),&var_WIDTH.at(i),std::string(jetString+"WIDTH/F").c_str());
+      tree->Branch(std::string(jetString+"SPLIT12").c_str(),&var_SPLIT12.at(i),std::string(jetString+"SPLIT12/F").c_str());
+      tree->Branch(std::string(jetString+"SPLIT23").c_str(),&var_SPLIT23.at(i),std::string(jetString+"SPLIT23/F").c_str());
+      tree->Branch(std::string(jetString+"SPLIT34").c_str(),&var_SPLIT34.at(i),std::string(jetString+"SPLIT34/F").c_str());
+      tree->Branch(std::string(jetString+"Dip12").c_str(),&var_Dip12.at(i),std::string(jetString+"Dip12/F").c_str());
+      tree->Branch(std::string(jetString+"Dip13").c_str(),&var_Dip13.at(i),std::string(jetString+"Dip13/F").c_str());
+      tree->Branch(std::string(jetString+"Dip23").c_str(),&var_Dip23.at(i),std::string(jetString+"Dip23/F").c_str());
+      tree->Branch(std::string(jetString+"DipExcl12").c_str(),&var_DipExcl12.at(i),std::string(jetString+"DipExcl12/F").c_str());
+      tree->Branch(std::string(jetString+"PlanarFlow").c_str(),&var_PlanarFlow.at(i),std::string(jetString+"PlanarFlow/F").c_str());
+      tree->Branch(std::string(jetString+"Angularity").c_str(),&var_Angularity.at(i),std::string(jetString+"Angularity/F").c_str());
+      tree->Branch(std::string(jetString+"QW").c_str(),&var_QW.at(i),std::string(jetString+"QW/F").c_str());
+      tree->Branch(std::string(jetString+"PullMag").c_str(),&var_PullMag.at(i),std::string(jetString+"PullMag/F").c_str());
+      tree->Branch(std::string(jetString+"PullPhi").c_str(),&var_PullPhi.at(i),std::string(jetString+"PullPhi/F").c_str());
+      tree->Branch(std::string(jetString+"Pull_C00").c_str(),&var_Pull_C00.at(i),std::string(jetString+"Pull_C00/F").c_str());
+      tree->Branch(std::string(jetString+"Pull_C01").c_str(),&var_Pull_C01.at(i),std::string(jetString+"Pull_C01/F").c_str());
+      tree->Branch(std::string(jetString+"Pull_C10").c_str(),&var_Pull_C10.at(i),std::string(jetString+"Pull_C10/F").c_str());
+      tree->Branch(std::string(jetString+"Pull_C11").c_str(),&var_Pull_C11.at(i),std::string(jetString+"Pull_C11/F").c_str());
 
 
       if (extendedVars)
 	{
-	  tree->Branch(std::string(jetType+"TauWTA1").c_str(),&var_TauWTA1.at(i),std::string(jetType+"TauWTA1/F").c_str());
-	  tree->Branch(std::string(jetType+"TauWTA2").c_str(),&var_TauWTA2.at(i),std::string(jetType+"TauWTA2/F").c_str());
-	  tree->Branch(std::string(jetType+"ZCUT12").c_str(),&var_ZCUT12.at(i),std::string(jetType+"ZCUT12/F").c_str());
+	  tree->Branch(std::string(jetString+"TauWTA1").c_str(),&var_TauWTA1.at(i),std::string(jetString+"TauWTA1/F").c_str());
+	  tree->Branch(std::string(jetString+"TauWTA2").c_str(),&var_TauWTA2.at(i),std::string(jetString+"TauWTA2/F").c_str());
+	  tree->Branch(std::string(jetString+"ZCUT12").c_str(),&var_ZCUT12.at(i),std::string(jetString+"ZCUT12/F").c_str());
 	  
-	  tree->Branch(std::string(returnJetType(samplePrefix, groomalgo, addLC,0)+"TauWTA2/TauWTA1").c_str(),&var_TauWTA2TauWTA1.at(0),std::string(jetType+"TauWTA2TauWTA1/F").c_str());
-	  tree->Branch(std::string(returnJetType(samplePrefix, groomalgo, addLC,1)+"TauWTA2/TauWTA1").c_str(),&var_TauWTA2TauWTA1.at(1),std::string(jetType+"TauWTA2TauWTA1/F").c_str());
-	  tree->Branch(std::string(jetType+"TauWTA2/TauWTA1").c_str(),&var_TauWTA2TauWTA1.at(2),std::string(jetType+"TauWTA2TauWTA1/F").c_str());  
+	  tree->Branch(std::string(returnJetType(samplePrefix, groomalgo, addLC,0)+"TauWTA2/TauWTA1").c_str(),&var_TauWTA2TauWTA1.at(0),std::string(jetString+"TauWTA2TauWTA1/F").c_str());
+	  tree->Branch(std::string(returnJetType(samplePrefix, groomalgo, addLC,1)+"TauWTA2/TauWTA1").c_str(),&var_TauWTA2TauWTA1.at(1),std::string(jetString+"TauWTA2TauWTA1/F").c_str());
+	  tree->Branch(std::string(jetString+"TauWTA2/TauWTA1").c_str(),&var_TauWTA2TauWTA1.at(2),std::string(jetString+"TauWTA2TauWTA1/F").c_str());  
 	  
 	}
       // add a calculated variable Tau2/Tau1
-      tree->Branch(std::string(returnJetType(samplePrefix, groomalgo, addLC,0)+"Tau21").c_str(),&var_Tau21.at(0),std::string(jetType+"Tau21/F").c_str());
-      tree->Branch(std::string(returnJetType(samplePrefix, groomalgo, addLC,1)+"Tau21").c_str(),&var_Tau21.at(1),std::string(jetType+"Tau21/F").c_str());
-      tree->Branch(std::string(jetType+"Tau21").c_str(),&var_Tau21.at(2),std::string(jetType+"Tau21/F").c_str());  
+      tree->Branch(std::string(returnJetType(samplePrefix, groomalgo, addLC,0)+"Tau21").c_str(),&var_Tau21.at(0),std::string(jetString+"Tau21/F").c_str());
+      tree->Branch(std::string(returnJetType(samplePrefix, groomalgo, addLC,1)+"Tau21").c_str(),&var_Tau21.at(1),std::string(jetString+"Tau21/F").c_str());
+      tree->Branch(std::string(jetString+"Tau21").c_str(),&var_Tau21.at(2),std::string(jetString+"Tau21/F").c_str());  
 
     }
 
