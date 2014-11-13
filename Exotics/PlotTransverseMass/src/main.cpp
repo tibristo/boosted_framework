@@ -90,7 +90,8 @@ int main( int argc, char * argv[] ) {
       ("bkg-frac", po::value<bool>(&checkBkgFrac)->default_value(false),"Check the background fraction in the signal")
       ("tree-name", po::value<string>(&treeName)->default_value("physics"),"Name of tree to be read in from input file")
       ("branches-file", po::value<string>(&branchesFile)->default_value(""),"Name of file containing branches, otherwise Alg_branches.txt is used. Becareful with this, because if the branches are not read in then when any of them are used later on a segfault will occur, so make sure there is one that it will use.")
-      ("xAOD", po::value<bool>(&xAOD)->default_value(false),"Indicate if we are running over xAOD output.")
+      ("xAOD-jets", po::value<bool>(&xAODJets)->default_value(true),"Indicate if we are running over xAOD output and there is the word Jets appended to the algorithm name.")
+      ("xAOD-emfrac", po::value<bool>(&xAODemfrac)->default_value(false),"Indicate if we are running over xAOD output and emfrac is not available.")
       ;
         
     po::options_description cmdline_options;
@@ -431,7 +432,7 @@ void getMassHistograms(TTree *inputTree, TTree *inputTree1, TString groomAlgo, s
       for (int n=0; n<(*qcd_CA12_topo_pt).size(); n++){
 	TLorentzVector tempJet;
 	float emfractmp = 0.5;
-	if (!xAOD)
+	if (xAODemfrac)
 	  emfractmp = (*qcd_CA12_topo_emfrac)[n];
 	if (emfractmp<0.99 && (*qcd_CA12_topo_pt)[n]/1000>15.0){
 	  tempJet.SetPtEtaPhiE((*qcd_CA12_topo_pt)[n], (*qcd_CA12_topo_eta)[n], (*qcd_CA12_topo_phi)[n], (*qcd_CA12_topo_E)[n]);
@@ -481,7 +482,7 @@ void getMassHistograms(TTree *inputTree, TTree *inputTree1, TString groomAlgo, s
       int chosenTopoJetIndex=-99;
       float emfractmp = 0.5;
       for (int i=0; i<(*qcd_CA12_topo_pt).size(); i++){
-	if (!xAOD)
+	if (xAODemfrac)
 	  emfractmp = (*qcd_CA12_topo_emfrac)[i];
 	if (!hasTopoJet && emfractmp<0.99 && fabs((*qcd_CA12_topo_eta)[i])<1.2) {
 	  chosenTopoJetIndex=i;
@@ -539,7 +540,7 @@ void getMassHistograms(TTree *inputTree, TTree *inputTree1, TString groomAlgo, s
 
     for (int i=0; i<(*qcd_CA12_groomed_pt).size(); i++){
       float emfractmp = 0.5;
-      if (!xAOD)
+      if (xAODemfrac)
 	emfractmp = (*qcd_CA12_groomed_emfrac)[i];
       if (chosenLeadTruthJetIndex>=0 && chosenLeadGroomedIndex<0 && DeltaR((*qcd_CA12_truth_eta)[chosenLeadTruthJetIndex],(*qcd_CA12_truth_phi)[chosenLeadTruthJetIndex],(*qcd_CA12_groomed_eta)[i],(*qcd_CA12_groomed_phi)[i])<0.9 && emfractmp<0.99 && fabs((*qcd_CA12_groomed_eta)[i])<1.2){
 	// && (*qcd_CA12_groomed_pt)[i]/1000>100.0 ){ 
@@ -666,7 +667,7 @@ void getMassHistograms(TTree *inputTree, TTree *inputTree1, TString groomAlgo, s
       vector<TLorentzVector> small_jets;
       for (int n=0; n<(*Wp_CA12_topo_pt).size(); n++){
 	float emfractmp = 0.5;
-	if (!xAOD)
+	if (xAODemfrac)
 	  emfractmp = (*Wp_CA12_topo_emfrac)[n];
 	TLorentzVector tempJet;
 	if (emfractmp<0.99){
@@ -712,7 +713,7 @@ void getMassHistograms(TTree *inputTree, TTree *inputTree1, TString groomAlgo, s
       int chosenTopoJetIndex=-99;
       for (int i=0; i<(*Wp_CA12_topo_pt).size(); i++){
 	float emfractmp = 0.5;
-	if (!xAOD)
+	if (xAODemfrac)
 	  emfractmp = (*Wp_CA12_topo_emfrac)[i];
 	if (!hasTopoJet && emfractmp<0.99 && fabs((*Wp_CA12_topo_eta)[i])<1.2) {
 	  chosenTopoJetIndex=i;
@@ -767,7 +768,7 @@ void getMassHistograms(TTree *inputTree, TTree *inputTree1, TString groomAlgo, s
     int chosenLeadGroomedIndex=-99;
     for (int i=0; i<(*Wp_CA12_groomed_pt).size(); i++){
       float emfractmp = 0.5;
-      if (!xAOD)
+      if (xAODemfrac)
 	emfractmp = (*Wp_CA12_groomed_emfrac)[i]; 
       if (chosenLeadTruthJetIndex>=0 && chosenLeadGroomedIndex<0 && DeltaR((*Wp_CA12_truth_eta)[chosenLeadTruthJetIndex],(*Wp_CA12_truth_phi)[chosenLeadTruthJetIndex],(*Wp_CA12_groomed_eta)[i],(*Wp_CA12_groomed_phi)[i])<0.9 && emfractmp<0.99 && fabs((*Wp_CA12_groomed_eta)[i])<1.2){
 	//  && (*Wp_CA12_groomed_pt)[i]/1000>100.0 ){ 	
@@ -1874,24 +1875,32 @@ void makeMassWindowFile(bool applyMassWindow,bool extendedVars, std::string & al
 	  TFile * outfile = new TFile(std::string(algorithms.AlgoNames[i]+fileid_global+"/"+ss_fname.str()).c_str(),"RECREATE");   
 	  TTree * outTree = new TTree(treeName.c_str(),treeName.c_str());
 
+	  // reset all of the output variables so that they have default values
 	  resetOutputVariables();
+	  // set up all of the branches for the output tree
 	  setOutputBranches(outTree, algorithms.AlgoNames[i], i, extendedVars);
 
+	  // if we are going to add the subjet branches we set them up here
 	  if (subjetscalc || subjetspre)
 	    addSubJets(outTree, algorithms.AlgoNames[i], i);
+	  // add branches for runnumber, mc_event_number etc.
 	  addInfoBranches(outTree);
 
+	  // get number of entries to run over in the tree
 	  long entries = (long)inputTChain[tchainIdx]->GetEntries();
 
 	  // Setting up this with a high limit of 3.5 TeV so we don't miss anything.  Lots of bins - 200, so we can
 	  // do a lot of tuning of the scale factor regions later on!
 	  pt_reweight = new TH1F(std::string("pt_reweight"+bkg).c_str(),std::string("pt_reweight_"+bkg).c_str(), 200, 0, 3500);
 	  
+	  // set up the number of events in total
 	  NEvents = entries;
+	  // we keep track of the weighted (by mc_event_weight) number of events too
 	  NEvents_weighted.clear();
 
 	  std::cout << "total entries: " << entries << std::endl;
-
+	  
+	  // mass variable
 	  double mass = 0;
 	  for (long n = 0; n < entries; n++)
 	    {
@@ -1937,6 +1946,7 @@ void makeMassWindowFile(bool applyMassWindow,bool extendedVars, std::string & al
 		  continue;
 		}
 	      
+	      // check if the lepton selection is passed for electron/ muon
 	      if (!leptonSelection(lepType))
 		{
 		  continue;
@@ -1951,7 +1961,7 @@ void makeMassWindowFile(bool applyMassWindow,bool extendedVars, std::string & al
 		  for (int jet_i=0; jet_i<(*jet_pt_topo).size(); jet_i++)
 		    {
 		      float emfractmp = 0.5;
-		      if (!xAOD)
+		      if (xAODemfrac)
 			emfractmp = (*jet_emfrac_topo)[jet_i];
 		      if (!hasTopoJet && emfractmp<0.99 && fabs((*jet_eta_topo)[jet_i])<1.2) 
 			{
@@ -1983,7 +1993,7 @@ void makeMassWindowFile(bool applyMassWindow,bool extendedVars, std::string & al
 	      for (int jet_i=0; jet_i<(*jet_pt_groomed).size(); jet_i++)
 		{
 		  float emfractmp = 0.5;
-		  if (!xAOD)
+		  if (xAODemfrac)
 		    emfractmp = (*jet_emfrac_groomed)[jet_i];
 		  if (chosenLeadGroomedIndex<0 && DeltaR((*jet_eta_truth)[chosenLeadTruthJetIndex],(*jet_phi_truth)[chosenLeadTruthJetIndex],(*jet_eta_groomed)[jet_i],(*jet_phi_groomed)[jet_i])<0.9 && emfractmp<0.99 && fabs((*jet_eta_groomed)[jet_i])<1.2)
 		    {
@@ -2001,6 +2011,7 @@ void makeMassWindowFile(bool applyMassWindow,bool extendedVars, std::string & al
 	      leadTruthIndex = chosenLeadTruthJetIndex;
 	      leadTopoIndex = chosenLeadTopoJetIndex;
 
+	      // set the mass to the leading groomed jet
 	      mass = (*var_m_vec[2])[leadGroomedIndex]/1000.0 ;
 
 	      // if we are not applying a mass window we do not apply any mass cuts
@@ -2008,7 +2019,10 @@ void makeMassWindowFile(bool applyMassWindow,bool extendedVars, std::string & al
 		{
 		  continue;
 		}
+	      // set the mass of the two leptons and leading groomed jet
+	      setLLJMass(leadGroomedIndex);
 
+	      // leading subjet index
 	      int lead_subjet = 0;
 
 	      // if we are calculating the subjet variables: massdrop and momentum balance
@@ -2016,6 +2030,7 @@ void makeMassWindowFile(bool applyMassWindow,bool extendedVars, std::string & al
 		{
 
 		  std::vector<int> subjet_idx = (*subjet_index).at(leadGroomedIndex); // only groomed ones.....
+		  // get the two leading subjets
 		  std::pair<int,int> subjet_leading = getTwoLeadingSubjets(subjet_idx,var_subjets_pt_vec);
 
 		  // calculate the mass drop
@@ -2028,6 +2043,7 @@ void makeMassWindowFile(bool applyMassWindow,bool extendedVars, std::string & al
 		    {
 		      lead_subjet = subjet_leading.first;
 		    
+		      // get kinematics for the subjets
 		      double pt2 =  (*var_subjets_pt_vec)[subjet_leading.second];
 		      double eta_1 =  (*var_subjets_eta_vec)[subjet_leading.first];
 		      double eta_2 =  (*var_subjets_eta_vec)[subjet_leading.second];
@@ -2036,6 +2052,7 @@ void makeMassWindowFile(bool applyMassWindow,bool extendedVars, std::string & al
 		    
 		      double subjet_mass =  (*var_subjets_m_vec)[subjet_leading.first];
 		    
+		      // calculate the mass drop - leading subjet/mass
 		      double mu12 = subjet_mass/(mass*1000);
 		      var_massdrop = mu12;
 		    
@@ -2046,12 +2063,11 @@ void makeMassWindowFile(bool applyMassWindow,bool extendedVars, std::string & al
 		      var_yt = yt;
 		    }
 		} // end if(subjets)
-
+	      // if we have the mass fraction and momentum balance in the input file already
 	      else if (subjetspre)
 		{
-		  var_massdrop = var_massFraction_vec;//[leadGroomedIndex];
-		  //std::cout << var_massFraction_vec << std::endl;
-		  var_yt = var_ktycut2_vec;//[leadGroomedIndex];
+		  var_massdrop = var_massFraction_vec;
+		  var_yt = var_ktycut2_vec;
 		}
 
 	      // tau21
@@ -2059,6 +2075,7 @@ void makeMassWindowFile(bool applyMassWindow,bool extendedVars, std::string & al
 	      var_Tau21[1]=(*var_Tau2_vec[1])[leadTopoIndex]/(*var_Tau1_vec[1])[leadTopoIndex];
 	      var_Tau21[2]=(*var_Tau2_vec[2])[leadGroomedIndex]/(*var_Tau1_vec[2])[leadGroomedIndex];
 	    
+	      // set up tauwta variables and zcut12
 	      if (extendedVars)
 		{
 		  var_TauWTA2TauWTA1[0]=(*var_TauWTA2_vec[0])[leadTruthIndex]/(*var_TauWTA1_vec[0])[leadTruthIndex];
@@ -2069,7 +2086,8 @@ void makeMassWindowFile(bool applyMassWindow,bool extendedVars, std::string & al
 		    var_TauWTA2TauWTA1[1]=(*var_TauWTA2_vec[1])[leadTopoIndex]/(*var_TauWTA1_vec[1])[leadTopoIndex];
 		}
 	    
-	      setOutputVariables(extendedVars, leadTruthIndex, leadTopoIndex, leadGroomedIndex, lead_subjet);
+	      // make sure all of the other output variables have their values set
+	      setOutputVariables(extendedVars, leadTruthIndex, leadTopoIndex, leadGroomedIndex, lead_subjet, algorithms.AlgoNames[i] , i);
 	      outTree->Fill();
 	      pt_reweight->Fill((*jet_pt_truth)[chosenLeadTruthJetIndex]/1000.0);
 
@@ -2090,18 +2108,18 @@ void makeMassWindowFile(bool applyMassWindow,bool extendedVars, std::string & al
 	  std::string bkg2 = signal ? "sig": "bkg";
 	  ss2 << algorithms.AlgoNames[i] << fileid_global << "/" << ss.str() << "_" << bkg2 << ".nevents";
 	  ofstream ev_out(ss2.str());
+	  // write out the weighted events to a text file
 	  for (std::map<int,float>::iterator it = NEvents_weighted.begin(); it!= NEvents_weighted.end(); it++)
 	    ev_out << it->first << "," << NEvents_weighted[it->first] << std::endl;
 	  ev_out.close();
 	  delete outfile;
-	  //delete intree;
+
 	} // end loop of datatype
-      // create the reweighting histogram
+
+      // create the reweighting file
       std::string fname = algorithms.AlgoNames[i]+fileid_global+"/" + ss.str() + ".ptweights";
       createPtReweightFile(pt_reweight_arr[sampleType::BACKGROUND], pt_reweight_arr[sampleType::SIGNAL], fname);
     } // end loop over pt bins
-    //} // end loop over algorithms
-
 
 } // makeMassWindowFile()
 
@@ -2146,19 +2164,22 @@ std::pair<int,int> getTwoLeadingSubjets(std::vector<int> & jet_idx, std::vector<
  *
  * @param algorithm The name of the algorithm being run.  If this is a valid branches file it will use this variable
  *        as a filename, otherwise it will use algorithm+"_branches.txt".
+ * @param brancharray A TObjArray pointer containing all of the branches in the input tree
  * @return vector of pairs containing all of the branches and if they should be on or off.
  */
 vector<std::pair<std::string,int> > getListOfJetBranches(std::string &algorithm, TObjArray * brancharray)
 {
   // Ideally we want this stored in an XML file, but for now it'll have to be a standard text file because I'm short on time!
   vector<pair<string,int> > branches;
-    
-  std::map<string, int> branchmap;
-  std::string filename = algorithm.find("branches.txt") == std::string::npos ? algorithm+"_branches.txt" : algorithm;
   
+  // reset branchmap
+  branchmap.clear();
+  std::string filename = algorithm.find("branches.txt") == std::string::npos ? algorithm+"_branches.txt" : algorithm;
+
+  // open input file
   ifstream in(filename);
   string line;
-  // what to do about branches that have * in them?
+  // keep a record of all the branches in the config file in a map
   while (getline(in, line))
     {
       trim(line);
@@ -2174,10 +2195,7 @@ vector<std::pair<std::string,int> > getListOfJetBranches(std::string &algorithm,
 
   // need to add leptons
   branchmap["electrons"] = 1;
-  branchmap["electronX"] = 1;
-  branchmap["electronY"] = 1;
-  branchmap["electronZ"] = 1;
-  branchmap["electronT"] = 1;
+
   branchmap["el_pt"] = 1;
   branchmap["el_eta"] = 1;
   branchmap["el_phi"] = 1;
@@ -2185,10 +2203,7 @@ vector<std::pair<std::string,int> > getListOfJetBranches(std::string &algorithm,
   branchmap["el_etcone20"] = 1;
 
   branchmap["muons"] = 1;
-  branchmap["muonX"] = 1;
-  branchmap["muonY"] = 1;
-  branchmap["muonZ"] = 1;
-  branchmap["muonT"] = 1;
+
   branchmap["mu_pt"] = 1;
   branchmap["mu_eta"] = 1;
   branchmap["mu_phi"] = 1;
@@ -2197,6 +2212,7 @@ vector<std::pair<std::string,int> > getListOfJetBranches(std::string &algorithm,
   branchmap["mu_charge"] = 1;
   in.close();
 
+  // loop through all of the branches in the tree and check if they exist in the branch map
   TIter it(brancharray);
   TBranch * tb;
   while (tb = (TBranch *) it.Next())
@@ -2227,7 +2243,7 @@ std::string returnJetType(std::string & samplePrefix, std::string & groomalgo, b
   std::string jet = "";
   std::string xaod = "";
   // right now we have an issue with xAOD where it adds "Jets" before _variable, so we need a quick fix for this
-  if (xAOD)
+  if (xAODJets)
     {
       xaod = "Jets";
     }
@@ -2267,6 +2283,18 @@ std::string returnSubJetType(std::string & samplePrefix, std::string & groomalgo
 
 }// return subjettype
 
+/*
+ * Check if a branch is in the branchmap so we don't try to set branch addresses we aren't using
+ *
+ * @param branch Name of the branch to check
+ * @return bool indicating if it is in the branchmap
+ */
+bool useBranch(std::string branch)
+{
+  if (branchmap.find(branch) != branchmap.end())
+    return true;
+  return false;
+}
 
 /*
  * Adds essential output branches to the output file.
@@ -2289,101 +2317,38 @@ void addInfoBranches(TTree * tree)
 }// addInfoBranches
 
 /*
- * Set the branch addresses for the leptons being read in.
+ * Set up the branch address for a vector<TLorentzVector>.
  *
- * @param tree Pointer to the TChain being read in.
- * @param list Pointer to TObjArray that contains all of teh branches in the tree.
+ * @param tree Reference to a TChain pointer.  This is the input TTree.
+ * @param list Reference to a TObjArray pointer that contains a list of all branches in the tree.
+ * @param vec Reference to a vector<TLV> pointer which will be used to read in from the file.
+ * @param branch The name of the branch we are setting the address for.
  */
-void setLeptons(TChain * tree, TObjArray * list)
+void setVector(TChain *& tree, TObjArray *& list, vector<TLorentzVector> *& vec, string branch)//const char * branch)
 {
-  // electrons
-  if (list->FindObject("electrons"))
-    tree->SetBranchAddress("electrons", &var_electrons_vec);
+  // first check to see if the branch is actually in the tree, then check to see if we are interested in using it
+  if (list->FindObject(branch.c_str()) && useBranch(branch))
+    tree->SetBranchAddress(branch.c_str(), &vec);
   else
-    std::cout << "missing branch electrons, might cause unexpected behaviour" << std::endl;
-  if (list->FindObject("electronX"))
-    tree->SetBranchAddress("electronX", &var_electronX_vec);
-  else
-    std::cout << "missing branch electronX, might cause unexpected behaviour" << std::endl;
-  if (list->FindObject("electronY"))
-    tree->SetBranchAddress("electronY", &var_electronY_vec);
-  else
-    std::cout << "missing branch electronY, might cause unexpected behaviour" << std::endl;
-  if (list->FindObject("electronZ"))
-    tree->SetBranchAddress("electronZ", &var_electronZ_vec);
-  else
-    std::cout << "missing branch electronZ, might cause unexpected behaviour" << std::endl;
-  if (list->FindObject("electronT"))
-    tree->SetBranchAddress("electronT", &var_electronT_vec);
-  else
-    std::cout << "missing branch electronT, might cause unexpected behaviour" << std::endl;
-  if (list->FindObject("el_pt"))
-    tree->SetBranchAddress("el_pt", &var_electronPt_vec);
-  else
-    std::cout << "missing branch el_pt, might cause unexpected behaviour" << std::endl;
-  if (list->FindObject("el_eta"))
-    tree->SetBranchAddress("el_eta", &var_electronEta_vec);
-  else
-    std::cout << "missing branch el_eta, might cause unexpected behaviour" << std::endl;
-  if (list->FindObject("el_phi"))
-    tree->SetBranchAddress("el_phi", &var_electronPhi_vec);
-  else
-    std::cout << "missing branch el_phi, might cause unexpected behaviour" << std::endl;
-  if (list->FindObject("el_ptcone20"))
-    tree->SetBranchAddress("el_ptcone20", &var_el_ptcone20_vec);
-  else
-    std::cout << "missing branch el_etcone20, might cause unexpected behaviour" << std::endl;
-  if (list->FindObject("el_etcone20"))
-    tree->SetBranchAddress("el_etcone20", &var_el_etcone20_vec);
-  else
-    std::cout << "missing branch el_etcone20, might cause unexpected behaviour" << std::endl;
-  //muons
-  if (list->FindObject("muons"))
-    tree->SetBranchAddress("muons", &var_muons_vec);
-  else
-    std::cout << "missing branch muons, might cause unexpected behaviour" << std::endl;
-  if (list->FindObject("muonX"))
-    tree->SetBranchAddress("muonX", &var_muonX_vec);
-  else
-    std::cout << "missing branch muonX, might cause unexpected behaviour" << std::endl;
-  if (list->FindObject("muonY"))
-    tree->SetBranchAddress("muonY", &var_muonY_vec);
-  else
-    std::cout << "missing branch muonY, might cause unexpected behaviour" << std::endl;
-  if (list->FindObject("muonZ"))
-    tree->SetBranchAddress("muonZ", &var_muonZ_vec);
-  else
-    std::cout << "missing branch muonZ, might cause unexpected behaviour" << std::endl;
-  if (list->FindObject("muonT"))
-    tree->SetBranchAddress("muonT", &var_muonT_vec);
-  else
-    std::cout << "missing branch muonT, might cause unexpected behaviour" << std::endl;
-  if (list->FindObject("mu_pt"))
-    tree->SetBranchAddress("mu_pt", &var_muonPt_vec);
-  else
-    std::cout << "missing branch mu_pt, might cause unexpected behaviour" << std::endl;
-  if (list->FindObject("mu_eta"))
-    tree->SetBranchAddress("mu_eta", &var_muonEta_vec);
-  else
-    std::cout << "missing branch mu_eta, might cause unexpected behaviour" << std::endl;
-  if (list->FindObject("mu_phi"))
-    tree->SetBranchAddress("mu_phi", &var_muonPhi_vec);
-  else
-    std::cout << "missing branch mu_phi, might cause unexpected behaviour" << std::endl;
-  if (list->FindObject("mu_ptcone20"))
-    tree->SetBranchAddress("mu_ptcone20", &var_mu_ptcone20_vec);
-  else
-    std::cout << "missing branch mu_ptcone20, might cause unexpected behaviour" << std::endl;
-  if (list->FindObject("mu_etcone20"))
-    tree->SetBranchAddress("mu_etcone20", &var_mu_etcone20_vec);
-  else
-    std::cout << "missing branch mu_etcone20, might cause unexpected behaviour" << std::endl;
-  if (list->FindObject("mu_charge"))
-    tree->SetBranchAddress("mu_charge", &var_mu_charge_vec);
-  else
-    std::cout << "missing branch mu_charge, might cause unexpected behaviour" << std::endl;
+    std::cout << "missing branch " << branch << ", might cause unexpected behaviour" << std::endl;
+}
 
-} // setLeptons
+/*
+ * Set up the branch address for a vector<Float_t>.  Overloaded version of the one for vector<TLV>.
+ *
+ * @param tree Reference to a TChain pointer.  This is the input TTree.
+ * @param list Reference to a TObjArray pointer that contains a list of all branches in the tree.
+ * @param vec Reference to a vector<Float_t> pointer which will be used to read in from the file.
+ * @param branch The name of the branch we are setting the address for.
+ */
+void setVector(TChain *& tree, TObjArray *& list, vector<Float_t> *& vec, string branch)//const char * branch)
+{
+  // first check to see if the branch is actually in the tree, then check to see if we are interested in using it
+  if (list->FindObject(branch.c_str()) && useBranch(branch))
+    tree->SetBranchAddress(branch.c_str(), &vec);
+  else
+    std::cout << "missing branch " << branch << ", might cause unexpected behaviour" << std::endl;
+}
 
 /*
  * Erase a jet from the groomed jet collection.  It erases this entry from all jet variable collections.
@@ -2394,7 +2359,8 @@ void setLeptons(TChain * tree, TObjArray * list)
 void eraseJet(int jet, bool extendedVars)
 {
   int i = jetType::GROOMED;
-  // erasing an element/ range that doesn't exist it will cause undefined behaviour so need to check first
+  // erasing an element/ range that doesn't exist it will cause undefined behaviour
+  // so first we check if it is NULL and if it is not empty
   if (var_E_vec[i] != NULL && var_E_vec[i]->size() > jet)
     var_E_vec[i]->erase(var_E_vec[i]->begin()+jet);
   if (var_pt_vec[i] != NULL && var_pt_vec[i]->size() > jet)
@@ -2477,7 +2443,9 @@ void overlapRemoval(bool extendedVars)
 	  // dR < 0.8 remove jet from collection
 	  if (dR < 0.8)
 	    {
+	      // remove jet from collection
 	      eraseJet(it, extendedVars);
+	      // account for removed jet
 	      it--;
 	    }
 	}
@@ -2490,10 +2458,11 @@ void overlapRemoval(bool extendedVars)
  */
 void setLLJMass(int jetidx)
 {
-  // set the invariant mass of the two leptons and jet
+  // set the invariant mass of the two leptons and groomed jet
   int t = jetType::GROOMED;
   TLorentzVector j = TLorentzVector();
-  j.SetPtEtaPhiE((*var_pt_vec[t])[jetidx], (*var_eta_vec[t])[jetidx], (*var_phi_vec[t])[jetidx] ,(*var_E_vec[t])[jetidx]);
+  j.SetPtEtaPhiM((*var_pt_vec[t])[jetidx], (*var_eta_vec[t])[jetidx], (*var_phi_vec[t])[jetidx] ,(*var_m_vec[t])[jetidx]);
+  // add the jet and two leptons and get the mass.
   var_mllj = (j+var_leptons[0]+var_leptons[1]).M();
 } // setLLJMass
 
@@ -2506,8 +2475,7 @@ void setLLJMass(int jetidx)
 int eventSelection()
 {
   int lepType = leptonType::FAIL;
-  // 2 electrons or 2 muons of opposite charge
-  
+  // 2 electrons or 2 muons of opposite charge  
   if (var_electrons_vec->size() == 2)
     {
       var_mll = (var_electrons_vec->at(0)+var_electrons_vec->at(1)).M();
@@ -2520,6 +2488,7 @@ int eventSelection()
     }
   else
     {
+      // it has failed
       return lepType;
     }
   // |mll-91| < 25 gev
@@ -2563,8 +2532,15 @@ std::vector<float> dummyCharge(int size)
 bool leptonSelection(int lepType)
 {
   bool pass = true;
+  // clear all of the vectors that we are going to set here
+  var_etcone20.clear();
+  var_ptcone20.clear();
+  var_charge.clear();
+  var_leptons.clear();
+
   if (lepType == leptonType::ELECTRON)
     {
+      std::vector<float> dummyChargeVec = dummyCharge(2);
       // electron selection
       // et > 25 GeV
       for (int idx = 0; idx < 2; idx++)
@@ -2588,13 +2564,13 @@ bool leptonSelection(int lepType)
 	    {
 	      return false;
 	    }
+	  //std::cout << (*var_el_ptcone20_vec)[idx] << std::endl;
+	  var_ptcone20.push_back((*var_el_ptcone20_vec)[idx]);
+	  var_etcone20.push_back((*var_el_etcone20_vec)[idx]);
+	  var_charge.push_back(dummyChargeVec[idx]);
+	  var_leptons.push_back((*var_electrons_vec)[idx]);
 	} // for loop idx
       
-      // we haven't returned false, so set the output variables 
-      var_leptons = (*var_electrons_vec);
-      var_ptcone20 = (*var_el_ptcone20_vec);
-      var_etcone20 = (*var_el_etcone20_vec);
-      var_charge = dummyCharge(var_electrons_vec->size());
       var_isElectronEvent = 1;
       
     } // if leptype = electron
@@ -2623,13 +2599,12 @@ bool leptonSelection(int lepType)
 	    {
 	      return false;
 	    }
+	  var_ptcone20.push_back((*var_mu_ptcone20_vec)[idx]);
+	  var_etcone20.push_back((*var_mu_etcone20_vec)[idx]);
+	  var_charge.push_back((*var_mu_charge_vec)[idx]);
+	  var_leptons.push_back((*var_muons_vec)[idx]);
 	} // for loop idx
 
-      // set the output variables
-      var_leptons = (*var_muons_vec);
-      var_ptcone20 = (*var_mu_ptcone20_vec);
-      var_etcone20 = (*var_mu_etcone20_vec);
-      var_charge= (*var_mu_charge_vec);  
       var_isElectronEvent = 0;
     } // elif lepttype = muon
   else 
@@ -2650,6 +2625,7 @@ bool leptonSelection(int lepType)
 void setJetsBranches(TChain * tree, std::string &groomalgo,  std::string & groomIdx, bool extendedVars)
 {
   std::string samplePrefix = "";
+  // get a list of all the branches in the tree
   TObjArray * brancharray = tree->GetListOfBranches();
   bool addLC = false; // we use this variable to indicate whether "LC" should be in the algorithm string
   samplePrefix = algorithms.AlgoPrefix[groomIdx];
@@ -2660,7 +2636,7 @@ void setJetsBranches(TChain * tree, std::string &groomalgo,  std::string & groom
   tree->SetBranchAddress("mc_event_weight",&mc_event_weight);
   tree->SetBranchAddress("mc_channel_number", &mc_channel_number);
 
-
+  // double check to make sure the branch exists in the tree
   if (brancharray->FindObject("RunNumber"))
     tree->SetBranchAddress("RunNumber", &runNumberIn);
   if (brancharray->FindObject("nVertices"))
@@ -2669,150 +2645,76 @@ void setJetsBranches(TChain * tree, std::string &groomalgo,  std::string & groom
     tree->SetBranchAddress("averageIntPerXing",&avgIntpXingIn);
 
   
-  setLeptons(tree, brancharray);
+  //setLeptons(tree, brancharray);
+  // set up the branch addresses for the lepton variables
+  setVector(tree, brancharray, var_electrons_vec, std::string("electrons"));
+  setVector(tree, brancharray, var_electronPt_vec, std::string("el_pt"));
+  setVector(tree, brancharray, var_electronEta_vec, "el_eta");
+  setVector(tree, brancharray, var_electronPhi_vec, "el_phi");
+  setVector(tree, brancharray, var_el_ptcone20_vec, "el_ptcone20");
+  setVector(tree, brancharray, var_el_etcone20_vec, "el_etcone20");
 
+  setVector(tree, brancharray, var_muons_vec, "muons");
+  setVector(tree, brancharray, var_muonPt_vec, "mu_pt");
+  setVector(tree, brancharray, var_muonEta_vec, "mu_eta");
+  setVector(tree, brancharray, var_muonPhi_vec, "mu_phi");
+  setVector(tree, brancharray, var_mu_ptcone20_vec, "mu_ptcone20");
+  setVector(tree, brancharray, var_mu_etcone20_vec, "mu_etcone20");
+  setVector(tree, brancharray, var_mu_charge_vec, "mu_charge");
+
+  // loop through the truth, toppo and groomed jets and set up the branches for the different variables
   for (int i = 0; i < jetType::MAX; i++) // truth, topo, groomed
     {
+      std::string jetString = returnJetType(samplePrefix, groomalgo, addLC,i); //set to truth/ topo/ groomed
+      setVector(tree, brancharray, var_E_vec.at(i), std::string(jetString+"E") );
+      setVector(tree, brancharray, var_pt_vec.at(i), std::string(jetString+"pt") );
+      setVector(tree, brancharray, var_m_vec.at(i), std::string(jetString+"m") );
+      setVector(tree, brancharray, var_eta_vec.at(i), std::string(jetString+"eta") );
+      setVector(tree, brancharray, var_phi_vec.at(i), std::string(jetString+"phi") );
+      setVector(tree, brancharray, var_emfrac_vec.at(i), std::string(jetString+"emfrac") );
+      setVector(tree, brancharray, var_Tau1_vec.at(i), std::string(jetString+"Tau1") );
+      setVector(tree, brancharray, var_Tau2_vec.at(i), std::string(jetString+"Tau2") );
+      setVector(tree, brancharray, var_Tau3_vec.at(i), std::string(jetString+"Tau3") );
+      setVector(tree, brancharray, var_WIDTH_vec.at(i), std::string(jetString+"WIDTH") );
+      setVector(tree, brancharray, var_SPLIT12_vec.at(i), std::string(jetString+"SPLIT12") );
+      setVector(tree, brancharray, var_SPLIT23_vec.at(i), std::string(jetString+"SPLIT23") );
+      setVector(tree, brancharray, var_SPLIT34_vec.at(i), std::string(jetString+"SPLIT34") );
+      setVector(tree, brancharray, var_Dip12_vec.at(i), std::string(jetString+"Dip12") );
+      setVector(tree, brancharray, var_Dip13_vec.at(i), std::string(jetString+"Dip13") );
+      setVector(tree, brancharray, var_Dip23_vec.at(i), std::string(jetString+"Dip23") );
+      setVector(tree, brancharray, var_DipExcl12_vec.at(i), std::string(jetString+"DipExcl12") );
+      setVector(tree, brancharray, var_PlanarFlow_vec.at(i), std::string(jetString+"PlanarFlow") );
+      setVector(tree, brancharray, var_Angularity_vec.at(i), std::string(jetString+"Angularity") );
+      setVector(tree, brancharray, var_QW_vec.at(i), std::string(jetString+"QW") );
+      setVector(tree, brancharray, var_PullMag_vec.at(i), std::string(jetString+"PullMag") );
+      setVector(tree, brancharray, var_PullPhi_vec.at(i), std::string(jetString+"PullPhi") );
+      setVector(tree, brancharray, var_Pull_C00_vec.at(i), std::string(jetString+"Pull_C00") );
+      setVector(tree, brancharray, var_Pull_C01_vec.at(i), std::string(jetString+"Pull_C01") );
+      setVector(tree, brancharray, var_Pull_C10_vec.at(i), std::string(jetString+"Pull_C10") );
+      setVector(tree, brancharray, var_Pull_C11_vec.at(i), std::string(jetString+"Pull_C11") );
 
-      std::string jetType = returnJetType(samplePrefix, groomalgo, addLC,i); //set to truth/ topo/ groomed
-
-      if(brancharray->FindObject(std::string(jetType+"E").c_str()))
-	tree->SetBranchAddress(std::string(jetType+"E").c_str(),&var_E_vec.at(i));
-      else
-	std::cout << "branch not found: " << std::string(jetType+"E") << std::endl;
-      if(brancharray->FindObject(std::string(jetType+"pt").c_str()))
-	tree->SetBranchAddress(std::string(jetType+"pt").c_str(),&var_pt_vec.at(i));
-      else
-	std::cout << "branch not found: " << std::string(jetType+"pt") << std::endl;
-      if(brancharray->FindObject(std::string(jetType+"m").c_str()))
-	tree->SetBranchAddress(std::string(jetType+"m").c_str(),&var_m_vec.at(i));
-      else
-	std::cout << "branch not found: " << std::string(jetType+"m") << std::endl;
-      if(brancharray->FindObject(std::string(jetType+"eta").c_str()))
-	tree->SetBranchAddress(std::string(jetType+"eta").c_str(),&var_eta_vec.at(i));
-      else
-	std::cout << "branch not found: " << std::string(jetType+"eta") << std::endl;
-      if(brancharray->FindObject(std::string(jetType+"phi").c_str()))
-	tree->SetBranchAddress(std::string(jetType+"phi").c_str(),&var_phi_vec.at(i));
-      else
-	std::cout << "branch not found: " << std::string(jetType+"phi") << std::endl;
-      //tree->SetBranchStatus(std::string(jetType+"constit_index").c_str(),1);
-      //tree->SetBranchAddress(std::string(jetType+"constit_index").c_str(),&var_constit_index.at(i));
-      if (i != 0 && brancharray->FindObject(std::string(jetType+"emfrac").c_str())) // no truth emfrac
-	tree->SetBranchAddress(std::string(jetType+"emfrac").c_str(),&var_emfrac_vec.at(i));
-      else
-	std::cout << "branch not found: " << std::string(jetType+"emfrac") << std::endl;
-      if(brancharray->FindObject(std::string(jetType+"Tau1").c_str()))
-	tree->SetBranchAddress(std::string(jetType+"Tau1").c_str(),&var_Tau1_vec.at(i));
-      else
-	std::cout << "branch not found: " << std::string(jetType+"Tau1") << std::endl;
-      if(brancharray->FindObject(std::string(jetType+"Tau2").c_str()))
-	tree->SetBranchAddress(std::string(jetType+"Tau2").c_str(),&var_Tau2_vec.at(i));
-      else
-	std::cout << "branch not found: " << std::string(jetType+"Tau2") << std::endl;
-      if(brancharray->FindObject(std::string(jetType+"Tau3").c_str()))
-	tree->SetBranchAddress(std::string(jetType+"Tau3").c_str(),&var_Tau3_vec.at(i));
-      else
-	std::cout << "branch not found: " << std::string(jetType+"Tau3") << std::endl;
-      if(brancharray->FindObject(std::string(jetType+"WIDTH").c_str()))
-	tree->SetBranchAddress(std::string(jetType+"WIDTH").c_str(),&var_WIDTH_vec.at(i));
-      else
-	std::cout << "branch not found: " << std::string(jetType+"WIDTH") << std::endl;
-      if(brancharray->FindObject(std::string(jetType+"SPLIT12").c_str()))
-	tree->SetBranchAddress(std::string(jetType+"SPLIT12").c_str(),&var_SPLIT12_vec.at(i));
-      else
-	std::cout << "branch not found: " << std::string(jetType+"SPLIT12") << std::endl;
-      if(brancharray->FindObject(std::string(jetType+"SPLIT23").c_str()))
-	tree->SetBranchAddress(std::string(jetType+"SPLIT23").c_str(),&var_SPLIT23_vec.at(i));
-      else
-	std::cout << "branch not found: " << std::string(jetType+"SPLIT23") << std::endl;
-      if(brancharray->FindObject(std::string(jetType+"SPLIT34").c_str()))
-	tree->SetBranchAddress(std::string(jetType+"SPLIT34").c_str(),&var_SPLIT34_vec.at(i));
-      else
-	std::cout << "branch not found: " << std::string(jetType+"SPLIT34") << std::endl;
-      if(brancharray->FindObject(std::string(jetType+"Dip12").c_str()))
-	tree->SetBranchAddress(std::string(jetType+"Dip12").c_str(),&var_Dip12_vec.at(i));
-      else
-	std::cout << "branch not found: " << std::string(jetType+"Dip12") << std::endl;
-      if(brancharray->FindObject(std::string(jetType+"Dip13").c_str()))
-	tree->SetBranchAddress(std::string(jetType+"Dip13").c_str(),&var_Dip13_vec.at(i));
-      else
-	std::cout << "branch not found: " << std::string(jetType+"Dip13") << std::endl;
-      if(brancharray->FindObject(std::string(jetType+"Dip23").c_str()))
-	tree->SetBranchAddress(std::string(jetType+"Dip23").c_str(),&var_Dip23_vec.at(i));
-      else
-	std::cout << "branch not found: " << std::string(jetType+"Dip23") << std::endl;
-      if(brancharray->FindObject(std::string(jetType+"DipExcl12").c_str()))
-	tree->SetBranchAddress(std::string(jetType+"DipExcl12").c_str(),&var_DipExcl12_vec.at(i));
-      else
-	std::cout << "branch not found: " << std::string(jetType+"DipExcl12") << std::endl;
-      if(brancharray->FindObject(std::string(jetType+"PlanarFlow").c_str()))
-	tree->SetBranchAddress(std::string(jetType+"PlanarFlow").c_str(),&var_PlanarFlow_vec.at(i));
-      else
-	std::cout << "branch not found: " << std::string(jetType+"PlanarFlow") << std::endl;
-      if(brancharray->FindObject(std::string(jetType+"Angularity").c_str()))
-	tree->SetBranchAddress(std::string(jetType+"Angularity").c_str(),&var_Angularity_vec.at(i));
-      else
-	std::cout << "branch not found: " << std::string(jetType+"Angularity") << std::endl;
-      if(brancharray->FindObject(std::string(jetType+"QW").c_str()))
-	tree->SetBranchAddress(std::string(jetType+"QW").c_str(),&var_QW_vec.at(i));
-      else
-	std::cout << "branch not found: " << std::string(jetType+"QW") << std::endl;
-      if(brancharray->FindObject(std::string(jetType+"PullMag").c_str()))
-	tree->SetBranchAddress(std::string(jetType+"PullMag").c_str(),&var_PullMag_vec.at(i));
-      else
-	std::cout << "branch not found: " << std::string(jetType+"PullMag") << std::endl;
-      if(brancharray->FindObject(std::string(jetType+"PullPhi").c_str()))
-	tree->SetBranchAddress(std::string(jetType+"PullPhi").c_str(),&var_PullPhi_vec.at(i));
-      else
-	std::cout << "branch not found: " << std::string(jetType+"PullPhi") << std::endl;
-      if(brancharray->FindObject(std::string(jetType+"Pull_C00").c_str()))
-	tree->SetBranchAddress(std::string(jetType+"Pull_C00").c_str(),&var_Pull_C00_vec.at(i));
-      else
-	std::cout << "branch not found: " << std::string(jetType+"Pull_C00") << std::endl;
-      if(brancharray->FindObject(std::string(jetType+"Pull_C01").c_str()))
-	tree->SetBranchAddress(std::string(jetType+"Pull_C01").c_str(),&var_Pull_C01_vec.at(i));
-      else
-	std::cout << "branch not found: " << std::string(jetType+"Pull_C01") << std::endl;
-      if(brancharray->FindObject(std::string(jetType+"Pull_C10").c_str()))
-	tree->SetBranchAddress(std::string(jetType+"Pull_C10").c_str(),&var_Pull_C10_vec.at(i));
-      else
-	std::cout << "branch not found: " << std::string(jetType+"Pull_C10") << std::endl;
-      if(brancharray->FindObject(std::string(jetType+"Pull_C11").c_str()))
-	tree->SetBranchAddress(std::string(jetType+"Pull_C11").c_str(),&var_Pull_C11_vec.at(i));
-      else
-	std::cout << "branch not found: " << std::string(jetType+"Pull_C11") << std::endl;
-
+      // if using tauwta and zcut
       if (extendedVars)
 	{
-	  if(brancharray->FindObject(std::string(jetType+"TauWTA1").c_str()))
-	    tree->SetBranchAddress(std::string(jetType+"TauWTA1").c_str(),&var_TauWTA1_vec.at(i));
-	  else
-	    std::cout << "branch not found: " << std::string(jetType+"TauWTA1") << std::endl;
-	  if(brancharray->FindObject(std::string(jetType+"TauWTA2").c_str()))
-	    tree->SetBranchAddress(std::string(jetType+"TauWTA2").c_str(),&var_TauWTA2_vec.at(i));
-	  else
-	    std::cout << "branch not found: " << std::string(jetType+"TauWTA2") << std::endl;
-	  if(brancharray->FindObject(std::string(jetType+"ZCUT12").c_str()))
-	    tree->SetBranchAddress(std::string(jetType+"ZCUT12").c_str(),&var_ZCUT12_vec.at(i));
-	  else
-	    std::cout << "branch not found: " << std::string(jetType+"ZCUT12") << std::endl;
+	  setVector(tree, brancharray, var_TauWTA1_vec.at(i), std::string(jetString+"TauWTA1") );
+	  setVector(tree, brancharray, var_TauWTA2_vec.at(i), std::string(jetString+"TauWTA2") );
+	  setVector(tree, brancharray, var_ZCUT12_vec.at(i), std::string(jetString+"ZCUT12") );
 	}
 
     } // end for loop over topo/truth/groom
 
-  std::string jetType = returnJetType( samplePrefix, groomalgo, addLC, 2); //set to truth/ topo/ groomed
+  std::string jetString = returnJetType( samplePrefix, groomalgo, addLC, 2); //set to truth/ topo/ groomed
 
   if (subjetspre) // if the sample has the pre-calculated subjet variables
     {
-      if(brancharray->FindObject(std::string(jetType+"config_massFraction").c_str() ) )
-	tree->SetBranchAddress(std::string(jetType+"config_massFraction").c_str(),&var_massFraction_vec);
+      if(brancharray->FindObject(std::string(jetString+"config_massFraction").c_str() ) )
+	tree->SetBranchAddress(std::string(jetString+"config_massFraction").c_str(),&var_massFraction_vec);
       else
-	std::cout << "branch not found: " << std::string(jetType+"config_massFraction") << std::endl;
-      if(brancharray->FindObject(std::string(jetType+"config_ktycut2").c_str()))
-	tree->SetBranchAddress(std::string(jetType+"config_ktycut2").c_str(),&var_ktycut2_vec);
+	std::cout << "branch not found: " << std::string(jetString+"config_massFraction") << std::endl;
+      if(brancharray->FindObject(std::string(jetString+"config_ktycut2").c_str()))
+	tree->SetBranchAddress(std::string(jetString+"config_ktycut2").c_str(),&var_ktycut2_vec);
       else
-	std::cout << "branch not found: " << std::string(jetType+"config_ktycut2") << std::endl;
+	std::cout << "branch not found: " << std::string(jetString+"config_ktycut2") << std::endl;
     }
 
   if (!subjetscalc) // if the sample has the subjet branches available to create massdrop and yt
@@ -2830,6 +2732,7 @@ void setJetsBranches(TChain * tree, std::string &groomalgo,  std::string & groom
     return;
   }
 
+  // subjet kinematics
   tree->SetBranchAddress(std::string(subjetType+"E").c_str(),&var_subjets_E_vec);
   tree->SetBranchAddress(std::string(subjetType+"pt").c_str(),&var_subjets_pt_vec);
   tree->SetBranchAddress(std::string(subjetType+"m").c_str(),&var_subjets_m_vec);
@@ -2856,7 +2759,7 @@ void addSubJets(TTree * tree, std::string & groomalgo, std::string &  groomIdx)
   if (algorithms.AlgoType[groomIdx].find("recluster") == std::string::npos) // we're doing reclustering
     addLC = true; // just add the LC to the name
 
-  std::string jetType = returnJetType( samplePrefix, groomalgo, addLC, 2); //set to truth/ topo/ groomed
+  std::string jetString = returnJetType( samplePrefix, groomalgo, addLC, 2); //set to truth/ topo/ groomed
   std::string subjetType = returnSubJetType(samplePrefix, groomIdx, addLC);
   if (subjetscalc)
     {
@@ -2867,8 +2770,8 @@ void addSubJets(TTree * tree, std::string & groomalgo, std::string &  groomIdx)
       tree->Branch(std::string(subjetType+"phi").c_str(),&var_subjets_phi,std::string(subjetType+"phi/F").c_str());
     }
 
-  tree->Branch(std::string(jetType+"massdrop").c_str(),&var_massdrop, std::string(jetType+"massdrop/F").c_str());
-  tree->Branch(std::string(jetType+"yt").c_str(),&var_yt,std::string(jetType+"yt/F").c_str());
+  tree->Branch(std::string(jetString+"massdrop").c_str(),&var_massdrop, std::string(jetString+"massdrop/F").c_str());
+  tree->Branch(std::string(jetString+"yt").c_str(),&var_yt,std::string(jetString+"yt/F").c_str());
 
 } //addSubJets()
 
@@ -2881,9 +2784,9 @@ void addSubJets(TTree * tree, std::string & groomalgo, std::string &  groomIdx)
 void addLeptonBranches(TTree * tree)
 {
   tree->Branch("leptons",&var_leptons);
-  tree->Branch("ptcone20", &var_ptcone20, "ptcone20/F");
-  tree->Branch("etcone20", &var_etcone20, "etcone20/F");
-  tree->Branch("charge", &var_charge, "charge/F");
+  tree->Branch("ptcone20", &var_ptcone20);//, "ptcone20/F");
+  tree->Branch("etcone20", &var_etcone20);//, "etcone20/F");
+  tree->Branch("charge", &var_charge);//, "charge/F");
   tree->Branch("mass_llj", &var_mllj, "mass_mllj/F");
   tree->Branch("mll", &var_mll, "mll/F");
   tree->Branch("isElectronEvent", &var_isElectronEvent, "isElectronEvent/I");
@@ -2984,10 +2887,7 @@ void initVectors(bool extendedVars)
   var_subjets_phi_vec = 0;
   
   var_electrons_vec = 0;
-  var_electronX_vec = 0;
-  var_electronY_vec = 0;
-  var_electronZ_vec = 0;
-  var_electronT_vec = 0;
+
   var_electronPhi_vec = 0;
   var_electronEta_vec = 0;
   var_electronPt_vec = 0;
@@ -2995,10 +2895,7 @@ void initVectors(bool extendedVars)
   var_el_etcone20_vec = 0;
 
   var_muons_vec = 0;
-  var_muonX_vec = 0;
-  var_muonY_vec = 0;
-  var_muonZ_vec = 0;
-  var_muonT_vec = 0;
+
   var_muonPt_vec = 0;
   var_muonEta_vec = 0;
   var_muonPhi_vec = 0;
@@ -3016,44 +2913,28 @@ void setLeptonVectors()
 {
 
   int elsize = 0;
-  if (var_electronX_vec != NULL)
-    elsize = var_electronX_vec->size();
-  else if (var_electronPt_vec != NULL)
+
+  if (var_electronPt_vec != NULL)
     elsize = var_electronPt_vec->size();
 
   for (int x = 0; x < elsize; x++) // loop through all electrons
     {
-      if (var_electronPt_vec != NULL)
-	{
-	  TLorentzVector e = TLorentzVector();
-	  e.SetPtEtaPhiM((*var_electronPt_vec)[x], (*var_electronEta_vec)[x], (*var_electronPhi_vec)[x], ELMASS);
-	  electrons.push_back(e);
-	}
-      else if (var_electronX_vec != NULL)
-	{
-	  TLorentzVector e = TLorentzVector((*var_electronX_vec)[x], (*var_electronY_vec)[x], (*var_electronZ_vec)[x], (*var_electronT_vec)[x]);
-	  electrons.push_back(e);
-	}
+      TLorentzVector e = TLorentzVector();
+      e.SetPtEtaPhiM((*var_electronPt_vec)[x], (*var_electronEta_vec)[x], (*var_electronPhi_vec)[x], ELMASS);
+      electrons.push_back(e);
+      
     }
 
   int musize = 0;
-  if (var_muonX_vec != NULL)
-    musize = var_muonX_vec->size();
-  else if (var_muonPt_vec != NULL)
+  if (var_muonPt_vec != NULL)
     musize = var_muonPt_vec->size();
   TLorentzVector m = TLorentzVector();
   for (int x = 0; x < musize; x++)
     {
-      if (var_muonPt_vec != NULL)
-	{
-	  m.SetPtEtaPhiM((*var_muonPt_vec)[x], (*var_muonEta_vec)[x], (*var_muonPhi_vec)[x], MUMASS);
-	  muons.push_back(m);
-	}
-      else if (var_muonX_vec !=  NULL)
-	{
-	  m.SetXYZT((*var_muonX_vec)[x], (*var_muonY_vec)[x], (*var_muonZ_vec)[x], (*var_muonT_vec)[x]);
-	  muons.push_back(m);
-	}
+      
+      m.SetPtEtaPhiM((*var_muonPt_vec)[x], (*var_muonEta_vec)[x], (*var_muonPhi_vec)[x], MUMASS);
+      muons.push_back(m);
+      
     }
   
 
@@ -3063,27 +2944,38 @@ void setLeptonVectors()
 /*
  * Set all of the output variables.  These are set to variables calculated per event or to variables read in. 
  * This also sets the weights for the output file.
- *
- * @param extendedVars Flag indicating if TauWTA1/2 and ZCUT12 are being used.
+ * 
+* @param extendedVars Flag indicating if TauWTA1/2 and ZCUT12 are being used.
  * @param jet_idx_truth The index of the truth jet being used.
  * @param jet_idx_topo The index of the topo jet being used.
  * @param jet_idx_groomed The index of the groomed jet being used.
  * @param subjet_idx The index of the groomed jet within the subjet collection.
+ * @param groomalgo The abbreviated name of the algorithm.
+ * @param groomIdx The full name of the algorithm.
  */
-void setOutputVariables(bool extendedVars, int jet_idx_truth, int jet_idx_topo, int jet_idx_groomed, int subjet_idx)
+void setOutputVariables(bool extendedVars, int jet_idx_truth, int jet_idx_topo, int jet_idx_groomed, int subjet_idx, std::string & groomalgo, std::string &  groomIdx)
 {
-
+  // set to 0 for now
   int jet_idx = 0;
+  // set some of the variables that are not collections/ vectors
   mc_event_weight_out = mc_event_weight;
   mc_channel_number_out = mc_channel_number;
   runNumberOut = runNumberIn;
   nvtxOut = nvtxIn;
   avgIntpXingOut = avgIntpXingIn;
 
+  std::string samplePrefix = ""; // AntiKt10/ CamKt12 for example
+  bool addLC = false; // some algorithms have "LC" in their name
+  samplePrefix = algorithms.AlgoPrefix[groomIdx];
+
+  if (algorithms.AlgoType[groomIdx].find("recluster") == std::string::npos) // we're doing reclustering
+    addLC = true; // just add the LC to the name
+
   // default weights
   var_k_factor = 1.0;  
   var_filter_eff = 1.0;
   var_xs = 1.0;
+  // check if the weights read in from the file have entries for this channel number
   if (k_factors.count(long(mc_channel_number)) > 0 )
     {
       var_k_factor = k_factors[long(mc_channel_number)];
@@ -3098,18 +2990,19 @@ void setOutputVariables(bool extendedVars, int jet_idx_truth, int jet_idx_topo, 
     {
       var_xs = xs[long(mc_channel_number)];
     }
-  
+
+  // loop through the different types of jets and set the output variables
   for (int x = 0; x < jetType::MAX ; x++)
     {
       switch (x)
 	{
-	case 0://jetType::TRUTH:
+	case jetType::TRUTH:
 	  jet_idx = jet_idx_truth;
 	  break;
-	case 1://jetType::TOPO:
+	case jetType::TOPO:
 	  jet_idx = jet_idx_topo;
 	  break;
-	case 2://jetType::GROOMED:
+	case jetType::GROOMED:
 	  jet_idx = jet_idx_groomed;
 	  break;
 	}
@@ -3117,65 +3010,72 @@ void setOutputVariables(bool extendedVars, int jet_idx_truth, int jet_idx_topo, 
       if (jet_idx == -99) // mostly just topo jets
 	continue;
       
-      if (var_E_vec[x] != NULL)
+      string jetString = returnJetType( samplePrefix, groomalgo, addLC, x); //set to truth/ topo/ groomed;
+      
+      // before setting the output variable we check to see if the variable we are setting up is
+      // not null and if we are wanting to write out that information anyway.
+      if (var_E_vec[x] != NULL && useBranch(string(jetString+"E")))
 	var_E[x]=(*var_E_vec[x])[jet_idx];
-      if (var_pt_vec[x] != NULL)
+      if (var_pt_vec[x] != NULL && useBranch(string(jetString+"pt")))
 	var_pt[x]=(*var_pt_vec[x])[jet_idx];
-      if (var_m_vec[x] != NULL)
+      if (var_m_vec[x] != NULL && useBranch(string(jetString+"m")))
 	var_m[x]=(*var_m_vec[x])[jet_idx];
-      if (var_eta_vec[x] != NULL)
+      if (var_eta_vec[x] != NULL && useBranch(string(jetString+"eta")))
 	var_eta[x]=(*var_eta_vec[x])[jet_idx];
-      if (var_phi_vec[x] != NULL)
+      if (var_phi_vec[x] != NULL && useBranch(string(jetString+"phi")))
 	var_phi[x]=(*var_phi_vec[x])[jet_idx];
-      if (x!=0 && !xAOD)
+      if (x!=0 && xAODemfrac && useBranch(string(jetString +"emfrac")))
 	var_emfrac[x]=(*var_emfrac_vec[x])[jet_idx];
-      if (var_Tau1_vec[x] != NULL)
+      if (var_Tau1_vec[x] != NULL && useBranch(string(jetString+"Tau1")))
 	var_Tau1[x]=(*var_Tau1_vec[x])[jet_idx];
-      if (var_Tau2_vec[x] != NULL)
+      if (var_Tau2_vec[x] != NULL && useBranch(string(jetString+"Tau2")))
 	var_Tau2[x]=(*var_Tau2_vec[x])[jet_idx];
-      if (var_Tau3_vec[x] != NULL)
+      if (var_Tau3_vec[x] != NULL && useBranch(string(jetString+"Tau3")))
 	var_Tau3[x]=(*var_Tau3_vec[x])[jet_idx];
-      if (var_WIDTH_vec[x] != NULL)
+      if (var_WIDTH_vec[x] != NULL && useBranch(string(jetString+"WIDTH")))
 	var_WIDTH[x]=(*var_WIDTH_vec[x])[jet_idx];
-      if (var_SPLIT12_vec[x] != NULL)
+      if (var_SPLIT12_vec[x] != NULL && useBranch(string(jetString+"SPLIT12")))
 	var_SPLIT12[x]=(*var_SPLIT12_vec[x])[jet_idx];
-      if (var_SPLIT23_vec[x] != NULL)
+      if (var_SPLIT23_vec[x] != NULL && useBranch(string(jetString+"SPLIT23")))
 	var_SPLIT23[x]=(*var_SPLIT23_vec[x])[jet_idx];
-      if (var_SPLIT34_vec[x] != NULL)
+      if (var_SPLIT34_vec[x] != NULL && useBranch(string(jetString+"SPLIT34")))
 	var_SPLIT34[x]=(*var_SPLIT34_vec[x])[jet_idx];
-      if (var_Dip12_vec[x] != NULL)
+      if (var_Dip12_vec[x] != NULL && useBranch(string(jetString+"Dip12")))
 	var_Dip12[x]=(*var_Dip12_vec[x])[jet_idx];
-      if (var_Dip13_vec[x] != NULL)
+      if (var_Dip13_vec[x] != NULL && useBranch(string(jetString+"Dip13")))
 	var_Dip13[x]=(*var_Dip13_vec[x])[jet_idx];
-      if (var_Dip23_vec[x] != NULL)
+      if (var_Dip23_vec[x] != NULL && useBranch(string(jetString+"Dip23")))
 	var_Dip23[x]=(*var_Dip23_vec[x])[jet_idx];
-      if (var_DipExcl12_vec[x] != NULL)
+      if (var_DipExcl12_vec[x] != NULL && useBranch(string(jetString+"DipExcl12")))
 	var_DipExcl12[x]=(*var_DipExcl12_vec[x])[jet_idx];
-      if (var_PlanarFlow_vec[x] != NULL)
+      if (var_PlanarFlow_vec[x] != NULL && useBranch(string(jetString+"PlanarFlow")))
 	var_PlanarFlow[x]=(*var_PlanarFlow_vec[x])[jet_idx];
-      if (var_Angularity_vec[x] != NULL)
+      if (var_Angularity_vec[x] != NULL && useBranch(string(jetString+"Angularity")))
 	var_Angularity[x]=(*var_Angularity_vec[x])[jet_idx];
-      if (var_QW_vec[x] != NULL)
+      if (var_QW_vec[x] != NULL && useBranch(string(jetString+"QW")))
 	var_QW[x]=(*var_QW_vec[x])[jet_idx];
-      if (var_PullMag_vec[x] != NULL)
+      if (var_PullMag_vec[x] != NULL && useBranch(string(jetString+"PullMag")))
 	var_PullMag[x]=(*var_PullMag_vec[x])[jet_idx];
-      if (var_PullPhi_vec[x] != NULL)
+      if (var_PullPhi_vec[x] != NULL && useBranch(string(jetString+"PullPhi")))
 	var_PullPhi[x]=(*var_PullPhi_vec[x])[jet_idx];
-      if (var_Pull_C00_vec[x] != NULL)
+      if (var_Pull_C00_vec[x] != NULL && useBranch(string(jetString+"Pull_C00")))
 	var_Pull_C00[x]=(*var_Pull_C00_vec[x])[jet_idx];
-      if (var_Pull_C01_vec[x] != NULL)
+      if (var_Pull_C01_vec[x] != NULL && useBranch(string(jetString+"Pull_C01")))
 	var_Pull_C01[x]=(*var_Pull_C01_vec[x])[jet_idx];
-      if (var_Pull_C10_vec[x] != NULL)
+      if (var_Pull_C10_vec[x] != NULL && useBranch(string(jetString+"Pull_C10")))
 	var_Pull_C10[x]=(*var_Pull_C10_vec[x])[jet_idx];
-      if (var_Pull_C11_vec[x] != NULL)
+      if (var_Pull_C11_vec[x] != NULL && useBranch(string(jetString+"Pull_C11")))
 	var_Pull_C11[x]=(*var_Pull_C11_vec[x])[jet_idx];
       // tau21 is set in the main loop, not here, because we have to calculate it
 
       if (extendedVars)
 	{
-	  var_TauWTA1[x]=(*var_TauWTA1_vec[x])[jet_idx];
-	  var_TauWTA2[x]=(*var_TauWTA2_vec[x])[jet_idx];
-	  var_ZCUT12[x]=(*var_ZCUT12_vec[x])[jet_idx];
+	  if (useBranch(string(jetString+"TauWTA1")))
+	      var_TauWTA1[x]=(*var_TauWTA1_vec[x])[jet_idx];
+	  if (useBranch(string(jetString+"TauWTA2")))
+	      var_TauWTA2[x]=(*var_TauWTA2_vec[x])[jet_idx];
+	  if (useBranch(string(jetString+"ZCUT12")))
+	    var_ZCUT12[x]=(*var_ZCUT12_vec[x])[jet_idx];
 	}
     } // end for loop
 
