@@ -97,7 +97,7 @@ std::string returnJetType(std::string & samplePrefix, std::string & groomalgo, b
 std::string returnSubJetType(std::string & samplePrefix, std::string & groomalgo, bool addLC);
 void clearVectors();
 void clearOutputVariables();
-void setOutputVariables(bool extendedVars, int idx1, int idx2, int idx3, int subidx);
+void setOutputVariables(bool extendedVars, int idx1, int idx2, int idx3, int subidx, std::string & groomalgo, std::string & groomIdx);
 void setOutputBranches(TTree* tree, std::string & algorithm, std::string & groomIdx, bool extendedVars);
 void resetOutputVariables();
 void getMPV();
@@ -112,6 +112,11 @@ void setLeptons(TChain * tree, TObjArray * list);
 void addLeptonBranches(TChain * tree);
 void setLeptonVectors();
 std::vector<float> dummyCharge(int size);
+void setVector(TChain *& tree, TObjArray *& list, vector<TLorentzVector> *& vec, std::string branch);//, const char * branch);//std::string & branch);
+
+void setVector(TChain *& tree, TObjArray *& list, vector<Float_t> *& vec, std::string branch);//, const char * branch);//std::string & branch);
+bool useBranch(std::string branch);
+void setLLJMass(int jetidx);
 
 enum class groomAlgoEnum{groomZero, TopoSplitFilteredMu67SmallR0YCut9, TopoSplitFilteredMu100SmallR30YCut4, TopoTrimmedPtFrac5SmallR30, TopoTrimmedPtFrac5SmallR20, TopoPrunedCaRcutFactor50Zcut10, TopoPrunedCaRcutFactor50Zcut20, AntiKt2LCTopo, AntiKt3LCTopo, AntiKt4LCTopo};
 enum sampleType{BACKGROUND,SIGNAL};
@@ -146,6 +151,7 @@ struct Algorithms algorithms;
 std::string fileid_global;
 std::string treeName;
 std::string branchesFile;
+std::map<string, int> branchmap;
 float GEV = 1000.;
 float ELMASS = 0.511;
 float MUMASS = 105.7;
@@ -174,7 +180,8 @@ Float_t avgIntpXingIn = 0;
 // xaod expects UInt_t, but D3PDs Int_t. This is annoying and will cause problems
 UInt_t nvtxIn = 0;
 UInt_t nvtxOut = 0;
-bool xAOD = false;
+bool xAODJets = false;
+bool xAODemfrac = false;
 //QCD split filtering with Y cut 9
 vector<float> * qcd_CA12_truth_pt = 0;
 vector<float> * qcd_CA12_truth_eta = 0;
@@ -399,37 +406,37 @@ std::map<long, float> xs;
 
 
 
-std::map<int, std::vector<Float_t> *> var_E_vec;
-std::map<int, std::vector<Float_t> *> var_pt_vec;
-std::map<int, std::vector<Float_t> *> var_m_vec;
-std::map<int, std::vector<Float_t> *> var_eta_vec;
-std::map<int, std::vector<Float_t> *> var_phi_vec;
-std::map<int, std::vector<Float_t> *> var_emfrac_vec;
-std::map<int, std::vector<Float_t> *> var_Tau1_vec;
-std::map<int, std::vector<Float_t> *> var_Tau2_vec;
-std::map<int, std::vector<Float_t> *> var_Tau3_vec;
-std::map<int, std::vector<Float_t> *> var_WIDTH_vec;
-std::map<int, std::vector<Float_t> *> var_SPLIT12_vec;
-std::map<int, std::vector<Float_t> *> var_SPLIT23_vec;
-std::map<int, std::vector<Float_t> *> var_SPLIT34_vec;
-std::map<int, std::vector<Float_t> *> var_Dip12_vec;
-std::map<int, std::vector<Float_t> *> var_Dip13_vec;
-std::map<int, std::vector<Float_t> *> var_Dip23_vec;
-std::map<int, std::vector<Float_t> *> var_DipExcl12_vec;
-std::map<int, std::vector<Float_t> *> var_PlanarFlow_vec;
-std::map<int, std::vector<Float_t> *> var_Angularity_vec;
-std::map<int, std::vector<Float_t> *> var_QW_vec;
-std::map<int, std::vector<Float_t> *> var_PullMag_vec;
-std::map<int, std::vector<Float_t> *> var_PullPhi_vec;
-std::map<int, std::vector<Float_t> *> var_Pull_C00_vec;
-std::map<int, std::vector<Float_t> *> var_Pull_C01_vec;
-std::map<int, std::vector<Float_t> *> var_Pull_C10_vec;
-std::map<int, std::vector<Float_t> *> var_Pull_C11_vec;
+std::map<int, std::vector<float> *> var_E_vec;
+std::map<int, std::vector<float> *> var_pt_vec;
+std::map<int, std::vector<float> *> var_m_vec;
+std::map<int, std::vector<float> *> var_eta_vec;
+std::map<int, std::vector<float> *> var_phi_vec;
+std::map<int, std::vector<float> *> var_emfrac_vec;
+std::map<int, std::vector<float> *> var_Tau1_vec;
+std::map<int, std::vector<float> *> var_Tau2_vec;
+std::map<int, std::vector<float> *> var_Tau3_vec;
+std::map<int, std::vector<float> *> var_WIDTH_vec;
+std::map<int, std::vector<float> *> var_SPLIT12_vec;
+std::map<int, std::vector<float> *> var_SPLIT23_vec;
+std::map<int, std::vector<float> *> var_SPLIT34_vec;
+std::map<int, std::vector<float> *> var_Dip12_vec;
+std::map<int, std::vector<float> *> var_Dip13_vec;
+std::map<int, std::vector<float> *> var_Dip23_vec;
+std::map<int, std::vector<float> *> var_DipExcl12_vec;
+std::map<int, std::vector<float> *> var_PlanarFlow_vec;
+std::map<int, std::vector<float> *> var_Angularity_vec;
+std::map<int, std::vector<float> *> var_QW_vec;
+std::map<int, std::vector<float> *> var_PullMag_vec;
+std::map<int, std::vector<float> *> var_PullPhi_vec;
+std::map<int, std::vector<float> *> var_Pull_C00_vec;
+std::map<int, std::vector<float> *> var_Pull_C01_vec;
+std::map<int, std::vector<float> *> var_Pull_C10_vec;
+std::map<int, std::vector<float> *> var_Pull_C11_vec;
 
-std::map<int, std::vector<Float_t> *> var_TauWTA1_vec; 
-std::map<int, std::vector<Float_t> *> var_TauWTA2_vec; 
-std::map<int, std::vector<Float_t> *> var_TauWTA2TauWTA1_vec; 
-std::map<int, std::vector<Float_t> *> var_ZCUT12_vec;
+std::map<int, std::vector<float> *> var_TauWTA1_vec; 
+std::map<int, std::vector<float> *> var_TauWTA2_vec; 
+std::map<int, std::vector<float> *> var_TauWTA2TauWTA1_vec; 
+std::map<int, std::vector<float> *> var_ZCUT12_vec;
 
 Float_t var_massFraction_vec;
 Float_t var_ktycut2_vec;
@@ -439,27 +446,21 @@ Float_t var_ktycut2_vec;
 // electrons in
 vector<TLorentzVector> * var_electrons_vec;
 std::vector<TLorentzVector> electrons;
-std::vector<Float_t> * var_electronX_vec;
-std::vector<Float_t> * var_electronY_vec;
-std::vector<Float_t> * var_electronZ_vec;
-std::vector<Float_t> * var_electronT_vec;
-std::vector<Float_t> * var_electronPt_vec;
-std::vector<Float_t> * var_electronEta_vec;
-std::vector<Float_t> * var_electronPhi_vec;
-//std::vector<Float_t> * var_electronT_vec;
-std::vector<Float_t> * var_el_ptcone20_vec;
-std::vector<Float_t> * var_el_etcone20_vec;
+
+std::vector<float> * var_electronPt_vec;
+std::vector<float> * var_electronEta_vec;
+std::vector<float> * var_electronPhi_vec;
+//std::vector<float> * var_electronT_vec;
+std::vector<float> * var_el_ptcone20_vec;
+std::vector<float> * var_el_etcone20_vec;
 
 // muons in
 std::vector<TLorentzVector> * var_muons_vec;
 std::vector<TLorentzVector> muons;
-std::vector<Float_t> * var_muonX_vec;
-std::vector<Float_t> * var_muonY_vec;
-std::vector<Float_t> * var_muonZ_vec;
-std::vector<Float_t> * var_muonT_vec;
-std::vector<Float_t> * var_muonPt_vec;
-std::vector<Float_t> * var_muonEta_vec;
-std::vector<Float_t> * var_muonPhi_vec;
+
+std::vector<float> * var_muonPt_vec;
+std::vector<float> * var_muonEta_vec;
+std::vector<float> * var_muonPhi_vec;
 std::vector<float> * var_mu_ptcone20_vec;
 std::vector<float> * var_mu_etcone20_vec;
 std::vector<float> * var_mu_charge_vec;
@@ -469,52 +470,52 @@ std::map<int, std::vector<std::vector < int>  > * > var_constit_index;
 
 std::vector<std::vector <int> > * subjet_index;
 
-std::vector<Float_t> * var_subjets_E_vec;
-std::vector<Float_t> * var_subjets_pt_vec;
-std::vector<Float_t> * var_subjets_m_vec;
-std::vector<Float_t> * var_subjets_eta_vec;
-std::vector<Float_t> * var_subjets_phi_vec;
-//std::vector<Float_t> var_massdrop_vec;
-//std::vector<Float_t> var_yt_vec;
-//std::map<int, std::vector<Float_t> > var_Tau21_vec;
+std::vector<float> * var_subjets_E_vec;
+std::vector<float> * var_subjets_pt_vec;
+std::vector<float> * var_subjets_m_vec;
+std::vector<float> * var_subjets_eta_vec;
+std::vector<float> * var_subjets_phi_vec;
+//std::vector<float> var_massdrop_vec;
+//std::vector<float> var_yt_vec;
+//std::map<int, std::vector<float> > var_Tau21_vec;
 
 
 // variables that we write out to the outfile
 
 // store one value each for truth, topo, groomed
-std::vector<Float_t> var_E;
-std::vector<Float_t> var_pt;
-std::vector<Float_t> var_m;
-std::vector<Float_t> var_eta;
-std::vector<Float_t> var_phi;
-std::vector<Float_t> var_emfrac;
-std::vector<Float_t> var_Tau1;
-std::vector<Float_t> var_Tau2;
-std::vector<Float_t> var_Tau3;
-std::vector<Float_t> var_WIDTH;
-std::vector<Float_t> var_SPLIT12;
-std::vector<Float_t> var_SPLIT23;
-std::vector<Float_t> var_SPLIT34;
-std::vector<Float_t> var_Dip12;
-std::vector<Float_t> var_Dip13;
-std::vector<Float_t> var_Dip23;
-std::vector<Float_t> var_DipExcl12;
-std::vector<Float_t> var_PlanarFlow;
-std::vector<Float_t> var_Angularity;
-std::vector<Float_t> var_QW;
-std::vector<Float_t> var_PullMag;
-std::vector<Float_t> var_PullPhi;
-std::vector<Float_t> var_Pull_C00;
-std::vector<Float_t> var_Pull_C01;
-std::vector<Float_t> var_Pull_C10;
-std::vector<Float_t> var_Pull_C11;
-std::vector<Float_t> var_Tau21;
+std::vector<float> var_E;
+std::vector<float> var_pt;
+std::vector<float> var_m;
+std::vector<float> var_eta;
+std::vector<float> var_phi;
+std::vector<float> var_emfrac;
+std::vector<float> var_Tau1;
+std::vector<float> var_Tau2;
+std::vector<float> var_Tau3;
+std::vector<float> var_WIDTH;
+std::vector<float> var_SPLIT12;
+std::vector<float> var_SPLIT23;
+std::vector<float> var_SPLIT34;
+std::vector<float> var_Dip12;
+std::vector<float> var_Dip13;
+std::vector<float> var_Dip23;
+std::vector<float> var_DipExcl12;
+std::vector<float> var_PlanarFlow;
+std::vector<float> var_Angularity;
+std::vector<float> var_QW;
+std::vector<float> var_PullMag;
+std::vector<float> var_PullPhi;
+std::vector<float> var_Pull_C00;
+std::vector<float> var_Pull_C01;
+std::vector<float> var_Pull_C10;
+std::vector<float> var_Pull_C11;
+std::vector<float> var_Tau21;
 
 
 // leptons out
 std::vector<TLorentzVector> var_leptons;
-std::vector<float> var_ptcone20;
-std::vector<float> var_etcone20;
+std::vector<Float_t> var_ptcone20;
+std::vector<Float_t> var_etcone20;
 Float_t var_mllj;
 Float_t var_mll;
 
