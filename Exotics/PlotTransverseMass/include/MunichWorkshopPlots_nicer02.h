@@ -182,6 +182,7 @@ UInt_t nvtxIn = 0;
 UInt_t nvtxOut = 0;
 bool xAODJets = false;
 bool xAODemfrac = false;
+bool hvtllqq = false;
 //QCD split filtering with Y cut 9
 vector<float> * qcd_CA12_truth_pt = 0;
 vector<float> * qcd_CA12_truth_eta = 0;
