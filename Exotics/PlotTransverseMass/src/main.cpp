@@ -92,6 +92,7 @@ int main( int argc, char * argv[] ) {
       ("branches-file", po::value<string>(&branchesFile)->default_value(""),"Name of file containing branches, otherwise Alg_branches.txt is used. Becareful with this, because if the branches are not read in then when any of them are used later on a segfault will occur, so make sure there is one that it will use.")
       ("xAOD-jets", po::value<bool>(&xAODJets)->default_value(true),"Indicate if we are running over xAOD output and there is the word Jets appended to the algorithm name.")
       ("xAOD-emfrac", po::value<bool>(&xAODemfrac)->default_value(false),"Indicate if we are running over xAOD output and emfrac is not available.")
+      ("hvtllqq-selection", po::value<bool>(&hvtllqq)->default_value(false),"Indicate if we are running the HVTllqq analysis selection.")
       ;
         
     po::options_description cmdline_options;
@@ -1935,21 +1936,23 @@ void makeMassWindowFile(bool applyMassWindow,bool extendedVars, std::string & al
 		    continue;
 		}
 
-	      // setup the TLVs for the leptons
-	      //setLeptonVectors();
-	      // do overlap removal before looking for jets
-	      overlapRemoval(extendedVars);
-	      //apply event selection
-	      int lepType = eventSelection();
-	      if (lepType == leptonType::FAIL)
+	      // apply extra lepton selections if running the hvtllqq selection
+	      if (hvtllqq)
 		{
-		  continue;
-		}
-	      
-	      // check if the lepton selection is passed for electron/ muon
-	      if (!leptonSelection(lepType))
-		{
-		  continue;
+		  // do overlap removal before looking for jets
+		  overlapRemoval(extendedVars);
+		  //apply event selection
+		  int lepType = eventSelection();
+		  if (lepType == leptonType::FAIL)
+		    {
+		      continue;
+		    }
+		  
+		  // check if the lepton selection is passed for electron/ muon
+		  if (!leptonSelection(lepType))
+		    {
+		      continue;
+		    }
 		}
 	      
 	      if (algorithms.AlgoType[groomAlgoIndex].find("truthmatch") != std::string::npos)
@@ -2459,6 +2462,8 @@ void overlapRemoval(bool extendedVars)
  */
 void setLLJMass(int jetidx)
 {
+  if (!hvtllqq)
+    return;
   // set the invariant mass of the two leptons and groomed jet
   int t = jetType::GROOMED;
   TLorentzVector j = TLorentzVector();
@@ -2475,6 +2480,11 @@ void setLLJMass(int jetidx)
 */
 int eventSelection()
 {
+  if (!hvtllqq)
+    {
+      std::cout << "running event selection when analysis is not being done, should not call this method" << std::endl;
+      return -1;
+    }
   int lepType = leptonType::FAIL;
   // 2 electrons or 2 muons of opposite charge  
   if (var_electrons_vec->size() == 2)
@@ -2532,6 +2542,8 @@ std::vector<float> dummyCharge(int size)
  */
 bool leptonSelection(int lepType)
 {
+  if (!hvtllqq) // if we are not running the hvtllqq analysis no lep selection
+    return true;
   bool pass = true;
   // clear all of the vectors that we are going to set here
   var_etcone20.clear();
@@ -2646,22 +2658,25 @@ void setJetsBranches(TChain * tree, std::string &groomalgo,  std::string & groom
     tree->SetBranchAddress("averageIntPerXing",&avgIntpXingIn);
 
   
-  //setLeptons(tree, brancharray);
-  // set up the branch addresses for the lepton variables
-  setVector(tree, brancharray, var_electrons_vec, std::string("electrons"));
-  setVector(tree, brancharray, var_electronPt_vec, std::string("el_pt"));
-  setVector(tree, brancharray, var_electronEta_vec, "el_eta");
-  setVector(tree, brancharray, var_electronPhi_vec, "el_phi");
-  setVector(tree, brancharray, var_el_ptcone20_vec, "el_ptcone20");
-  setVector(tree, brancharray, var_el_etcone20_vec, "el_etcone20");
-
-  setVector(tree, brancharray, var_muons_vec, "muons");
-  setVector(tree, brancharray, var_muonPt_vec, "mu_pt");
-  setVector(tree, brancharray, var_muonEta_vec, "mu_eta");
-  setVector(tree, brancharray, var_muonPhi_vec, "mu_phi");
-  setVector(tree, brancharray, var_mu_ptcone20_vec, "mu_ptcone20");
-  setVector(tree, brancharray, var_mu_etcone20_vec, "mu_etcone20");
-  setVector(tree, brancharray, var_mu_charge_vec, "mu_charge");
+  //
+  // set up the branch addresses for the lepton variables if running hvtllqq analysis
+  if (hvtllqq)
+    {
+      setVector(tree, brancharray, var_electrons_vec, std::string("electrons"));
+      setVector(tree, brancharray, var_electronPt_vec, std::string("el_pt"));
+      setVector(tree, brancharray, var_electronEta_vec, "el_eta");
+      setVector(tree, brancharray, var_electronPhi_vec, "el_phi");
+      setVector(tree, brancharray, var_el_ptcone20_vec, "el_ptcone20");
+      setVector(tree, brancharray, var_el_etcone20_vec, "el_etcone20");
+      
+      setVector(tree, brancharray, var_muons_vec, "muons");
+      setVector(tree, brancharray, var_muonPt_vec, "mu_pt");
+      setVector(tree, brancharray, var_muonEta_vec, "mu_eta");
+      setVector(tree, brancharray, var_muonPhi_vec, "mu_phi");
+      setVector(tree, brancharray, var_mu_ptcone20_vec, "mu_ptcone20");
+      setVector(tree, brancharray, var_mu_etcone20_vec, "mu_etcone20");
+      setVector(tree, brancharray, var_mu_charge_vec, "mu_charge");
+    }
 
   // loop through the truth, toppo and groomed jets and set up the branches for the different variables
   for (int i = 0; i < jetType::MAX; i++) // truth, topo, groomed
@@ -2784,6 +2799,8 @@ void addSubJets(TTree * tree, std::string & groomalgo, std::string &  groomIdx)
  */
 void addLeptonBranches(string & jetString, TTree * tree)
 {
+  if (!hvtllqq) // if not running hvtllqq analysis
+    return;
   tree->Branch("leptons",&var_leptons);
   tree->Branch("ptcone20", &var_ptcone20);//, "ptcone20/F");
   tree->Branch("etcone20", &var_etcone20);//, "etcone20/F");
@@ -2912,6 +2929,8 @@ void initVectors(bool extendedVars)
  */
 void setLeptonVectors()
 {
+  if(!hvtllqq) // if not running hvtlqq exit
+    return;
 
   int elsize = 0;
 
@@ -3272,8 +3291,9 @@ void setOutputBranches(TTree * tree, std::string & groomalgo, std::string & groo
 
     }
   std::string jetString = returnJetType(samplePrefix, groomalgo, addLC,jetType::GROOMED); 
-  // add the lepton branches
-  addLeptonBranches(jetString, tree);
+  // add the lepton branches if running hvtllqq analysis
+  if (hvtllqq)
+    addLeptonBranches(jetString, tree);
 } // setOutputBranches
 
 
