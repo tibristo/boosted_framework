@@ -2190,6 +2190,7 @@ vector<std::pair<std::string,int> > getListOfJetBranches(std::string &algorithm,
   branchmap["RunNumber"] = 1;
   branchmap["mc_channel_number"] = 1;
   branchmap["vxp_n"] = 1;
+  branchmap["nVertices"] = 1;
   branchmap["averageIntPerXing"] = 1;
   branchmap["mc_event_weight"] = 1;
 
@@ -2781,13 +2782,13 @@ void addSubJets(TTree * tree, std::string & groomalgo, std::string &  groomIdx)
  *
  * @param tree A TChain pointer to the output file.
  */
-void addLeptonBranches(TTree * tree)
+void addLeptonBranches(string & jetString, TTree * tree)
 {
   tree->Branch("leptons",&var_leptons);
   tree->Branch("ptcone20", &var_ptcone20);//, "ptcone20/F");
   tree->Branch("etcone20", &var_etcone20);//, "etcone20/F");
   tree->Branch("charge", &var_charge);//, "charge/F");
-  tree->Branch("mass_llj", &var_mllj, "mass_mllj/F");
+  tree->Branch(string(jetString+"mass_llj").c_str(), &var_mllj, "mass_mllj/F");
   tree->Branch("mll", &var_mll, "mll/F");
   tree->Branch("isElectronEvent", &var_isElectronEvent, "isElectronEvent/I");
 
@@ -3270,9 +3271,9 @@ void setOutputBranches(TTree * tree, std::string & groomalgo, std::string & groo
       tree->Branch(std::string(jetString+"Tau21").c_str(),&var_Tau21.at(2),std::string(jetString+"Tau21/F").c_str());  
 
     }
-
+  std::string jetString = returnJetType(samplePrefix, groomalgo, addLC,jetType::GROOMED); 
   // add the lepton branches
-  addLeptonBranches(tree);
+  addLeptonBranches(jetString, tree);
 } // setOutputBranches
 
 

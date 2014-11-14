@@ -109,7 +109,7 @@ void overlapRemoval(bool extendedVars);
 int eventSelection();
 bool leptonSelection(int lepType);
 void setLeptons(TChain * tree, TObjArray * list);
-void addLeptonBranches(TChain * tree);
+void addLeptonBranches(std::string & jetString, TChain * tree);
 void setLeptonVectors();
 std::vector<float> dummyCharge(int size);
 void setVector(TChain *& tree, TObjArray *& list, vector<TLorentzVector> *& vec, std::string branch);//, const char * branch);//std::string & branch);
