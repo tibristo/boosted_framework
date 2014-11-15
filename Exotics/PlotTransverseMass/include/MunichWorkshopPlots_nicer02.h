@@ -519,6 +519,7 @@ std::vector<Float_t> var_ptcone20;
 std::vector<Float_t> var_etcone20;
 Float_t var_mllj;
 Float_t var_mll;
+Float_t var_ptll;
 
 Int_t var_isElectronEvent = false;
 

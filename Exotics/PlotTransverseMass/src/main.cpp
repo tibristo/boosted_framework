@@ -2516,11 +2516,13 @@ int eventSelection()
   if (var_electrons_vec->size() == 2)
     {
       var_mll = (var_electrons_vec->at(0)+var_electrons_vec->at(1)).M();
+      var_ptll = (var_electrons_vec->at(0)+var_electrons_vec->at(1)).Pt();
       lepType = leptonType::ELECTRON;
     }
   else if (var_muons_vec->size() == 2 && (*var_mu_charge_vec)[0]*(*var_mu_charge_vec)[1] == -1)
     {
       var_mll = (var_muons_vec->at(0)+var_muons_vec->at(1)).M();
+      var_ptll = (var_muons_vec->at(0)+var_muons_vec->at(1)).Pt();
       lepType = leptonType::MUON;
     }
   else
@@ -2528,8 +2530,8 @@ int eventSelection()
       // it has failed
       return lepType;
     }
-  // |mll-91| < 25 gev
-  if (fabs(var_mll-91*GEV) >= 25*GEV)
+  // |mll-91| < 25 gev and ptll > 70 gev to be consistent with ttbar
+  if (fabs(var_mll-91*GEV) >= 25*GEV || fabs(var_ptll) <= 70*GEV)
     {
       return leptonType::FAIL;
     }
@@ -2833,6 +2835,7 @@ void addLeptonBranches(string & jetString, TTree * tree)
   tree->Branch("charge", &var_charge);//, "charge/F");
   tree->Branch(string(jetString+"mass_llj").c_str(), &var_mllj, "mass_mllj/F");
   tree->Branch("mll", &var_mll, "mll/F");
+  tree->Branch("ptll", &var_ptll, "ptll/F");
   tree->Branch("isElectronEvent", &var_isElectronEvent, "isElectronEvent/I");
 
 } // addLeptonBranches
@@ -3150,6 +3153,7 @@ void clearOutputVariables()
   var_isElectronEvent = 0;
   var_mllj = 0;
   var_mll = 0;
+  var_ptll = 0;
 
   electrons.clear();
   muons.clear();
