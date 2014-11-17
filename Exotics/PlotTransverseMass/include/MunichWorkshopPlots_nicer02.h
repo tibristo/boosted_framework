@@ -438,6 +438,7 @@ std::map<int, std::vector<float> *> var_TauWTA1_vec;
 std::map<int, std::vector<float> *> var_TauWTA2_vec; 
 std::map<int, std::vector<float> *> var_TauWTA2TauWTA1_vec; 
 std::map<int, std::vector<float> *> var_ZCUT12_vec;
+std::vector<float> * var_YFilt_vec;
 
 Float_t var_massFraction_vec;
 Float_t var_ktycut2_vec;
@@ -511,7 +512,7 @@ std::vector<float> var_Pull_C01;
 std::vector<float> var_Pull_C10;
 std::vector<float> var_Pull_C11;
 std::vector<float> var_Tau21;
-
+Float_t var_YFilt;
 
 // leptons out
 std::vector<TLorentzVector> var_leptons;
@@ -520,6 +521,9 @@ std::vector<Float_t> var_etcone20;
 Float_t var_mllj;
 Float_t var_mll;
 Float_t var_ptll;
+
+// store leading jet pt, before any truth matching or selections
+Float_t var_leadingJetPt;
 
 Int_t var_isElectronEvent = false;
 
