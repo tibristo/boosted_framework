@@ -1866,6 +1866,7 @@ void makeMassWindowFile(bool applyMassWindow,bool extendedVars, std::string & al
 
 	      if ((*it).second == 0)
 		{
+		  std::cout << (*it).first << std::endl;
 		  inputTChain[tchainIdx]->SetBranchStatus((*it).first.c_str(),0);
 		}
 	      
@@ -2419,6 +2420,8 @@ void eraseJet(int jet, bool extendedVars)
     var_Pull_C10_vec[i]->erase(var_Pull_C10_vec[i]->begin()+jet);
   if (var_Pull_C11_vec[i] != NULL && var_Pull_C11_vec[i]->size() > jet)
     var_Pull_C11_vec[i]->erase(var_Pull_C11_vec[i]->begin()+jet);
+  if (var_YFilt_vec != NULL && var_YFilt_vec->size() > jet)
+    var_YFilt_vec->erase(var_YFilt_vec->begin()+jet);
   
   if (extendedVars)
     {
@@ -2680,6 +2683,8 @@ void setJetsBranches(TChain * tree, std::string &groomalgo,  std::string & groom
       setVector(tree, brancharray, var_mu_charge_vec, "mu_charge");
     }
 
+  // there is only yfilt stored for groomed jets
+  setVector(tree, brancharray, var_YFilt_vec, std::string(returnJetType(samplePrefix, groomalgo, addLC,2)+"YFilt") );
   // loop through the truth, toppo and groomed jets and set up the branches for the different variables
   for (int i = 0; i < jetType::MAX; i++) // truth, topo, groomed
     {
@@ -2710,6 +2715,7 @@ void setJetsBranches(TChain * tree, std::string &groomalgo,  std::string & groom
       setVector(tree, brancharray, var_Pull_C01_vec.at(i), std::string(jetString+"Pull_C01") );
       setVector(tree, brancharray, var_Pull_C10_vec.at(i), std::string(jetString+"Pull_C10") );
       setVector(tree, brancharray, var_Pull_C11_vec.at(i), std::string(jetString+"Pull_C11") );
+
 
       // if using tauwta and zcut
       if (extendedVars)
@@ -2888,6 +2894,7 @@ void initVectors(bool extendedVars)
       var_Pull_C01_vec[i] = 0;
       var_Pull_C10_vec[i] = 0;
       var_Pull_C11_vec[i]= 0;//std::map<i, 0>;
+
   
       if (extendedVars)
 	{
@@ -2897,6 +2904,7 @@ void initVectors(bool extendedVars)
 	}
 
     }  
+  var_YFilt_vec = 0;
   var_massFraction_vec = 0;
   var_ktycut2_vec = 0;
 
@@ -3014,6 +3022,9 @@ void setOutputVariables(bool extendedVars, int jet_idx_truth, int jet_idx_topo, 
       var_xs = xs[long(mc_channel_number)];
     }
 
+  // yfilt only exists for groomed jets
+  if (var_YFilt_vec != NULL && useBranch(string(returnJetType(samplePrefix, groomalgo, addLC,2)+"YFilt")))
+    var_YFilt=(*var_YFilt_vec)[jet_idx];
   // loop through the different types of jets and set the output variables
   for (int x = 0; x < jetType::MAX ; x++)
     {
@@ -3089,6 +3100,7 @@ void setOutputVariables(bool extendedVars, int jet_idx_truth, int jet_idx_topo, 
 	var_Pull_C10[x]=(*var_Pull_C10_vec[x])[jet_idx];
       if (var_Pull_C11_vec[x] != NULL && useBranch(string(jetString+"Pull_C11")))
 	var_Pull_C11[x]=(*var_Pull_C11_vec[x])[jet_idx];
+
       // tau21 is set in the main loop, not here, because we have to calculate it
 
       if (extendedVars)
@@ -3129,6 +3141,9 @@ void clearOutputVariables()
   var_mll = 0;
   var_ptll = 0;
 
+  var_leadingJetPt = 0;
+  var_YFilt = 0;
+
   electrons.clear();
   muons.clear();
   var_E.clear();
@@ -3158,6 +3173,7 @@ void clearOutputVariables()
   var_Pull_C10.clear();
   var_Pull_C11.clear();
   var_Tau21.clear();
+
   var_TauWTA2TauWTA1.clear();
   var_TauWTA1.clear();
   var_TauWTA2.clear();
@@ -3217,6 +3233,7 @@ void resetOutputVariables()
       var_TauWTA1.push_back(-999);
       var_TauWTA2.push_back(-999);
       var_ZCUT12.push_back(-999);
+
     }
 } //resetOutputVariables
 
@@ -3275,6 +3292,7 @@ void setOutputBranches(TTree * tree, std::string & groomalgo, std::string & groo
       tree->Branch(std::string(jetString+"Pull_C01").c_str(),&var_Pull_C01.at(i),std::string(jetString+"Pull_C01/F").c_str());
       tree->Branch(std::string(jetString+"Pull_C10").c_str(),&var_Pull_C10.at(i),std::string(jetString+"Pull_C10/F").c_str());
       tree->Branch(std::string(jetString+"Pull_C11").c_str(),&var_Pull_C11.at(i),std::string(jetString+"Pull_C11/F").c_str());
+      tree->Branch(std::string(jetString+"YFilt").c_str(),&var_YFilt,std::string(jetString+"YFilt/F").c_str());
 
 
       if (extendedVars)
