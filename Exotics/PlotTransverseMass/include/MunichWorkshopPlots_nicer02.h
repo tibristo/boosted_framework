@@ -83,29 +83,29 @@ void setMassBranch(TTree * tree, std::string &algorithm, std::string & groomAlgo
 void plotVariables(TTree * tree, vector<std::string> & branches);
 std::vector<std::string> getListOfBranches(std::string &algorithm);
 //void make68Plots(int algidx, TChain * bkg, TChain * sig);
-void makeMassWindowFile(bool applyMassWindow, bool extendedVars, std::string & algorithm);
-void setJetsBranches(TChain * tree, std::string & algorithm, std::string & groomIdx, bool extendedVars);
+void makeMassWindowFile(bool applyMassWindow, std::string & algorithm);
+void setJetsBranches(TChain * tree, std::string & algorithm, std::string & groomIdx);
 void addInfoBranches(TTree * tree);
 void addSubJets(TTree * tree, std::string & algorithm, std::string & groomIdx);
 //void getBranchesSelection(TTree * tree, std::string & algorithm);
 void setSelectionVectors();
 void runAlgorithm(TChain *inputTree, TChain *inputTree1, TString groomAlgo, std::string & groomAlgoIndex, bool massHistos);
 vector<std::pair<std::string,int> > getListOfJetBranches(std::string & algorithm, TObjArray * brancharray);
-void initVectors(bool extendedVars);
+void initVectors();
 std::pair<int,int> getTwoLeadingSubjets(std::vector<int> & indices, std::vector<float> * subjets);
 std::string returnJetType(std::string & samplePrefix, std::string & groomalgo, bool addLC, int idx);
 std::string returnSubJetType(std::string & samplePrefix, std::string & groomalgo, bool addLC);
 void clearVectors();
 void clearOutputVariables();
-void setOutputVariables(bool extendedVars, int idx1, int idx2, int idx3, int subidx, std::string & groomalgo, std::string & groomIdx);
-void setOutputBranches(TTree* tree, std::string & algorithm, std::string & groomIdx, bool extendedVars);
+void setOutputVariables(int idx1, int idx2, int idx3, int subidx, std::string & groomalgo, std::string & groomIdx);
+void setOutputBranches(TTree* tree, std::string & algorithm, std::string & groomIdx);
 void resetOutputVariables();
 void getMPV();
 void scaleHists();
 void setAddress(TChain * tree, std::string  name, std::vector<Float_t> * var_vec);
 void readWeights();
 void createPtReweightFile(TH1F * bkg, TH1F * sig, std::string & fname);
-void overlapRemoval(bool extendedVars);
+void overlapRemoval();
 int eventSelection();
 bool leptonSelection(int lepType);
 void setLeptons(TChain * tree, TObjArray * list);
@@ -115,7 +115,7 @@ std::vector<float> dummyCharge(int size);
 void setVector(TChain *& tree, TObjArray *& list, vector<TLorentzVector> *& vec, std::string branch);//, const char * branch);//std::string & branch);
 
 void setVector(TChain *& tree, TObjArray *& list, vector<Float_t> *& vec, std::string branch);//, const char * branch);//std::string & branch);
-bool useBranch(std::string branch);
+bool useBranch(std::string branch, bool partialmatch = false);
 void setLLJMass(int jetidx);
 
 enum class groomAlgoEnum{groomZero, TopoSplitFilteredMu67SmallR0YCut9, TopoSplitFilteredMu100SmallR30YCut4, TopoTrimmedPtFrac5SmallR30, TopoTrimmedPtFrac5SmallR20, TopoPrunedCaRcutFactor50Zcut10, TopoPrunedCaRcutFactor50Zcut20, AntiKt2LCTopo, AntiKt3LCTopo, AntiKt4LCTopo};
@@ -436,8 +436,24 @@ std::map<int, std::vector<float> *> var_Pull_C11_vec;
 
 std::map<int, std::vector<float> *> var_TauWTA1_vec; 
 std::map<int, std::vector<float> *> var_TauWTA2_vec; 
+std::map<int, std::vector<float> *> var_TauWTA3_vec; 
 std::map<int, std::vector<float> *> var_TauWTA2TauWTA1_vec; 
 std::map<int, std::vector<float> *> var_ZCUT12_vec;
+std::map<int, std::vector<float> *> var_ZCUT23_vec;
+std::map<int, std::vector<float> *> var_ZCUT34_vec;
+
+std::map<int, std::vector<float> *> var_ActiveArea_vec;
+std::map<int, std::vector<float> *> var_Aplanarity_vec;
+std::map<int, std::vector<float> *> var_Sphericity_vec;
+std::map<int, std::vector<float> *> var_ThrustMaj_vec;
+std::map<int, std::vector<float> *> var_ThrustMin_vec;
+std::map<int, std::vector<float> *> var_VoronoiArea_vec;
+
+
+
+
+
+
 std::vector<float> * var_YFilt_vec;
 
 Float_t var_massFraction_vec;
@@ -514,6 +530,9 @@ std::vector<float> var_Pull_C11;
 std::vector<float> var_Tau21;
 Float_t var_YFilt;
 
+
+
+
 // leptons out
 std::vector<TLorentzVector> var_leptons;
 std::vector<Float_t> var_ptcone20;
@@ -547,8 +566,22 @@ Float_t var_yt;
 // these variables are only in Lily's samples, so we need to add a flag to say we are running on those samples
 std::vector<Float_t> var_TauWTA1; 
 std::vector<Float_t> var_TauWTA2; 
+std::vector<Float_t> var_TauWTA3; 
 std::vector<Float_t> var_TauWTA2TauWTA1; 
 std::vector<Float_t> var_ZCUT12;
+std::vector<Float_t> var_ZCUT23;
+std::vector<Float_t> var_ZCUT34;
+
+
+std::vector<Float_t> var_ActiveArea;
+std::vector<Float_t> var_Aplanarity;
+std::vector<Float_t> var_Sphericity;
+std::vector<Float_t> var_ThrustMaj;
+std::vector<Float_t> var_ThrustMin;
+std::vector<Float_t> var_VoronoiArea;
+
+
+
 
 // store the weights for the samples
 Float_t var_k_factor;
