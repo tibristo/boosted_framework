@@ -26,6 +26,80 @@
 </algorithm>
 
 <algorithm>
+  <Algorithm>CamKt6LCTopoSplitFilteredMu100SmallR30YCut0</Algorithm>
+  <GroomingAlgorithm>TopoSplitFilteredMu100SmallR30YCut0</GroomingAlgorithm>
+  <JetAlgorithm>CamKt6</JetAlgorithm>
+  <Abbreviation>SF100r30Y0</Abbreviation>
+  <PlotLabel>CA6 Split Filtered jets, #mu=1.0, y_{cut}=0.0, R_{subjet}=0.3</PlotLabel>
+  <Type>splitfiltered</Type>
+  <SubjetGroomingAlgorithm>TopoSplitFiltSubjetsMu100SmallR30YCut0</SubjetGroomingAlgorithm>
+  <SubjetIndexBranch>jet_CamKt6LCTopo_SplitFiltSubjetsMu100SmallR30YCut0_index</SubjetIndexBranch>
+  <BinLabel>CA6 Split-Filt (1.0, 0.0, 0.3)</BinLabel>
+</algorithm>
+
+<algorithm>
+  <Algorithm>CamKt6LCTopoSplitFilteredMu100SmallR30YCut4</Algorithm>
+  <GroomingAlgorithm>TopoSplitFilteredMu100SmallR30YCut4</GroomingAlgorithm>
+  <JetAlgorithm>CamKt6</JetAlgorithm>
+  <Abbreviation>SF100r30Y4</Abbreviation>
+  <PlotLabel>CA6 Split Filtered jets, #mu=1.0, y_{cut}=0.04, R_{subjet}=0.3</PlotLabel>
+  <Type>splitfiltered</Type>
+  <SubjetGroomingAlgorithm>TopoSplitFiltSubjetsMu100SmallR30YCut4</SubjetGroomingAlgorithm>
+  <SubjetIndexBranch>jet_CamKt6LCTopo_SplitFiltSubjetsMu100SmallR30YCut4_index</SubjetIndexBranch>
+  <BinLabel>CA6 Split-Filt (1.0, 0.04, 0.3)</BinLabel>
+</algorithm>
+
+<algorithm>
+  <Algorithm>CamKt6LCTopoSplitFilteredMu100SmallR30YCut9</Algorithm>
+  <GroomingAlgorithm>TopoSplitFilteredMu100SmallR30YCut9</GroomingAlgorithm>
+  <JetAlgorithm>CamKt6</JetAlgorithm>
+  <Abbreviation>SF100r30Y9</Abbreviation>
+  <PlotLabel>CA6 Split Filtered jets, #mu=1.0, y_{cut}=0.09, R_{subjet}=0.3</PlotLabel>
+  <Type>splitfiltered</Type>
+  <SubjetGroomingAlgorithm>TopoSplitFiltSubjetsMu100SmallR30YCut9</SubjetGroomingAlgorithm>
+  <SubjetIndexBranch>jet_CamKt6LCTopo_SplitFiltSubjetsMu100SmallR30YCut9_index</SubjetIndexBranch>
+  <BinLabel>CA6 Split-Filt (1.0, 0.09, 0.3)</BinLabel>
+</algorithm>
+
+<algorithm>
+  <Algorithm>CamKt8LCTopoSplitFilteredMu100SmallR30YCut0</Algorithm>
+  <GroomingAlgorithm>TopoSplitFilteredMu100SmallR30YCut0</GroomingAlgorithm>
+  <JetAlgorithm>CamKt8</JetAlgorithm>
+  <Abbreviation>SF100r30Y0</Abbreviation>
+  <PlotLabel>CA8 Split Filtered jets, #mu=1.0, y_{cut}=0.0, R_{subjet}=0.3</PlotLabel>
+  <Type>splitfiltered</Type>
+  <SubjetGroomingAlgorithm>TopoSplitFiltSubjetsMu100SmallR30YCut0</SubjetGroomingAlgorithm>
+  <SubjetIndexBranch>jet_CamKt8LCTopo_SplitFiltSubjetsMu100SmallR30YCut0_index</SubjetIndexBranch>
+  <BinLabel>CA8 Split-Filt (1.0, 0.0, 0.3)</BinLabel>
+</algorithm>
+
+<algorithm>
+  <Algorithm>CamKt8LCTopoSplitFilteredMu100SmallR30YCut4</Algorithm>
+  <GroomingAlgorithm>TopoSplitFilteredMu100SmallR30YCut4</GroomingAlgorithm>
+  <JetAlgorithm>CamKt8</JetAlgorithm>
+  <Abbreviation>SF100r30Y4</Abbreviation>
+  <PlotLabel>CA8 Split Filtered jets, #mu=1.0, y_{cut}=0.04, R_{subjet}=0.3</PlotLabel>
+  <Type>splitfiltered</Type>
+  <SubjetGroomingAlgorithm>TopoSplitFiltSubjetsMu100SmallR30YCut4</SubjetGroomingAlgorithm>
+  <SubjetIndexBranch>jet_CamKt8LCTopo_SplitFiltSubjetsMu100SmallR30YCut4_index</SubjetIndexBranch>
+  <BinLabel>CA8 Split-Filt (1.0, 0.04, 0.3)</BinLabel>
+</algorithm>
+
+<algorithm>
+  <Algorithm>CamKt8LCTopoSplitFilteredMu100SmallR30YCut9</Algorithm>
+  <GroomingAlgorithm>TopoSplitFilteredMu100SmallR30YCut9</GroomingAlgorithm>
+  <JetAlgorithm>CamKt8</JetAlgorithm>
+  <Abbreviation>SF100r30Y9</Abbreviation>
+  <PlotLabel>CA8 Split Filtered jets, #mu=1.0, y_{cut}=0.09, R_{subjet}=0.3</PlotLabel>
+  <Type>splitfiltered</Type>
+  <SubjetGroomingAlgorithm>TopoSplitFiltSubjetsMu100SmallR30YCut9</SubjetGroomingAlgorithm>
+  <SubjetIndexBranch>jet_CamKt8LCTopo_SplitFiltSubjetsMu100SmallR30YCut9_index</SubjetIndexBranch>
+  <BinLabel>CA8 Split-Filt (1.0, 0.09, 0.3)</BinLabel>
+</algorithm>
+
+
+
+<algorithm>
   <Algorithm>CamKt12LCTopoSplitFilteredMu100SmallR30YCut0</Algorithm>
   <GroomingAlgorithm>TopoSplitFilteredMu100SmallR30YCut0</GroomingAlgorithm>
   <JetAlgorithm>CamKt12</JetAlgorithm>
@@ -98,6 +172,18 @@
 </algorithm>
 
 <algorithm>
+  <Algorithm>AntiKt8LCTopoTrimmedPtFrac5SmallR20</Algorithm>
+  <GroomingAlgorithm>TopoTrimmedPtFrac5SmallR20</GroomingAlgorithm>
+  <JetAlgorithm>AntiKt8</JetAlgorithm>
+  <Abbreviation>TrimPt5r20</Abbreviation>
+  <PlotLabel>AK8 Trimmed jets, f_{cut}=0.05, R_{subjet}=0.2</PlotLabel>
+  <Type>trimmed</Type>
+  <SubjetGroomingAlgorithm>TopoTrimmedSubjetsPtFrac5SmallR20</SubjetGroomingAlgorithm>
+  <SubjetIndexBranch>jet_AntiKt8LCTopoTrimmedPtFrac5SmallR20_TrimmedSubjetsPtFrac5SmallR20_index</SubjetIndexBranch>
+  <BinLabel>AK8 Trimmed (0.05, 0.2)</BinLabel>
+</algorithm>
+
+<algorithm>
   <Algorithm>AntiKt10LCTopoTrimmedPtFrac5SmallR20</Algorithm>
   <GroomingAlgorithm>TopoTrimmedPtFrac5SmallR20</GroomingAlgorithm>
   <JetAlgorithm>AntiKt10</JetAlgorithm>
@@ -107,6 +193,18 @@
   <SubjetGroomingAlgorithm>TopoTrimmedSubjetsPtFrac5SmallR20</SubjetGroomingAlgorithm>
   <SubjetIndexBranch>jet_AntiKt10LCTopoTrimmedPtFrac5SmallR20_TrimmedSubjetsPtFrac5SmallR20_index</SubjetIndexBranch>
   <BinLabel>AK10 Trimmed (0.05, 0.2)</BinLabel>
+</algorithm>
+
+<algorithm>
+  <Algorithm>AntiKt12LCTopoTrimmedPtFrac5SmallR20</Algorithm>
+  <GroomingAlgorithm>TopoTrimmedPtFrac5SmallR20</GroomingAlgorithm>
+  <JetAlgorithm>AntiKt12</JetAlgorithm>
+  <Abbreviation>TrimPt5r20</Abbreviation>
+  <PlotLabel>AK12 Trimmed jets, f_{cut}=0.05, R_{subjet}=0.2</PlotLabel>
+  <Type>trimmed</Type>
+  <SubjetGroomingAlgorithm>TopoTrimmedSubjetsPtFrac5SmallR20</SubjetGroomingAlgorithm>
+  <SubjetIndexBranch>jet_AntiKt12LCTopoTrimmedPtFrac5SmallR20_TrimmedSubjetsPtFrac5SmallR20_index</SubjetIndexBranch>
+  <BinLabel>AK12 Trimmed (0.05, 0.2)</BinLabel>
 </algorithm>
 
 
@@ -120,6 +218,42 @@
   <SubjetGroomingAlgorithm>TopoTrimmedSubjetsPtFrac5SmallR30</SubjetGroomingAlgorithm>
   <SubjetIndexBranch>jet_CamKt12LCTopoTrimmedPtFrac5SmallR30_TrimmedSubjetsPtFrac5SmallR30_index</SubjetIndexBranch>
   <BinLabel>CA12 Trimmed (0.05, 0.3)</BinLabel>
+</algorithm>
+
+<algorithm>
+  <Algorithm>CamKt6LCTopoTrimmedPtFrac5SmallR20</Algorithm>
+  <GroomingAlgorithm>TopoTrimmedPtFrac5SmallR20</GroomingAlgorithm>
+  <JetAlgorithm>CamKt6</JetAlgorithm>
+  <Abbreviation>TrimPt5r20</Abbreviation>
+  <PlotLabel>CA6 Trimmed jets, f_{cut}=0.05, R_{subjet}=0.2</PlotLabel>
+  <Type>trimmed</Type>
+  <SubjetGroomingAlgorithm>TopoTrimmedSubjetsPtFrac5SmallR20</SubjetGroomingAlgorithm>
+  <SubjetIndexBranch>jet_CamKt6LCTopoTrimmedPtFrac5SmallR20_TrimmedSubjetsPtFrac5SmallR20_index</SubjetIndexBranch>
+  <BinLabel>CA6 Trimmed (0.05, 0.2)</BinLabel>
+</algorithm>
+
+<algorithm>
+  <Algorithm>CamKt8LCTopoTrimmedPtFrac5SmallR20</Algorithm>
+  <GroomingAlgorithm>TopoTrimmedPtFrac5SmallR20</GroomingAlgorithm>
+  <JetAlgorithm>CamKt8</JetAlgorithm>
+  <Abbreviation>TrimPt5r20</Abbreviation>
+  <PlotLabel>CA8 Trimmed jets, f_{cut}=0.05, R_{subjet}=0.2</PlotLabel>
+  <Type>trimmed</Type>
+  <SubjetGroomingAlgorithm>TopoTrimmedSubjetsPtFrac5SmallR20</SubjetGroomingAlgorithm>
+  <SubjetIndexBranch>jet_CamKt8LCTopoTrimmedPtFrac5SmallR20_TrimmedSubjetsPtFrac5SmallR20_index</SubjetIndexBranch>
+  <BinLabel>CA8 Trimmed (0.05, 0.2)</BinLabel>
+</algorithm>
+
+<algorithm>
+  <Algorithm>CamKt10LCTopoTrimmedPtFrac5SmallR20</Algorithm>
+  <GroomingAlgorithm>TopoTrimmedPtFrac5SmallR20</GroomingAlgorithm>
+  <JetAlgorithm>CamKt10</JetAlgorithm>
+  <Abbreviation>TrimPt5r20</Abbreviation>
+  <PlotLabel>CA10 Trimmed jets, f_{cut}=0.05, R_{subjet}=0.2</PlotLabel>
+  <Type>trimmed</Type>
+  <SubjetGroomingAlgorithm>TopoTrimmedSubjetsPtFrac5SmallR20</SubjetGroomingAlgorithm>
+  <SubjetIndexBranch>jet_CamKt10LCTopoTrimmedPtFrac5SmallR20_TrimmedSubjetsPtFrac5SmallR20_index</SubjetIndexBranch>
+  <BinLabel>CA10 Trimmed (0.05, 0.2)</BinLabel>
 </algorithm>
 
 <algorithm>
@@ -206,6 +340,57 @@
   <SubjetGroomingAlgorithm></SubjetGroomingAlgorithm>
   <SubjetIndexBranch></SubjetIndexBranch>
   <BinLabel>CA12 Pruned (0.5, 0.2)</BinLabel>
+</algorithm>
+
+
+<algorithm>
+  <Algorithm>CamKt6LCTopoPrunedCaRcutFactor50Zcut10</Algorithm>
+  <GroomingAlgorithm>TopoPrunedCaRcutFactor50Zcut10</GroomingAlgorithm>
+  <JetAlgorithm>CamKt6</JetAlgorithm>
+  <Abbreviation>PrunRf50Z10</Abbreviation>
+  <PlotLabel>CA6 Pruned jets, R_{cut}=0.5, Z_{cut}=0.1</PlotLabel>
+  <Type>pruned</Type>
+  <SubjetGroomingAlgorithm></SubjetGroomingAlgorithm>
+  <SubjetIndexBranch></SubjetIndexBranch>
+  <BinLabel>CA6 Pruned (0.5, 0.1)</BinLabel>
+</algorithm>
+
+<algorithm>
+  <Algorithm>CamKt6LCTopoPrunedCaRcutFactor50Zcut15</Algorithm>
+  <GroomingAlgorithm>TopoPrunedCaRcutFactor50Zcut15</GroomingAlgorithm>
+  <JetAlgorithm>CamKt6</JetAlgorithm>
+  <Abbreviation>PrunRf50Z15</Abbreviation>
+  <PlotLabel>CA6 Pruned jets, R_{cut}=0.5, Z_{cut}=0.15</PlotLabel>
+  <Type>pruned</Type>
+  <SubjetGroomingAlgorithm></SubjetGroomingAlgorithm>
+  <SubjetIndexBranch></SubjetIndexBranch>
+  <BinLabel>CA6 Pruned (0.5, 0.2)</BinLabel>
+</algorithm>
+
+
+
+<algorithm>
+  <Algorithm>CamKt8LCTopoPrunedCaRcutFactor50Zcut10</Algorithm>
+  <GroomingAlgorithm>TopoPrunedCaRcutFactor50Zcut10</GroomingAlgorithm>
+  <JetAlgorithm>CamKt8</JetAlgorithm>
+  <Abbreviation>PrunRf50Z10</Abbreviation>
+  <PlotLabel>CA8 Pruned jets, R_{cut}=0.5, Z_{cut}=0.1</PlotLabel>
+  <Type>pruned</Type>
+  <SubjetGroomingAlgorithm></SubjetGroomingAlgorithm>
+  <SubjetIndexBranch></SubjetIndexBranch>
+  <BinLabel>CA8 Pruned (0.5, 0.1)</BinLabel>
+</algorithm>
+
+<algorithm>
+  <Algorithm>CamKt8LCTopoPrunedCaRcutFactor50Zcut15</Algorithm>
+  <GroomingAlgorithm>TopoPrunedCaRcutFactor50Zcut15</GroomingAlgorithm>
+  <JetAlgorithm>CamKt8</JetAlgorithm>
+  <Abbreviation>PrunRf50Z15</Abbreviation>
+  <PlotLabel>CA8 Pruned jets, R_{cut}=0.5, Z_{cut}=0.15</PlotLabel>
+  <Type>pruned</Type>
+  <SubjetGroomingAlgorithm></SubjetGroomingAlgorithm>
+  <SubjetIndexBranch></SubjetIndexBranch>
+  <BinLabel>CA8 Pruned (0.5, 0.2)</BinLabel>
 </algorithm>
 
 

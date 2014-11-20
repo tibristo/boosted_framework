@@ -43,7 +43,6 @@ int main( int argc, char * argv[] ) {
   AtlasStyle();
   
   bool makePtPlotsFlag = false;
-  bool extendedVars = false;
   bool scaleHistsFlag = false;  
   bool makePlotsFlag = false;
   bool getMPVFlag = false;
@@ -80,7 +79,7 @@ int main( int argc, char * argv[] ) {
        "algorithm type")
       ("subjets-calc", po::value<bool>(&subjetscalc)->default_value(false),"calculate mass drop and momentum balance from subjet kinematics")
       ("subjets-pre", po::value<bool>(&subjetspre)->default_value(false),"use massFraction and ktycut2 from the input files")
-      ("extendedvars", po::value<bool>(&extendedVars)->default_value(false),"add extra variables - TauWTA1/2 and ZCUT12")
+
       ("mass-window", po::value<bool>(&applyMassWindowFlag)->default_value(false),"apply mass window cuts")
       ("make-plots", po::value<bool>(&makePlotsFlag)->default_value(false),"create plots")
       ("make-ptplots", po::value<bool>(&makePtPlotsFlag)->default_value(false),"create pT plots")
@@ -90,7 +89,7 @@ int main( int argc, char * argv[] ) {
       ("bkg-frac", po::value<bool>(&checkBkgFrac)->default_value(false),"Check the background fraction in the signal")
       ("tree-name", po::value<string>(&treeName)->default_value("physics"),"Name of tree to be read in from input file")
       ("branches-file", po::value<string>(&branchesFile)->default_value(""),"Name of file containing branches, otherwise Alg_branches.txt is used. Becareful with this, because if the branches are not read in then when any of them are used later on a segfault will occur, so make sure there is one that it will use.")
-      ("xAOD-jets", po::value<bool>(&xAODJets)->default_value(true),"Indicate if we are running over xAOD output and there is the word Jets appended to the algorithm name.")
+      ("xAOD-jets", po::value<bool>(&xAODJets)->default_value(false),"Indicate if we are running over xAOD output and there is the word Jets appended to the algorithm name.")
       ("xAOD-emfrac", po::value<bool>(&xAODemfrac)->default_value(false),"Indicate if we are running over xAOD output and emfrac is not available.")
       ("hvtllqq-selection", po::value<bool>(&hvtllqq)->default_value(false),"Indicate if we are running the HVTllqq analysis selection.")
       ;
@@ -292,7 +291,7 @@ int main( int argc, char * argv[] ) {
     } // if massHists
 
   // make an output file
-  makeMassWindowFile(applyMassWindowFlag, extendedVars, alg_in_orig);
+  makeMassWindowFile(applyMassWindowFlag, alg_in_orig);
 
   return 0;
 }
@@ -1805,10 +1804,9 @@ void makePtPlots(std::string & algo){
  * jet and lepton selection, pT cuts.
  *
  * @param applyMassWindow Flag if any mass window cuts should be applied.
- * @param extendedVars Flag if TauWTA1/1 and ZCUT12 are being used.
  * @param algorithm The name of the algorithm being run.
  */
-void makeMassWindowFile(bool applyMassWindow,bool extendedVars, std::string & algorithm)
+void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
 {
   std::cout << "starting make mass window output files " << std::endl;
   double mass_max = 0.0;
@@ -1846,11 +1844,13 @@ void makeMassWindowFile(bool applyMassWindow,bool extendedVars, std::string & al
 	{
 	  signal = k == 1? false : true;
 	  // Initialise all the vectors to.. something 
-	  initVectors(extendedVars);
+	  initVectors();
 
+	  // set up the mass window
 	  mass_max = TopEdgeMassWindow[j];
 	  mass_min = BottomEdgeMassWindow[j];
 	  
+	  // set the tchain pointer to the signal or background sample
 	  int tchainIdx = signal ? sampleType::SIGNAL : sampleType::BACKGROUND;
 	  std::stringstream ss_fname; // store the name of the output file and include the i and j indices!
 	  std::string bkg = signal ? "sig": "bkg";
@@ -1866,21 +1866,21 @@ void makeMassWindowFile(bool applyMassWindow,bool extendedVars, std::string & al
 
 	      if ((*it).second == 0)
 		{
-		  std::cout << (*it).first << std::endl;
 		  inputTChain[tchainIdx]->SetBranchStatus((*it).first.c_str(),0);
 		}
 	      
 	    }
 
-	  setJetsBranches(inputTChain[tchainIdx], algorithms.AlgoNames[i], i, extendedVars); //set all of the branches for the output tree for the jets	  
+	  setJetsBranches(inputTChain[tchainIdx], algorithms.AlgoNames[i], i); //set all of the branches for the output tree for the jets	  
 
+	  // output file
 	  TFile * outfile = new TFile(std::string(algorithms.AlgoNames[i]+fileid_global+"/"+ss_fname.str()).c_str(),"RECREATE");   
 	  TTree * outTree = new TTree(treeName.c_str(),treeName.c_str());
 
 	  // reset all of the output variables so that they have default values
 	  resetOutputVariables();
 	  // set up all of the branches for the output tree
-	  setOutputBranches(outTree, algorithms.AlgoNames[i], i, extendedVars);
+	  setOutputBranches(outTree, algorithms.AlgoNames[i], i);
 
 	  // if we are going to add the subjet branches we set them up here
 	  if (subjetscalc || subjetspre)
@@ -1941,7 +1941,7 @@ void makeMassWindowFile(bool applyMassWindow,bool extendedVars, std::string & al
 	      if (hvtllqq)
 		{
 		  // do overlap removal before looking for jets
-		  overlapRemoval(extendedVars);
+		  overlapRemoval();
 		  //apply event selection
 		  int lepType = eventSelection();
 		  if (lepType == leptonType::FAIL)
@@ -2080,18 +2080,22 @@ void makeMassWindowFile(bool applyMassWindow,bool extendedVars, std::string & al
 	      var_Tau21[2]=(*var_Tau2_vec[2])[leadGroomedIndex]/(*var_Tau1_vec[2])[leadGroomedIndex];
 	    
 	      // set up tauwta variables and zcut12
-	      if (extendedVars)
+	      if (useBranch(string("TauWTA2TauWTA1"),true) && useBranch(string("TauWTA2"), true) && useBranch(string("TauWTA1"), true) )
 		{
-		  var_TauWTA2TauWTA1[0]=(*var_TauWTA2_vec[0])[leadTruthIndex]/(*var_TauWTA1_vec[0])[leadTruthIndex];
-		  var_TauWTA2TauWTA1[2]=(*var_TauWTA2_vec[2])[leadGroomedIndex]/(*var_TauWTA1_vec[2])[leadGroomedIndex];
+		  // need to check if these branches are on....
+		  if (var_TauWTA1_vec[0] != NULL && var_TauWTA2_vec[0] != NULL)
+		    var_TauWTA2TauWTA1[0]=(*var_TauWTA2_vec[0])[leadTruthIndex]/(*var_TauWTA1_vec[0])[leadTruthIndex];
+		  if (var_TauWTA1_vec[2] != NULL && var_TauWTA2_vec[2] != NULL)
+		    var_TauWTA2TauWTA1[2]=(*var_TauWTA2_vec[2])[leadGroomedIndex]/(*var_TauWTA1_vec[2])[leadGroomedIndex];
 		  if (leadTopoIndex == -99)
 		    var_TauWTA2TauWTA1[1]=-99;
-		  else
+		  else if (var_TauWTA1_vec[1] != NULL && var_TauWTA2_vec[1] != NULL)
 		    var_TauWTA2TauWTA1[1]=(*var_TauWTA2_vec[1])[leadTopoIndex]/(*var_TauWTA1_vec[1])[leadTopoIndex];
 		}
+		
 	    
 	      // make sure all of the other output variables have their values set
-	      setOutputVariables(extendedVars, leadTruthIndex, leadTopoIndex, leadGroomedIndex, lead_subjet, algorithms.AlgoNames[i] , i);
+	      setOutputVariables(leadTruthIndex, leadTopoIndex, leadGroomedIndex, lead_subjet, algorithms.AlgoNames[i] , i);
 	      outTree->Fill();
 	      pt_reweight->Fill((*jet_pt_truth)[chosenLeadTruthJetIndex]/1000.0);
 
@@ -2292,12 +2296,29 @@ std::string returnSubJetType(std::string & samplePrefix, std::string & groomalgo
  * Check if a branch is in the branchmap so we don't try to set branch addresses we aren't using
  *
  * @param branch Name of the branch to check
+ * @param partialmatch Only look for substrings of keys that match the string
+ *
  * @return bool indicating if it is in the branchmap
  */
-bool useBranch(std::string branch)
+bool useBranch(std::string branch, bool partialmatch)
 {
-  if (branchmap.find(branch) != branchmap.end())
-    return true;
+  // look for the key in the branch map
+  if (!partialmatch)
+    {
+      if (branchmap.find(branch) != branchmap.end())
+	return true;
+    }
+  // look for a partial match
+  else
+    {
+      int brlen = branch.length();
+      for (std::map<std::string, int>::iterator it = branchmap.begin(); it != branchmap.end(); it++)
+	{
+	  if (it->first.length() >= brlen && it->first.compare(it->first.length()-brlen, brlen, branch) == 0)
+	    return true;
+	}
+    }
+
   return false;
 }
 
@@ -2335,7 +2356,10 @@ void setVector(TChain *& tree, TObjArray *& list, vector<TLorentzVector> *& vec,
   if (list->FindObject(branch.c_str()) && useBranch(branch))
     tree->SetBranchAddress(branch.c_str(), &vec);
   else
-    std::cout << "missing branch " << branch << ", might cause unexpected behaviour" << std::endl;
+    {
+      std::cout << "missing branch " << branch << ", might cause unexpected behaviour, removing from branchmap" << std::endl;
+      branchmap.erase(branch);
+    }
 }
 
 /*
@@ -2352,16 +2376,18 @@ void setVector(TChain *& tree, TObjArray *& list, vector<Float_t> *& vec, string
   if (list->FindObject(branch.c_str()) && useBranch(branch))
     tree->SetBranchAddress(branch.c_str(), &vec);
   else
-    std::cout << "missing branch " << branch << ", might cause unexpected behaviour" << std::endl;
+    {
+      std::cout << "missing branch " << branch << ", might cause unexpected behaviour, removing from branchmap" << std::endl;
+      branchmap.erase(branch);
+    }
 }
 
 /*
  * Erase a jet from the groomed jet collection.  It erases this entry from all jet variable collections.
  *
  * @param jet Integer giving position of the jet to be erased in the jet collection.
- * @param extendedVars Flag indicating if TauWTA1/2 and ZCUT12 are being used.
  */
-void eraseJet(int jet, bool extendedVars)
+void eraseJet(int jet)
 {
   int i = jetType::GROOMED;
   // erasing an element/ range that doesn't exist it will cause undefined behaviour
@@ -2423,24 +2449,40 @@ void eraseJet(int jet, bool extendedVars)
   if (var_YFilt_vec != NULL && var_YFilt_vec->size() > jet)
     var_YFilt_vec->erase(var_YFilt_vec->begin()+jet);
   
-  if (extendedVars)
-    {
-      if (var_TauWTA1_vec[i] != NULL && var_TauWTA1_vec[i]->size() > jet)
-	var_TauWTA1_vec[i]->erase(var_TauWTA1_vec[i]->begin()+jet);
-      if (var_TauWTA2_vec[i] != NULL && var_TauWTA2_vec[i]->size() > jet)
-	var_TauWTA2_vec[i]->erase(var_TauWTA2_vec[i]->begin()+jet);
-      if (var_ZCUT12_vec[i] != NULL && var_ZCUT12_vec[i]->size() > jet)
-	var_ZCUT12_vec[i]->erase(var_ZCUT12_vec[i]->begin()+jet);
-    }
+  if (var_ActiveArea_vec[i] != NULL && var_ActiveArea_vec[i]->size() >> jet)
+    var_ActiveArea_vec[i]->erase(var_ActiveArea_vec[i]->begin()+jet);
+  if (var_VoronoiArea_vec[i] != NULL && var_VoronoiArea_vec[i]->size() >> jet)
+    var_VoronoiArea_vec[i]->erase(var_VoronoiArea_vec[i]->begin()+jet);
+  if (var_Aplanarity_vec[i] != NULL && var_Aplanarity_vec[i]->size() >> jet)
+    var_Aplanarity_vec[i]->erase(var_Aplanarity_vec[i]->begin()+jet);
+  if (var_Sphericity_vec[i] != NULL && var_Sphericity_vec[i]->size() >> jet)
+    var_Sphericity_vec[i]->erase(var_Sphericity_vec[i]->begin()+jet);
+  if (var_ThrustMaj_vec[i] != NULL && var_ThrustMaj_vec[i]->size() >> jet)
+    var_ThrustMaj_vec[i]->erase(var_ThrustMaj_vec[i]->begin()+jet);
+  if (var_ThrustMin_vec[i] != NULL && var_ThrustMin_vec[i]->size() >> jet)
+    var_ThrustMin_vec[i]->erase(var_ThrustMin_vec[i]->begin()+jet);
+
+  if (var_TauWTA1_vec[i] != NULL && var_TauWTA1_vec[i]->size() > jet)
+    var_TauWTA1_vec[i]->erase(var_TauWTA1_vec[i]->begin()+jet);
+  if (var_TauWTA2_vec[i] != NULL && var_TauWTA2_vec[i]->size() > jet)
+    var_TauWTA2_vec[i]->erase(var_TauWTA2_vec[i]->begin()+jet);
+  if (var_TauWTA3_vec[i] != NULL && var_TauWTA3_vec[i]->size() > jet)
+    var_TauWTA3_vec[i]->erase(var_TauWTA3_vec[i]->begin()+jet);
+  if (var_ZCUT12_vec[i] != NULL && var_ZCUT12_vec[i]->size() > jet)
+    var_ZCUT12_vec[i]->erase(var_ZCUT12_vec[i]->begin()+jet);
+  if (var_ZCUT23_vec[i] != NULL && var_ZCUT23_vec[i]->size() > jet)
+    var_ZCUT23_vec[i]->erase(var_ZCUT23_vec[i]->begin()+jet);
+  if (var_ZCUT34_vec[i] != NULL && var_ZCUT34_vec[i]->size() > jet)
+    var_ZCUT34_vec[i]->erase(var_ZCUT34_vec[i]->begin()+jet);
+    
   
 } // eraseJet
 
 /*
  * Overlap removal between jets and electrons, removes any (groomed) jet that overlaps with an electron.
  *
- * @param extendedVars Flag indicating if TauWTA1/2 and ZCUT12 are available.
  */
-void overlapRemoval(bool extendedVars)
+void overlapRemoval()
 {
   for (int it = 0 ; it < (*var_pt_vec[jetType::GROOMED]).size(); it++)
     {
@@ -2451,7 +2493,7 @@ void overlapRemoval(bool extendedVars)
 	  if (dR < 0.8)
 	    {
 	      // remove jet from collection
-	      eraseJet(it, extendedVars);
+	      eraseJet(it);
 	      // account for removed jet
 	      it--;
 	    }
@@ -2638,9 +2680,8 @@ bool leptonSelection(int lepType)
  * @param tree A pointer to the TChain that is being read in.
  * @param groomalgo The shortened name of the algorithm being used, like TopoSplitFiltered
  * @param groomIdx The full name of the algorithm.
- * @param extendedVars Flag indicating if the TauWTA1/2 and ZCUT12 variables should be used - they are not in every sample.
  */
-void setJetsBranches(TChain * tree, std::string &groomalgo,  std::string & groomIdx, bool extendedVars)
+void setJetsBranches(TChain * tree, std::string &groomalgo,  std::string & groomIdx)
 {
   std::string samplePrefix = "";
   // get a list of all the branches in the tree
@@ -2716,15 +2757,20 @@ void setJetsBranches(TChain * tree, std::string &groomalgo,  std::string & groom
       setVector(tree, brancharray, var_Pull_C10_vec.at(i), std::string(jetString+"Pull_C10") );
       setVector(tree, brancharray, var_Pull_C11_vec.at(i), std::string(jetString+"Pull_C11") );
 
+      setVector(tree, brancharray, var_ActiveArea_vec.at(i), std::string(jetString+"ActiveArea") );
+      setVector(tree, brancharray, var_Aplanarity_vec.at(i), std::string(jetString+"Aplanarity") );
+      setVector(tree, brancharray, var_Sphericity_vec.at(i), std::string(jetString+"Sphericity") );
+      setVector(tree, brancharray, var_ThrustMaj_vec.at(i), std::string(jetString+"ThrustMaj") );
+      setVector(tree, brancharray, var_ThrustMin_vec.at(i), std::string(jetString+"ThrustMin") );
+      setVector(tree, brancharray, var_VoronoiArea_vec.at(i), std::string(jetString+"VoronoiArea") );
 
-      // if using tauwta and zcut
-      if (extendedVars)
-	{
-	  setVector(tree, brancharray, var_TauWTA1_vec.at(i), std::string(jetString+"TauWTA1") );
-	  setVector(tree, brancharray, var_TauWTA2_vec.at(i), std::string(jetString+"TauWTA2") );
-	  setVector(tree, brancharray, var_ZCUT12_vec.at(i), std::string(jetString+"ZCUT12") );
-	}
-
+      setVector(tree, brancharray, var_TauWTA1_vec.at(i), std::string(jetString+"TauWTA1") );
+      setVector(tree, brancharray, var_TauWTA2_vec.at(i), std::string(jetString+"TauWTA2") );
+      setVector(tree, brancharray, var_TauWTA3_vec.at(i), std::string(jetString+"TauWTA3") );
+      setVector(tree, brancharray, var_ZCUT12_vec.at(i), std::string(jetString+"ZCUT12") );
+      setVector(tree, brancharray, var_ZCUT23_vec.at(i), std::string(jetString+"ZCUT23") );
+      setVector(tree, brancharray, var_ZCUT34_vec.at(i), std::string(jetString+"ZCUT34") );
+      
     } // end for loop over topo/truth/groom
 
   std::string jetString = returnJetType( samplePrefix, groomalgo, addLC, 2); //set to truth/ topo/ groomed
@@ -2846,9 +2892,8 @@ void setSelectionVectors()
 /*
  * Initialise all of the vectors used for reading in the input TTree.
  *
- * @param extendedVars Indicate whether or not TauWTA1/2 and ZCUT12 should be read.
  */
-void initVectors(bool extendedVars)
+void initVectors()
 {
 
   // have the vectors for the above histograms so we can do the reading in stuff from the TTree
@@ -2895,14 +2940,23 @@ void initVectors(bool extendedVars)
       var_Pull_C10_vec[i] = 0;
       var_Pull_C11_vec[i]= 0;//std::map<i, 0>;
 
+      var_ActiveArea_vec[i] = 0;
+      var_Aplanarity_vec[i] = 0;
+      var_Sphericity_vec[i] = 0;
+      var_ThrustMaj_vec[i] = 0;
+      var_ThrustMin_vec[i] = 0;
+      var_VoronoiArea_vec[i] = 0;
+      
   
-      if (extendedVars)
-	{
-	  var_TauWTA1_vec[i] = 0;
-	  var_TauWTA2_vec[i] = 0;
-	  var_ZCUT12_vec[i] = 0;
-	}
-
+      var_TauWTA1_vec[i] = 0;
+      var_TauWTA2_vec[i] = 0;
+      var_TauWTA3_vec[i] = 0;
+      
+      
+      var_ZCUT12_vec[i] = 0;
+      var_ZCUT23_vec[i] = 0;
+      var_ZCUT34_vec[i] = 0;
+      
     }  
   var_YFilt_vec = 0;
   var_massFraction_vec = 0;
@@ -2976,7 +3030,6 @@ void setLeptonVectors()
  * Set all of the output variables.  These are set to variables calculated per event or to variables read in. 
  * This also sets the weights for the output file.
  * 
-* @param extendedVars Flag indicating if TauWTA1/2 and ZCUT12 are being used.
  * @param jet_idx_truth The index of the truth jet being used.
  * @param jet_idx_topo The index of the topo jet being used.
  * @param jet_idx_groomed The index of the groomed jet being used.
@@ -2984,7 +3037,7 @@ void setLeptonVectors()
  * @param groomalgo The abbreviated name of the algorithm.
  * @param groomIdx The full name of the algorithm.
  */
-void setOutputVariables(bool extendedVars, int jet_idx_truth, int jet_idx_topo, int jet_idx_groomed, int subjet_idx, std::string & groomalgo, std::string &  groomIdx)
+void setOutputVariables( int jet_idx_truth, int jet_idx_topo, int jet_idx_groomed, int subjet_idx, std::string & groomalgo, std::string &  groomIdx)
 {
   // set to 0 for now
   int jet_idx = 0;
@@ -3101,17 +3154,33 @@ void setOutputVariables(bool extendedVars, int jet_idx_truth, int jet_idx_topo, 
       if (var_Pull_C11_vec[x] != NULL && useBranch(string(jetString+"Pull_C11")))
 	var_Pull_C11[x]=(*var_Pull_C11_vec[x])[jet_idx];
 
-      // tau21 is set in the main loop, not here, because we have to calculate it
-
-      if (extendedVars)
-	{
-	  if (useBranch(string(jetString+"TauWTA1")))
-	      var_TauWTA1[x]=(*var_TauWTA1_vec[x])[jet_idx];
-	  if (useBranch(string(jetString+"TauWTA2")))
-	      var_TauWTA2[x]=(*var_TauWTA2_vec[x])[jet_idx];
-	  if (useBranch(string(jetString+"ZCUT12")))
-	    var_ZCUT12[x]=(*var_ZCUT12_vec[x])[jet_idx];
-	}
+      if (var_ActiveArea_vec[x] != NULL && useBranch(string(jetString+"ActiveArea")))
+	var_ActiveArea[x] = (*var_ActiveArea_vec[x])[jet_idx];
+      if (var_Aplanarity_vec[x] != NULL && useBranch(string(jetString+"Aplanarity")))
+	var_Aplanarity[x] = (*var_Aplanarity_vec[x])[jet_idx];
+      if (var_Sphericity_vec[x] != NULL && useBranch(string(jetString+"Sphericity")))
+	var_Sphericity[x] = (*var_Sphericity_vec[x])[jet_idx];
+      if (var_ThrustMaj_vec[x] != NULL && useBranch(string(jetString+"ThrustMaj")))
+	var_ThrustMaj[x] = (*var_ThrustMaj_vec[x])[jet_idx];
+      if (var_ThrustMin_vec[x] != NULL && useBranch(string(jetString+"ThrustMin")))
+	var_ThrustMin[x] = (*var_ThrustMin_vec[x])[jet_idx];
+      if (var_VoronoiArea_vec[x] != NULL && useBranch(string(jetString+"VoronoiArea")))
+	var_VoronoiArea[x] = (*var_VoronoiArea_vec[x])[jet_idx];
+      
+      // tau21 and tauwta21 are set in the main loop, not here, because we have to calculate them
+      if (useBranch(string(jetString+"TauWTA1")))
+	var_TauWTA1[x]=(*var_TauWTA1_vec[x])[jet_idx];
+      if (useBranch(string(jetString+"TauWTA2")))
+	var_TauWTA2[x]=(*var_TauWTA2_vec[x])[jet_idx];
+      if (useBranch(string(jetString+"TauWTA3")))
+	var_TauWTA3[x]=(*var_TauWTA3_vec[x])[jet_idx];
+      if (useBranch(string(jetString+"ZCUT12")))
+	var_ZCUT12[x]=(*var_ZCUT12_vec[x])[jet_idx];
+      if (useBranch(string(jetString+"ZCUT23")))
+	var_ZCUT23[x]=(*var_ZCUT23_vec[x])[jet_idx];
+      if (useBranch(string(jetString+"ZCUT34")))
+	var_ZCUT34[x]=(*var_ZCUT34_vec[x])[jet_idx];
+	
     } // end for loop
 
   // only store this for groomed jets
@@ -3172,12 +3241,24 @@ void clearOutputVariables()
   var_Pull_C01.clear();
   var_Pull_C10.clear();
   var_Pull_C11.clear();
-  var_Tau21.clear();
 
+  var_ActiveArea.clear();
+  var_Aplanarity.clear();
+  var_Sphericity.clear();
+  var_ThrustMaj.clear();
+  var_ThrustMin.clear();
+  var_VoronoiArea.clear();
+
+  var_Tau21.clear();
   var_TauWTA2TauWTA1.clear();
   var_TauWTA1.clear();
   var_TauWTA2.clear();
+  var_TauWTA3.clear();
   var_ZCUT12.clear();
+  var_ZCUT23.clear();
+  var_ZCUT34.clear();
+
+
 
   var_leptons.clear();
   var_ptcone20.clear();
@@ -3228,11 +3309,22 @@ void resetOutputVariables()
       var_Pull_C01.push_back(-999);
       var_Pull_C10.push_back(-999);
       var_Pull_C11.push_back(-999);
+
+      var_ActiveArea.push_back(-999);
+      var_VoronoiArea.push_back(-999);
+      var_Aplanarity.push_back(-999);
+      var_Sphericity.push_back(-999);
+      var_ThrustMaj.push_back(-999);
+      var_ThrustMin.push_back(-999);
+
       var_Tau21.push_back(-999);
       var_TauWTA2TauWTA1.push_back(-999);
       var_TauWTA1.push_back(-999);
       var_TauWTA2.push_back(-999);
+      var_TauWTA3.push_back(-999);
       var_ZCUT12.push_back(-999);
+      var_ZCUT23.push_back(-999);
+      var_ZCUT34.push_back(-999);
 
     }
 } //resetOutputVariables
@@ -3243,9 +3335,8 @@ void resetOutputVariables()
  * @param tree A pointer to the output TTree.
  * @param groomalgo The shortened version of the grooming algorithm.
  * @param groomIdx The full grooming algorithm name, used as a key in the algorithms maps.
- * @param extendedVars Flag indicating if TauWTA1/2 and ZCUT12 should be used.
- */
-void setOutputBranches(TTree * tree, std::string & groomalgo, std::string & groomIdx, bool extendedVars)
+e */
+void setOutputBranches(TTree * tree, std::string & groomalgo, std::string & groomIdx)
 {
 
   std::string samplePrefix = ""; // AntiKt10 for example
@@ -3294,18 +3385,25 @@ void setOutputBranches(TTree * tree, std::string & groomalgo, std::string & groo
       tree->Branch(std::string(jetString+"Pull_C11").c_str(),&var_Pull_C11.at(i),std::string(jetString+"Pull_C11/F").c_str());
       tree->Branch(std::string(jetString+"YFilt").c_str(),&var_YFilt,std::string(jetString+"YFilt/F").c_str());
 
+tree->Branch(std::string(jetString+"ActiveArea").c_str(),&var_ActiveArea,std::string(jetString+"ActiveArea/F").c_str());
+tree->Branch(std::string(jetString+"VoronoiArea").c_str(),&var_VoronoiArea,std::string(jetString+"VoronoiArea/F").c_str());
+tree->Branch(std::string(jetString+"Aplanarity").c_str(),&var_Aplanarity,std::string(jetString+"Aplanarity/F").c_str());
+tree->Branch(std::string(jetString+"Sphericity").c_str(),&var_Sphericity,std::string(jetString+"Sphericity/F").c_str());
+tree->Branch(std::string(jetString+"ThrustMaj").c_str(),&var_ThrustMaj,std::string(jetString+"ThrustMaj/F").c_str());
+tree->Branch(std::string(jetString+"ThrustMin").c_str(),&var_ThrustMin,std::string(jetString+"ThrustMin/F").c_str());
+      
 
-      if (extendedVars)
-	{
-	  tree->Branch(std::string(jetString+"TauWTA1").c_str(),&var_TauWTA1.at(i),std::string(jetString+"TauWTA1/F").c_str());
-	  tree->Branch(std::string(jetString+"TauWTA2").c_str(),&var_TauWTA2.at(i),std::string(jetString+"TauWTA2/F").c_str());
-	  tree->Branch(std::string(jetString+"ZCUT12").c_str(),&var_ZCUT12.at(i),std::string(jetString+"ZCUT12/F").c_str());
+ tree->Branch(std::string(jetString+"TauWTA1").c_str(),&var_TauWTA1.at(i),std::string(jetString+"TauWTA1/F").c_str());
+ tree->Branch(std::string(jetString+"TauWTA2").c_str(),&var_TauWTA2.at(i),std::string(jetString+"TauWTA2/F").c_str());
+ tree->Branch(std::string(jetString+"TauWTA3").c_str(),&var_TauWTA3.at(i),std::string(jetString+"TauWTA3/F").c_str());
+ tree->Branch(std::string(jetString+"ZCUT12").c_str(),&var_ZCUT12.at(i),std::string(jetString+"ZCUT12/F").c_str());
+ tree->Branch(std::string(jetString+"ZCUT23").c_str(),&var_ZCUT23.at(i),std::string(jetString+"ZCUT23/F").c_str());
+ tree->Branch(std::string(jetString+"ZCUT34").c_str(),&var_ZCUT34.at(i),std::string(jetString+"ZCUT34/F").c_str());
 	  
-	  tree->Branch(std::string(returnJetType(samplePrefix, groomalgo, addLC,0)+"TauWTA2/TauWTA1").c_str(),&var_TauWTA2TauWTA1.at(0),std::string(jetString+"TauWTA2TauWTA1/F").c_str());
-	  tree->Branch(std::string(returnJetType(samplePrefix, groomalgo, addLC,1)+"TauWTA2/TauWTA1").c_str(),&var_TauWTA2TauWTA1.at(1),std::string(jetString+"TauWTA2TauWTA1/F").c_str());
-	  tree->Branch(std::string(jetString+"TauWTA2/TauWTA1").c_str(),&var_TauWTA2TauWTA1.at(2),std::string(jetString+"TauWTA2TauWTA1/F").c_str());  
+ tree->Branch(std::string(returnJetType(samplePrefix, groomalgo, addLC,0)+"TauWTA2/TauWTA1").c_str(),&var_TauWTA2TauWTA1.at(0),std::string(jetString+"TauWTA2TauWTA1/F").c_str());
+ tree->Branch(std::string(returnJetType(samplePrefix, groomalgo, addLC,1)+"TauWTA2/TauWTA1").c_str(),&var_TauWTA2TauWTA1.at(1),std::string(jetString+"TauWTA2TauWTA1/F").c_str());
+ tree->Branch(std::string(jetString+"TauWTA2/TauWTA1").c_str(),&var_TauWTA2TauWTA1.at(2),std::string(jetString+"TauWTA2TauWTA1/F").c_str());  
 	  
-	}
       // add a calculated variable Tau2/Tau1
       tree->Branch(std::string(returnJetType(samplePrefix, groomalgo, addLC,0)+"Tau21").c_str(),&var_Tau21.at(0),std::string(jetString+"Tau21/F").c_str());
       tree->Branch(std::string(returnJetType(samplePrefix, groomalgo, addLC,1)+"Tau21").c_str(),&var_Tau21.at(1),std::string(jetString+"Tau21/F").c_str());

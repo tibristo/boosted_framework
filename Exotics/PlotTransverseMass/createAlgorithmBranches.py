@@ -1,82 +1,51 @@
 
 
-algorithms = ['TopoSplitFilteredMu67SmallR0YCut9','TopoSplitFilteredMu100SmallR30YCut4', 'TopoSplitFilteredMu100SmallR30YCut0', 'TopoSplitFilteredMu100SmallR30YCut9', 'TopoSplitFilteredMu100SmallR30YCut12','TopoSplitFilteredMu100SmallR30YCut15','TopoTrimmedPtFrac5SmallR30','TopoTrimmedPtFrac5SmallR20','TopoPrunedCaRcutFactor50Zcut10','TopoPrunedCaRcutFactor50Zcut20','AntiKt2LCTopo','AntiKt3LCTopo','AntiKt4LCTopo', 'TopoPrunedCaRcutFactor50Zcut10Jets','TopoSplitFilteredMu100SmallR30YCut4Jets', 'TopoTrimmedPtFrac5SmallR30Jets', 'TopoSplitFilteredMu100SmallR30YCut4Jets','TopoSplitFilteredMu100SmallR30YCut4Jets']
+algorithms = ['CamKt12LCTopoSplitFilteredMu67SmallR0YCut9','CamKt12LCTopoSplitFilteredMu100SmallR30YCut4', 'CamKt12LCTopoSplitFilteredMu100SmallR30YCut0', 'CamKt12LCTopoSplitFilteredMu100SmallR30YCut9', 'CamKt12LCTopoSplitFilteredMu100SmallR30YCut12','CamKt12LCTopoSplitFilteredMu100SmallR30YCut15','AntiKt10LCTopoTrimmedPtFrac5SmallR20','AntiKt8LCTopoTrimmedPtFrac5SmallR20','AntiKt12LCTopoTrimmedPtFrac5SmallR20','CamKt6LCTopoTrimmedPtFrac5SmallR20','CamKt8LCTopoTrimmedPtFrac5SmallR20','CamKt10LCTopoTrimmedPtFrac5SmallR20','CamKt12LCTopoTrimmedPtFrac5SmallR20','CamKt6TopoPrunedCaRcutFactor50Zcut15','CamKt6TopoPrunedCaRcutFactor50Zcut10','CamKt8TopoPrunedCaRcutFactor50Zcut15','CamKt8TopoPrunedCaRcutFactor50Zcut10','CamKt12TopoPrunedCaRcutFactor50Zcut15','CamKt12TopoPrunedCaRcutFactor50Zcut10', 'CamKt6LCTopoSplitFilteredMu100SmallR30YCut4', 'CamKt6LCTopoSplitFilteredMu100SmallR30YCut0', 'CamKt6LCTopoSplitFilteredMu100SmallR30YCut9', 'CamKt8LCTopoSplitFilteredMu100SmallR30YCut4', 'CamKt8LCTopoSplitFilteredMu100SmallR30YCut0', 'CamKt8LCTopoSplitFilteredMu100SmallR30YCut9']
 numbins = [] # give all 20 bins?
 axisvalues = [[0,1700],[0,1200],[0,300],[-5,5],[-4,4],[-2,2],[0,1],[0,100],[0,1],[0,0.3],[0,90],[0,30],[0,15],[-2,5],[-2,5],[-2,10],[-2,5],[0.1,1],[0,1],[0,150],[-1500,100],[-1500,100],[-1500,100],[-1500,100],[-1500,100],[-1500,100],[0,1]] #going to be 2d for min, max
-var_type = ['E','pt','m','eta','phi','emfrac','Tau1','Tau2','Tau3','WIDTH','SPLIT12','SPLIT23','SPLIT34','Dip12','Dip13','Dip23','DipExcl12','PlanarFlow','Angularity','QW','PullMag','PullPhi','Pull_C00','Pull_C01','Pull_C10','Pull_C11','constit_index']
+var_type = ['E','pt','m','eta','phi','emfrac','Tau1','Tau2','Tau3','WIDTH','SPLIT12','SPLIT23','SPLIT34','Dip12','Dip13','Dip23','DipExcl12','PlanarFlow','Angularity','QW','PullMag','PullPhi','Pull_C00','Pull_C01','Pull_C10','Pull_C11','constit_index','ActiveArea','Aplanarity','TauWTA1','TauWTA2','Sphericity','ThrustMaj', 'ThrustMin', 'VoronoiArea', 'ZCUT12','ZCUT23','ZCUT34']
 
-subjet_alg = {'TopoTrimmedPtFrac5SmallR30':'TopoTrimmedSubjetsPtFrac5SmallR30','TopoSplitFilteredMu67SmallR0YCut9':'TopoSplitFiltSubjetsMu67SmallR0YCut9','TopoSplitFilteredMu100SmallR30YCut0':'TopoSplitFiltSubjetsMu100SmallR30YCut0', 'TopoSplitFilteredMu100SmallR30YCut4':'TopoSplitFiltSubjetsMu100SmallR30YCut4', 'TopoSplitFilteredMu100SmallR30YCut9':'TopoSplitFiltSubjetsMu100SmallR30YCut9', 'TopoSplitFilteredMu100SmallR30YCut12':'TopoSplitFiltSubjetsMu100SmallR30YCut12', 'TopoSplitFilteredMu100SmallR30YCut15':'TopoSplitFiltSubjetsMu100SmallR30YCut15'}
-alg_prefix = {'TopoSplitFilteredMu67SmallR0YCut9':'CamKt12','TopoSplitFilteredMu100SmallR30YCut0':'CamKt12','TopoSplitFilteredMu100SmallR30YCut4':'CamKt12', 'TopoSplitFilteredMu100SmallR30YCut9':'CamKt12', 'TopoSplitFilteredMu100SmallR30YCut12':'CamKt12', 'TopoSplitFilteredMu100SmallR30YCut15':'CamKt12','TopoTrimmedPtFrac5SmallR30':'AntiKt10','TopoTrimmedPtFrac5SmallR20':'AntiKt10','TopoPrunedCaRcutFactor50Zcut10':'AntiKt10','TopoPrunedCaRcutFactor50Zcut20':'AntiKt10','AntiKt2LCTopo':'','AntiKt3LCTopo':'','AntiKt4LCTopo':'','TopoPrunedCaRcutFactor50Zcut10Jets':'AntiKt10','TopoSplitFilteredMu100SmallR30YCut4Jets':'CamKt12', 'TopoTrimmedPtFrac5SmallR30Jets' : 'AntiKt10', 'TopoSplitFilteredMu100SmallR30YCut4Jets': 'CamKt12','TopoSplitFilteredMu100SmallR30YCut4Jets':'CamKt12' }
+subjet_alg = {'AntiKt8LCTopoTrimmedPtFrac5SmallR20':'AntiKt8LCTopoTrimmedSubjetsPtFrac5SmallR20', 'AntiKt10LCTopoTrimmedPtFrac5SmallR20':'AntiKt10LCTopoTrimmedSubjetsPtFrac5SmallR20', 'AntiKt12LCTopoTrimmedPtFrac5SmallR20':'AntiKt12LCTopoTrimmedSubjetsPtFrac5SmallR20',\
+'CamKt12LCTopoSplitFilteredMu67SmallR0YCut9':'CamKt12LCTopoSplitFiltSubjetsMu67SmallR0YCut9','CamKt12LCTopoSplitFilteredMu100SmallR30YCut0':'CamKt12LCTopoSplitFiltSubjetsMu100SmallR30YCut0', 'CamKt12LCTopoSplitFilteredMu100SmallR30YCut4':'CamKt12LCTopoSplitFiltSubjetsMu100SmallR30YCut4', 'CamKt12LCTopoSplitFilteredMu100SmallR30YCut9':'CamKt12LCTopoSplitFiltSubjetsMu100SmallR30YCut9', 'CamKt12LCTopoSplitFilteredMu100SmallR30YCut12':'CamKt12LCTopoSplitFiltSubjetsMu100SmallR30YCut12', 'CamKt12LCTopoSplitFilteredMu100SmallR30YCut15':'CamKt12LCTopoSplitFiltSubjetsMu100SmallR30YCut15',\
+'CamKt6LCTopoSplitFilteredMu100SmallR30YCut0':'CamKt6LCTopoSplitFiltSubjetsMu100SmallR30YCut0', 'CamKt6LCTopoSplitFilteredMu100SmallR30YCut4':'CamKt6LCTopoSplitFiltSubjetsMu100SmallR30YCut4', 'CamKt6LCTopoSplitFilteredMu100SmallR30YCut9':'CamKt6LCTopoSplitFiltSubjetsMu100SmallR30YCut9',\
+'CamKt8LCTopoSplitFilteredMu100SmallR30YCut0':'CamKt8LCTopoSplitFiltSubjetsMu100SmallR30YCut0', 'CamKt8LCTopoSplitFilteredMu100SmallR30YCut4':'CamKt8LCTopoSplitFiltSubjetsMu100SmallR30YCut4', 'CamKt8LCTopoSplitFilteredMu100SmallR30YCut9':'CamKt8LCTopoSplitFiltSubjetsMu100SmallR30YCut9',\
+}
+
+
 subjet_axes = [[0,1700],[0,1200],[0,300],[-5,5],[-4,4],[0,1],[0,0.3]]
 subjet_vars = ['E','pt','m','eta','phi','constit_index','WIDTH']
 
+#loop through algorithms and add to branches file
 for alg in algorithms:
-    f = open(alg+'.config','w')
+    # open output file
     f2 = open(alg+'_branches.txt','w')
     tcount = 0
-    prefix = 'jet_' + alg_prefix[alg]
-    if alg.find('LCTopo') == -1:
-        prefix+='LC'
+    # branch prefix
+    prefix = 'jet_'
+    # if LC in prefix name, keep it there
+    if alg.find('LC') != -1:
+        algprefix = alg[:alg.find('LC')+2]
+    else: # if there is no LC in the name
+        algprefix = alg[:alg.find('Topo')]
+    # xAODs have Jets appended to the algorithm name
     jetsadd =''
     if alg.find('Jets') != -1:
         jetsadd = 'Jets'
+    # loop through all of teh variables
     for t in var_type:
-        #changes numbins[tcount] to 20 for now....
-        
+        #changes numbins[tcount] to 20 for now....        
+        # emfrac doesn't exist for truth
         if t != 'emfrac':
-            f.write('truth_'+t+','+'jet_CamKt12Truth'+jetsadd+'_'+t+','+str(20) + ',' + str(axisvalues[tcount][0]) + ','+str(axisvalues[tcount][1])+',\n')
-            #f.write('truth_'+t+','+'jet_CamKt12Truth'+alg[4:]+'_'+t+','+str(20) + ',' + str(axisvalues[tcount][0]) + ','+str(axisvalues[tcount][1])+',\n')
             f2.write('jet_CamKt12Truth'+jetsadd+'_'+t+'\n')
-            #f2.write('jet_CamKt12Truth'+alg[4:]+'_'+t+'\n')
-        #f.write('topo_'+t+','+'jet_CamKt12LCTopo_'+t+','+str(20) + ',' + str(axisvalues[tcount][0]) + ','+str(axisvalues[tcount][1])+',\n')        
-        f.write('topo_'+t+','+prefix+'Topo'+jetsadd+'_'+t+','+str(20) + ',' + str(axisvalues[tcount][0]) + ','+str(axisvalues[tcount][1])+',\n')        
-        f.write('groomed_'+t+','+prefix+alg+'_'+t+','+str(20) + ',' + str(axisvalues[tcount][0]) + ','+str(axisvalues[tcount][1])+',\n')
-        
-
-
-        #f2.write('jet_CamKt12LCTopo_'+t+'\n')
-        f2.write(prefix+'Topo'+jetsadd+'_'+t+'\n')
-        #f2.write(prefix+'_'+t+'\n')
+        # topo + groomed
+        f2.write(prefix+algprefix+'Topo'+jetsadd+'_'+t+'\n')
         f2.write(prefix+alg+'_'+t+'\n')
         tcount+=1
     ecount = 0
+    # now loop through and add the subjet branches
     if alg in subjet_alg.keys():
         for e in subjet_vars:
-            f.write('subjet_'+e+','+prefix+subjet_alg[alg]+jetsadd+'_'+e+','+str(20)+','+str(subjet_axes[ecount][0]) + ',' + str(subjet_axes[ecount][1])+',\n')    
             f2.write(prefix+subjet_alg[alg]+jetsadd+'_'+e+'\n')
             ecount+=1
-
-    f.close()
     f2.close()
 
-
-'''
-jet_AntiKt10TruthTrimmedSubjetsPtFrac5SmallR30_n
-jet_AntiKt10TruthTrimmedSubjetsPtFrac5SmallR30_E
-jet_AntiKt10TruthTrimmedSubjetsPtFrac5SmallR30_pt
-jet_AntiKt10TruthTrimmedSubjetsPtFrac5SmallR30_m
-jet_AntiKt10TruthTrimmedSubjetsPtFrac5SmallR30_eta
-jet_AntiKt10TruthTrimmedSubjetsPtFrac5SmallR30_phi
-jet_AntiKt10TruthTrimmedSubjetsPtFrac5SmallR30_constit_n
-jet_AntiKt10TruthTrimmedSubjetsPtFrac5SmallR30_constit_index
-jet_AntiKt10TruthTrimmedSubjetsPtFrac5SmallR30_Lepton_n
-jet_AntiKt10TruthTrimmedSubjetsPtFrac5SmallR30_WIDTH
-
-
-jet_AntiKt10LCTopoTrimmedSubjetsPtFrac5SmallR30_n
-
-jet_CamKt12TruthSplitFiltSubjetsMu67SmallR0YCut9_n
-
-jet_CamKt12TruthSplitFiltSubjetsMu100SmallR30YCut4_n
-
-jet_CamKt12LCTopoSplitFiltSubjetsMu67SmallR0YCut9_n
-
-jet_CamKt12LCTopoSplitFiltSubjetsMu100SmallR30YCut4_n
-'''
-#jet_AntiKt10Truth_TrimmedSubjetsPtFrac5SmallR30_n
-
-#jet_AntiKt10LCTopo_TrimmedSubjetsPtFrac5SmallR30_n
-
-#jet_CamKt12Truth_SplitFiltSubjetsMu67SmallR0YCut9_n
-
-#jet_CamKt12Truth_SplitFiltSubjetsMu100SmallR30YCut4_n
