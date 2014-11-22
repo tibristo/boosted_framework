@@ -21,6 +21,7 @@
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/xml_parser.hpp>
 #include <boost/foreach.hpp>
+#include <algorithm>
 //#include "LinkDef.h"
 using namespace boost::algorithm;
 using namespace std;
@@ -192,6 +193,11 @@ int main( int argc, char * argv[] ) {
 
   vector<string> inputBkgFiles = vm["background-file"].as<vector<string> > ();
   vector<string> inputSigFiles = vm["signal-file"].as<vector<string> > ();
+
+  // shuffle the file order to increase efficiency when running multiple instances of this at once
+  std::random_shuffle(inputBkgFiles.begin(), inputBkgFiles.end());
+  std::random_shuffle(inputSigFiles.begin(), inputSigFiles.end());
+
 
   std::string alg_in = vm["algorithm"].as<string>();
   std::string alg_in_orig = vm["algorithm"].as<string>();
@@ -1855,26 +1861,41 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
 	  std::stringstream ss_fname; // store the name of the output file and include the i and j indices!
 	  std::string bkg = signal ? "sig": "bkg";
 	  ss_fname << ss.str() << "_" << bkg << ".root";
-	  boost::filesystem::path dir(std::string(algorithms.AlgoNames[i]+fileid_global));
+	  boost::filesystem::path dir(std::string(algorithm+fileid_global));
 	  boost::filesystem::create_directory(dir);
 
-	  inputTChain[tchainIdx]->GetEntries();
+	  // create a ttree cache to speed up branch reads
+	  inputTChain[tchainIdx]->SetCacheSize(10000000);
+
+
 
 	  // turn off the branches we're not interested in
+	  UInt_t * found = 0;
 	  for (std::vector<std::pair<string,int > >::iterator it = branches.begin(); it != branches.end(); it++)
 	    {
-
+	      found = 0;
 	      if ((*it).second == 0)
 		{
-		  inputTChain[tchainIdx]->SetBranchStatus((*it).first.c_str(),0);
+		  inputTChain[tchainIdx]->SetBranchStatus((*it).first.c_str(),0,found);
+		  // if the branch is not found in the tchain, then set it up in the branches file.
+		  {
+		    if ((&found) != 0)
+		      (*it).second = -1;
+		  }
+		}
+	      else if ((*it).second == 1)
+		{
+		  //std::cout << (*it).first << std::endl;
+		  // add branches we are using to branch cache
+		  inputTChain[tchainIdx]->AddBranchToCache((*it).first.c_str());
 		}
 	      
 	    }
-
+	  inputTChain[tchainIdx]->GetEntries();
 	  setJetsBranches(inputTChain[tchainIdx], algorithms.AlgoNames[i], i); //set all of the branches for the output tree for the jets	  
 
 	  // output file
-	  TFile * outfile = new TFile(std::string(algorithms.AlgoNames[i]+fileid_global+"/"+ss_fname.str()).c_str(),"RECREATE");   
+	  TFile * outfile = new TFile(std::string(algorithm+fileid_global+"/"+ss_fname.str()).c_str(),"RECREATE");   
 	  TTree * outTree = new TTree(treeName.c_str(),treeName.c_str());
 
 	  // reset all of the output variables so that they have default values
@@ -2209,7 +2230,7 @@ vector<std::pair<std::string,int> > getListOfJetBranches(std::string &algorithm,
   // reset branchmap
   branchmap.clear();
   std::string filename = algorithm.find("branches.txt") == std::string::npos ? algorithm+"_branches.txt" : algorithm;
-
+  std::cout << "using branches file: " << filename << std::endl;
   // open input file
   ifstream in(filename);
   string line;
@@ -3382,58 +3403,101 @@ void setOutputBranches(TTree * tree, std::string & groomalgo, std::string & groo
      
       std::string jetString = returnJetType(samplePrefix, groomalgo, addLC,i); //set to truth/ topo/ groomed
 
-      tree->Branch(std::string(jetString+"E").c_str(),&var_E.at(i),std::string(jetString+"E/F").c_str());
+      if (useBranch(string(jetString+"E")))
+	tree->Branch(std::string(jetString+"E").c_str(),&var_E.at(i),std::string(jetString+"E/F").c_str());
+      if (useBranch(string(jetString+"pt")))
       tree->Branch(std::string(jetString+"pt").c_str(),&var_pt.at(i),std::string(jetString+"pt/F").c_str());
+      if (useBranch(string(jetString+"m")))
       tree->Branch(std::string(jetString+"m").c_str(),&var_m.at(i),std::string(jetString+"m/F").c_str());
+      if (useBranch(string(jetString+"eta")))
       tree->Branch(std::string(jetString+"eta").c_str(),&var_eta.at(i),std::string(jetString+"eta/F").c_str());
+      if (useBranch(string(jetString+"phi")))
       tree->Branch(std::string(jetString+"phi").c_str(),&var_phi.at(i),std::string(jetString+"phi/F").c_str());
-      if (i != jetType::TRUTH) // emfrac doesn't exist for truth jets
+      if (i != jetType::TRUTH && useBranch(string(jetString+"emfrac"))) // emfrac doesn't exist for truth jets
 	tree->Branch(std::string(jetString+"emfrac").c_str(),&var_emfrac.at(i),std::string(jetString+"emfrac"+"/F").c_str());
+      if (useBranch(string(jetString+"Tau1")))
       tree->Branch(std::string(jetString+"Tau1").c_str(),&var_Tau1.at(i),std::string(jetString+"Tau1/F").c_str());
+      if (useBranch(string(jetString+"Tau2")))
       tree->Branch(std::string(jetString+"Tau2").c_str(),&var_Tau2.at(i),std::string(jetString+"Tau2/F").c_str());
+      if (useBranch(string(jetString+"Tau3")))
       tree->Branch(std::string(jetString+"Tau3").c_str(),&var_Tau3.at(i),std::string(jetString+"Tau3/F").c_str());
+      if (useBranch(string(jetString+"WIDTH")))
       tree->Branch(std::string(jetString+"WIDTH").c_str(),&var_WIDTH.at(i),std::string(jetString+"WIDTH/F").c_str());
+      if (useBranch(string(jetString+"SPLIT12")))
       tree->Branch(std::string(jetString+"SPLIT12").c_str(),&var_SPLIT12.at(i),std::string(jetString+"SPLIT12/F").c_str());
+      if (useBranch(string(jetString+"SPLIT23")))
       tree->Branch(std::string(jetString+"SPLIT23").c_str(),&var_SPLIT23.at(i),std::string(jetString+"SPLIT23/F").c_str());
+      if (useBranch(string(jetString+"SPLIT34")))
       tree->Branch(std::string(jetString+"SPLIT34").c_str(),&var_SPLIT34.at(i),std::string(jetString+"SPLIT34/F").c_str());
+      if (useBranch(string(jetString+"Dip12")))
       tree->Branch(std::string(jetString+"Dip12").c_str(),&var_Dip12.at(i),std::string(jetString+"Dip12/F").c_str());
+      if (useBranch(string(jetString+"Dip13")))
       tree->Branch(std::string(jetString+"Dip13").c_str(),&var_Dip13.at(i),std::string(jetString+"Dip13/F").c_str());
+      if (useBranch(string(jetString+"Dip23")))
       tree->Branch(std::string(jetString+"Dip23").c_str(),&var_Dip23.at(i),std::string(jetString+"Dip23/F").c_str());
+      if (useBranch(string(jetString+"DipExcl12")))
       tree->Branch(std::string(jetString+"DipExcl12").c_str(),&var_DipExcl12.at(i),std::string(jetString+"DipExcl12/F").c_str());
+      if (useBranch(string(jetString+"PlanarFlow")))
       tree->Branch(std::string(jetString+"PlanarFlow").c_str(),&var_PlanarFlow.at(i),std::string(jetString+"PlanarFlow/F").c_str());
+      if (useBranch(string(jetString+"Angularity")))
       tree->Branch(std::string(jetString+"Angularity").c_str(),&var_Angularity.at(i),std::string(jetString+"Angularity/F").c_str());
+      if (useBranch(string(jetString+"QW")))
       tree->Branch(std::string(jetString+"QW").c_str(),&var_QW.at(i),std::string(jetString+"QW/F").c_str());
+      if (useBranch(string(jetString+"PullMag")))
       tree->Branch(std::string(jetString+"PullMag").c_str(),&var_PullMag.at(i),std::string(jetString+"PullMag/F").c_str());
+      if (useBranch(string(jetString+"PullPhi")))
       tree->Branch(std::string(jetString+"PullPhi").c_str(),&var_PullPhi.at(i),std::string(jetString+"PullPhi/F").c_str());
+      if (useBranch(string(jetString+"Pull_C00")))
       tree->Branch(std::string(jetString+"Pull_C00").c_str(),&var_Pull_C00.at(i),std::string(jetString+"Pull_C00/F").c_str());
+      if (useBranch(string(jetString+"Pull_C01")))
       tree->Branch(std::string(jetString+"Pull_C01").c_str(),&var_Pull_C01.at(i),std::string(jetString+"Pull_C01/F").c_str());
+      if (useBranch(string(jetString+"Pull_C10")))
       tree->Branch(std::string(jetString+"Pull_C10").c_str(),&var_Pull_C10.at(i),std::string(jetString+"Pull_C10/F").c_str());
+      if (useBranch(string(jetString+"Pull_C11")))
       tree->Branch(std::string(jetString+"Pull_C11").c_str(),&var_Pull_C11.at(i),std::string(jetString+"Pull_C11/F").c_str());
+      if (useBranch(string(jetString+"YFilt")))
       tree->Branch(std::string(jetString+"YFilt").c_str(),&var_YFilt,std::string(jetString+"YFilt/F").c_str());
 
-tree->Branch(std::string(jetString+"ActiveArea").c_str(),&var_ActiveArea,std::string(jetString+"ActiveArea/F").c_str());
-tree->Branch(std::string(jetString+"VoronoiArea").c_str(),&var_VoronoiArea,std::string(jetString+"VoronoiArea/F").c_str());
-tree->Branch(std::string(jetString+"Aplanarity").c_str(),&var_Aplanarity,std::string(jetString+"Aplanarity/F").c_str());
-tree->Branch(std::string(jetString+"Sphericity").c_str(),&var_Sphericity,std::string(jetString+"Sphericity/F").c_str());
-tree->Branch(std::string(jetString+"ThrustMaj").c_str(),&var_ThrustMaj,std::string(jetString+"ThrustMaj/F").c_str());
-tree->Branch(std::string(jetString+"ThrustMin").c_str(),&var_ThrustMin,std::string(jetString+"ThrustMin/F").c_str());
+      if (useBranch(string(jetString+"ActiveArea")))
+	tree->Branch(std::string(jetString+"ActiveArea").c_str(),&var_ActiveArea,std::string(jetString+"ActiveArea/F").c_str());
+      if (useBranch(string(jetString+"VoronoiArea")))
+	tree->Branch(std::string(jetString+"VoronoiArea").c_str(),&var_VoronoiArea,std::string(jetString+"VoronoiArea/F").c_str());
+      if (useBranch(string(jetString+"Aplanarity")))
+	tree->Branch(std::string(jetString+"Aplanarity").c_str(),&var_Aplanarity,std::string(jetString+"Aplanarity/F").c_str());
+      if (useBranch(string(jetString+"Sphericity")))
+	tree->Branch(std::string(jetString+"Sphericity").c_str(),&var_Sphericity,std::string(jetString+"Sphericity/F").c_str());
+      if (useBranch(string(jetString+"ThrustMaj")))
+	tree->Branch(std::string(jetString+"ThrustMaj").c_str(),&var_ThrustMaj,std::string(jetString+"ThrustMaj/F").c_str());
+      if (useBranch(string(jetString+"ThrustMin")))
+	tree->Branch(std::string(jetString+"ThrustMin").c_str(),&var_ThrustMin,std::string(jetString+"ThrustMin/F").c_str());
       
-
- tree->Branch(std::string(jetString+"TauWTA1").c_str(),&var_TauWTA1.at(i),std::string(jetString+"TauWTA1/F").c_str());
- tree->Branch(std::string(jetString+"TauWTA2").c_str(),&var_TauWTA2.at(i),std::string(jetString+"TauWTA2/F").c_str());
- tree->Branch(std::string(jetString+"TauWTA3").c_str(),&var_TauWTA3.at(i),std::string(jetString+"TauWTA3/F").c_str());
- tree->Branch(std::string(jetString+"ZCUT12").c_str(),&var_ZCUT12.at(i),std::string(jetString+"ZCUT12/F").c_str());
- tree->Branch(std::string(jetString+"ZCUT23").c_str(),&var_ZCUT23.at(i),std::string(jetString+"ZCUT23/F").c_str());
- tree->Branch(std::string(jetString+"ZCUT34").c_str(),&var_ZCUT34.at(i),std::string(jetString+"ZCUT34/F").c_str());
-	  
- tree->Branch(std::string(returnJetType(samplePrefix, groomalgo, addLC,0)+"TauWTA2/TauWTA1").c_str(),&var_TauWTA2TauWTA1.at(0),std::string(jetString+"TauWTA2TauWTA1/F").c_str());
- tree->Branch(std::string(returnJetType(samplePrefix, groomalgo, addLC,1)+"TauWTA2/TauWTA1").c_str(),&var_TauWTA2TauWTA1.at(1),std::string(jetString+"TauWTA2TauWTA1/F").c_str());
- tree->Branch(std::string(jetString+"TauWTA2/TauWTA1").c_str(),&var_TauWTA2TauWTA1.at(2),std::string(jetString+"TauWTA2TauWTA1/F").c_str());  
-	  
+      if (useBranch(string(jetString+"TauWTA1")))
+	tree->Branch(std::string(jetString+"TauWTA1").c_str(),&var_TauWTA1.at(i),std::string(jetString+"TauWTA1/F").c_str());
+      if (useBranch(string(jetString+"TauWTA2")))
+	tree->Branch(std::string(jetString+"TauWTA2").c_str(),&var_TauWTA2.at(i),std::string(jetString+"TauWTA2/F").c_str());
+      if (useBranch(string(jetString+"TauWTA3")))
+	tree->Branch(std::string(jetString+"TauWTA3").c_str(),&var_TauWTA3.at(i),std::string(jetString+"TauWTA3/F").c_str());
+      if (useBranch(string(jetString+"ZCUT12")))
+	tree->Branch(std::string(jetString+"ZCUT12").c_str(),&var_ZCUT12.at(i),std::string(jetString+"ZCUT12/F").c_str());
+      if (useBranch(string(jetString+"ZCUT23")))
+	tree->Branch(std::string(jetString+"ZCUT23").c_str(),&var_ZCUT23.at(i),std::string(jetString+"ZCUT23/F").c_str());
+      if (useBranch(string(jetString+"ZCUT34")))
+	tree->Branch(std::string(jetString+"ZCUT34").c_str(),&var_ZCUT34.at(i),std::string(jetString+"ZCUT34/F").c_str());
+      
+      if (useBranch(string(returnJetType(samplePrefix, groomalgo, addLC,0)+"TauWTA2/TauWTA1")))
+	tree->Branch(std::string(returnJetType(samplePrefix, groomalgo, addLC,0)+"TauWTA2/TauWTA1").c_str(),&var_TauWTA2TauWTA1.at(0),std::string(jetString+"TauWTA2TauWTA1/F").c_str());
+      if (useBranch(string(returnJetType(samplePrefix, groomalgo, addLC,1)+"TauWTA2/TauWTA1")))
+	tree->Branch(std::string(returnJetType(samplePrefix, groomalgo, addLC,1)+"TauWTA2/TauWTA1").c_str(),&var_TauWTA2TauWTA1.at(1),std::string(jetString+"TauWTA2TauWTA1/F").c_str());
+      if (useBranch(string(jetString+"TauWTA2/TauWTA1")))
+	tree->Branch(std::string(jetString+"TauWTA2/TauWTA1").c_str(),&var_TauWTA2TauWTA1.at(2),std::string(jetString+"TauWTA2TauWTA1/F").c_str());  
+      
       // add a calculated variable Tau2/Tau1
-      tree->Branch(std::string(returnJetType(samplePrefix, groomalgo, addLC,0)+"Tau21").c_str(),&var_Tau21.at(0),std::string(jetString+"Tau21/F").c_str());
-      tree->Branch(std::string(returnJetType(samplePrefix, groomalgo, addLC,1)+"Tau21").c_str(),&var_Tau21.at(1),std::string(jetString+"Tau21/F").c_str());
-      tree->Branch(std::string(jetString+"Tau21").c_str(),&var_Tau21.at(2),std::string(jetString+"Tau21/F").c_str());  
+      if (useBranch(string(returnJetType(samplePrefix, groomalgo, addLC,0)+"Tau21")))
+	tree->Branch(std::string(returnJetType(samplePrefix, groomalgo, addLC,0)+"Tau21").c_str(),&var_Tau21.at(0),std::string(jetString+"Tau21/F").c_str());
+      if (useBranch(string(returnJetType(samplePrefix, groomalgo, addLC,0)+"Tau21")))
+	tree->Branch(std::string(returnJetType(samplePrefix, groomalgo, addLC,1)+"Tau21").c_str(),&var_Tau21.at(1),std::string(jetString+"Tau21/F").c_str());
+      if (useBranch(string(jetString+"Tau21")))
+	tree->Branch(std::string(jetString+"Tau21").c_str(),&var_Tau21.at(2),std::string(jetString+"Tau21/F").c_str());  
 
     }
   std::string jetString = returnJetType(samplePrefix, groomalgo, addLC,jetType::GROOMED); 
