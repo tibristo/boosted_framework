@@ -2457,49 +2457,21 @@ void eraseJet(int jet)
     var_Tau1_vec[i]->erase(var_Tau1_vec[i]->begin()+jet);
   if (var_Tau2_vec[i] != NULL && var_Tau2_vec[i]->size() > jet)
     var_Tau2_vec[i]->erase(var_Tau2_vec[i]->begin()+jet);
-  if (var_Tau3_vec[i] != NULL && var_Tau3_vec[i]->size() > jet)
-    var_Tau3_vec[i]->erase(var_Tau3_vec[i]->begin()+jet);
-  if (var_WIDTH_vec[i] != NULL && var_WIDTH_vec[i]->size() > jet)
-    var_WIDTH_vec[i]->erase(var_WIDTH_vec[i]->begin()+jet);
   if (var_SPLIT12_vec[i] != NULL && var_SPLIT12_vec[i]->size() > jet)
     var_SPLIT12_vec[i]->erase(var_SPLIT12_vec[i]->begin()+jet);
-  if (var_SPLIT23_vec[i] != NULL && var_SPLIT23_vec[i]->size() > jet)
-    var_SPLIT23_vec[i]->erase(var_SPLIT23_vec[i]->begin()+jet);
-  if (var_SPLIT34_vec[i] != NULL && var_SPLIT34_vec[i]->size() > jet)
-    var_SPLIT34_vec[i]->erase(var_SPLIT34_vec[i]->begin()+jet);
+
   if (var_Dip12_vec[i] != NULL && var_Dip12_vec[i]->size() > jet)
     var_Dip12_vec[i]->erase(var_Dip12_vec[i]->begin()+jet);
-  if (var_Dip13_vec[i] != NULL && var_Dip13_vec[i]->size() > jet)
-    var_Dip13_vec[i]->erase(var_Dip13_vec[i]->begin()+jet);
-  if (var_Dip23_vec[i] != NULL && var_Dip23_vec[i]->size() > jet)
-    var_Dip23_vec[i]->erase(var_Dip23_vec[i]->begin()+jet);
-  if (var_DipExcl12_vec[i] != NULL && var_DipExcl12_vec[i]->size() > jet)
-    var_DipExcl12_vec[i]->erase(var_DipExcl12_vec[i]->begin()+jet);
+
   if (var_PlanarFlow_vec[i] != NULL && var_PlanarFlow_vec[i]->size() > jet)
     var_PlanarFlow_vec[i]->erase(var_PlanarFlow_vec[i]->begin()+jet);
   if (var_Angularity_vec[i] != NULL && var_Angularity_vec[i]->size() > jet)
     var_Angularity_vec[i]->erase(var_Angularity_vec[i]->begin()+jet);
-  if (var_QW_vec[i] != NULL && var_QW_vec[i]->size() > jet)
-    var_QW_vec[i]->erase(var_QW_vec[i]->begin()+jet);
-  if (var_PullMag_vec[i] != NULL && var_PullMag_vec[i]->size() > jet)
-    var_PullMag_vec[i]->erase(var_PullMag_vec[i]->begin()+jet);
-  if (var_PullPhi_vec[i] != NULL && var_PullPhi_vec[i]->size() > jet)
-    var_PullPhi_vec[i]->erase(var_PullPhi_vec[i]->begin()+jet);
-  if (var_Pull_C00_vec[i] != NULL && var_Pull_C00_vec[i]->size() > jet)
-    var_Pull_C00_vec[i]->erase(var_Pull_C00_vec[i]->begin()+jet);
-  if (var_Pull_C01_vec[i] != NULL && var_Pull_C01_vec[i]->size() > jet)
-    var_Pull_C01_vec[i]->erase(var_Pull_C01_vec[i]->begin()+jet);
-  if (var_Pull_C10_vec[i] != NULL && var_Pull_C10_vec[i]->size() > jet)
-    var_Pull_C10_vec[i]->erase(var_Pull_C10_vec[i]->begin()+jet);
-  if (var_Pull_C11_vec[i] != NULL && var_Pull_C11_vec[i]->size() > jet)
-    var_Pull_C11_vec[i]->erase(var_Pull_C11_vec[i]->begin()+jet);
+
   if (var_YFilt_vec != NULL && var_YFilt_vec->size() > jet)
     var_YFilt_vec->erase(var_YFilt_vec->begin()+jet);
   
-  if (var_ActiveArea_vec[i] != NULL && var_ActiveArea_vec[i]->size() >> jet)
-    var_ActiveArea_vec[i]->erase(var_ActiveArea_vec[i]->begin()+jet);
-  if (var_VoronoiArea_vec[i] != NULL && var_VoronoiArea_vec[i]->size() >> jet)
-    var_VoronoiArea_vec[i]->erase(var_VoronoiArea_vec[i]->begin()+jet);
+
   if (var_Aplanarity_vec[i] != NULL && var_Aplanarity_vec[i]->size() >> jet)
     var_Aplanarity_vec[i]->erase(var_Aplanarity_vec[i]->begin()+jet);
   if (var_Sphericity_vec[i] != NULL && var_Sphericity_vec[i]->size() >> jet)
@@ -2513,14 +2485,8 @@ void eraseJet(int jet)
     var_TauWTA1_vec[i]->erase(var_TauWTA1_vec[i]->begin()+jet);
   if (var_TauWTA2_vec[i] != NULL && var_TauWTA2_vec[i]->size() > jet)
     var_TauWTA2_vec[i]->erase(var_TauWTA2_vec[i]->begin()+jet);
-  if (var_TauWTA3_vec[i] != NULL && var_TauWTA3_vec[i]->size() > jet)
-    var_TauWTA3_vec[i]->erase(var_TauWTA3_vec[i]->begin()+jet);
   if (var_ZCUT12_vec[i] != NULL && var_ZCUT12_vec[i]->size() > jet)
     var_ZCUT12_vec[i]->erase(var_ZCUT12_vec[i]->begin()+jet);
-  if (var_ZCUT23_vec[i] != NULL && var_ZCUT23_vec[i]->size() > jet)
-    var_ZCUT23_vec[i]->erase(var_ZCUT23_vec[i]->begin()+jet);
-  if (var_ZCUT34_vec[i] != NULL && var_ZCUT34_vec[i]->size() > jet)
-    var_ZCUT34_vec[i]->erase(var_ZCUT34_vec[i]->begin()+jet);
     
   
 } // eraseJet
@@ -2785,38 +2751,23 @@ void setJetsBranches(TChain * tree, std::string &groomalgo,  std::string & groom
       setVector(tree, brancharray, var_emfrac_vec.at(i), std::string(jetString+"emfrac") );
       setVector(tree, brancharray, var_Tau1_vec.at(i), std::string(jetString+"Tau1") );
       setVector(tree, brancharray, var_Tau2_vec.at(i), std::string(jetString+"Tau2") );
-      setVector(tree, brancharray, var_Tau3_vec.at(i), std::string(jetString+"Tau3") );
-      setVector(tree, brancharray, var_WIDTH_vec.at(i), std::string(jetString+"WIDTH") );
+
+
       setVector(tree, brancharray, var_SPLIT12_vec.at(i), std::string(jetString+"SPLIT12") );
-      setVector(tree, brancharray, var_SPLIT23_vec.at(i), std::string(jetString+"SPLIT23") );
-      setVector(tree, brancharray, var_SPLIT34_vec.at(i), std::string(jetString+"SPLIT34") );
+
       setVector(tree, brancharray, var_Dip12_vec.at(i), std::string(jetString+"Dip12") );
-      setVector(tree, brancharray, var_Dip13_vec.at(i), std::string(jetString+"Dip13") );
-      setVector(tree, brancharray, var_Dip23_vec.at(i), std::string(jetString+"Dip23") );
-      setVector(tree, brancharray, var_DipExcl12_vec.at(i), std::string(jetString+"DipExcl12") );
       setVector(tree, brancharray, var_PlanarFlow_vec.at(i), std::string(jetString+"PlanarFlow") );
       setVector(tree, brancharray, var_Angularity_vec.at(i), std::string(jetString+"Angularity") );
-      setVector(tree, brancharray, var_QW_vec.at(i), std::string(jetString+"QW") );
-      setVector(tree, brancharray, var_PullMag_vec.at(i), std::string(jetString+"PullMag") );
-      setVector(tree, brancharray, var_PullPhi_vec.at(i), std::string(jetString+"PullPhi") );
-      setVector(tree, brancharray, var_Pull_C00_vec.at(i), std::string(jetString+"Pull_C00") );
-      setVector(tree, brancharray, var_Pull_C01_vec.at(i), std::string(jetString+"Pull_C01") );
-      setVector(tree, brancharray, var_Pull_C10_vec.at(i), std::string(jetString+"Pull_C10") );
-      setVector(tree, brancharray, var_Pull_C11_vec.at(i), std::string(jetString+"Pull_C11") );
 
-      setVector(tree, brancharray, var_ActiveArea_vec.at(i), std::string(jetString+"ActiveArea") );
+
       setVector(tree, brancharray, var_Aplanarity_vec.at(i), std::string(jetString+"Aplanarity") );
       setVector(tree, brancharray, var_Sphericity_vec.at(i), std::string(jetString+"Sphericity") );
       setVector(tree, brancharray, var_ThrustMaj_vec.at(i), std::string(jetString+"ThrustMaj") );
       setVector(tree, brancharray, var_ThrustMin_vec.at(i), std::string(jetString+"ThrustMin") );
-      setVector(tree, brancharray, var_VoronoiArea_vec.at(i), std::string(jetString+"VoronoiArea") );
 
       setVector(tree, brancharray, var_TauWTA1_vec.at(i), std::string(jetString+"TauWTA1") );
       setVector(tree, brancharray, var_TauWTA2_vec.at(i), std::string(jetString+"TauWTA2") );
-      setVector(tree, brancharray, var_TauWTA3_vec.at(i), std::string(jetString+"TauWTA3") );
       setVector(tree, brancharray, var_ZCUT12_vec.at(i), std::string(jetString+"ZCUT12") );
-      setVector(tree, brancharray, var_ZCUT23_vec.at(i), std::string(jetString+"ZCUT23") );
-      setVector(tree, brancharray, var_ZCUT34_vec.at(i), std::string(jetString+"ZCUT34") );
       
     } // end for loop over topo/truth/groom
 
@@ -2968,42 +2919,20 @@ void initVectors()
       var_constit_index[i] = 0;
       var_Tau1_vec[i] = 0;
       var_Tau2_vec[i] = 0;
-      var_Tau3_vec[i] = 0;
-      var_WIDTH_vec[i] = 0;
       var_SPLIT12_vec[i] = 0;
-      var_SPLIT23_vec[i] = 0;
-      var_SPLIT34_vec[i] = 0;
       var_Dip12_vec[i] = 0;
-      var_Dip13_vec[i] = 0;
-      var_Dip23_vec[i] = 0;
-      var_DipExcl12_vec[i] = 0;
       var_PlanarFlow_vec[i] = 0;
       var_Angularity_vec[i] = 0;
-      var_QW_vec[i] = 0;
-      var_PullMag_vec[i] = 0;
-      var_PullPhi_vec[i] = 0;
-      var_Pull_C00_vec[i] = 0;
-      var_Pull_C01_vec[i] = 0;
-      var_Pull_C10_vec[i] = 0;
-      var_Pull_C11_vec[i]= 0;//std::map<i, 0>;
 
-      var_ActiveArea_vec[i] = 0;
       var_Aplanarity_vec[i] = 0;
       var_Sphericity_vec[i] = 0;
       var_ThrustMaj_vec[i] = 0;
       var_ThrustMin_vec[i] = 0;
-      var_VoronoiArea_vec[i] = 0;
-      
   
       var_TauWTA1_vec[i] = 0;
       var_TauWTA2_vec[i] = 0;
-      var_TauWTA3_vec[i] = 0;
-      
       
       var_ZCUT12_vec[i] = 0;
-      var_ZCUT23_vec[i] = 0;
-      var_ZCUT34_vec[i] = 0;
-      
     }  
   var_YFilt_vec = 0;
   var_massFraction_vec = 0;
@@ -3164,45 +3093,15 @@ void setOutputVariables( int jet_idx_truth, int jet_idx_topo, int jet_idx_groome
 	var_Tau1[x]=(*var_Tau1_vec[x])[jet_idx];
       if (var_Tau2_vec[x] != NULL && useBranch(string(jetString+"Tau2")))
 	var_Tau2[x]=(*var_Tau2_vec[x])[jet_idx];
-      if (var_Tau3_vec[x] != NULL && useBranch(string(jetString+"Tau3")))
-	var_Tau3[x]=(*var_Tau3_vec[x])[jet_idx];
-      if (var_WIDTH_vec[x] != NULL && useBranch(string(jetString+"WIDTH")))
-	var_WIDTH[x]=(*var_WIDTH_vec[x])[jet_idx];
       if (var_SPLIT12_vec[x] != NULL && useBranch(string(jetString+"SPLIT12")))
 	var_SPLIT12[x]=(*var_SPLIT12_vec[x])[jet_idx];
-      if (var_SPLIT23_vec[x] != NULL && useBranch(string(jetString+"SPLIT23")))
-	var_SPLIT23[x]=(*var_SPLIT23_vec[x])[jet_idx];
-      if (var_SPLIT34_vec[x] != NULL && useBranch(string(jetString+"SPLIT34")))
-	var_SPLIT34[x]=(*var_SPLIT34_vec[x])[jet_idx];
       if (var_Dip12_vec[x] != NULL && useBranch(string(jetString+"Dip12")))
 	var_Dip12[x]=(*var_Dip12_vec[x])[jet_idx];
-      if (var_Dip13_vec[x] != NULL && useBranch(string(jetString+"Dip13")))
-	var_Dip13[x]=(*var_Dip13_vec[x])[jet_idx];
-      if (var_Dip23_vec[x] != NULL && useBranch(string(jetString+"Dip23")))
-	var_Dip23[x]=(*var_Dip23_vec[x])[jet_idx];
-      if (var_DipExcl12_vec[x] != NULL && useBranch(string(jetString+"DipExcl12")))
-	var_DipExcl12[x]=(*var_DipExcl12_vec[x])[jet_idx];
       if (var_PlanarFlow_vec[x] != NULL && useBranch(string(jetString+"PlanarFlow")))
 	var_PlanarFlow[x]=(*var_PlanarFlow_vec[x])[jet_idx];
       if (var_Angularity_vec[x] != NULL && useBranch(string(jetString+"Angularity")))
 	var_Angularity[x]=(*var_Angularity_vec[x])[jet_idx];
-      if (var_QW_vec[x] != NULL && useBranch(string(jetString+"QW")))
-	var_QW[x]=(*var_QW_vec[x])[jet_idx];
-      if (var_PullMag_vec[x] != NULL && useBranch(string(jetString+"PullMag")))
-	var_PullMag[x]=(*var_PullMag_vec[x])[jet_idx];
-      if (var_PullPhi_vec[x] != NULL && useBranch(string(jetString+"PullPhi")))
-	var_PullPhi[x]=(*var_PullPhi_vec[x])[jet_idx];
-      if (var_Pull_C00_vec[x] != NULL && useBranch(string(jetString+"Pull_C00")))
-	var_Pull_C00[x]=(*var_Pull_C00_vec[x])[jet_idx];
-      if (var_Pull_C01_vec[x] != NULL && useBranch(string(jetString+"Pull_C01")))
-	var_Pull_C01[x]=(*var_Pull_C01_vec[x])[jet_idx];
-      if (var_Pull_C10_vec[x] != NULL && useBranch(string(jetString+"Pull_C10")))
-	var_Pull_C10[x]=(*var_Pull_C10_vec[x])[jet_idx];
-      if (var_Pull_C11_vec[x] != NULL && useBranch(string(jetString+"Pull_C11")))
-	var_Pull_C11[x]=(*var_Pull_C11_vec[x])[jet_idx];
 
-      if (var_ActiveArea_vec[x] != NULL && useBranch(string(jetString+"ActiveArea")))
-	var_ActiveArea[x] = (*var_ActiveArea_vec[x])[jet_idx];
       if (var_Aplanarity_vec[x] != NULL && useBranch(string(jetString+"Aplanarity")))
 	var_Aplanarity[x] = (*var_Aplanarity_vec[x])[jet_idx];
       if (var_Sphericity_vec[x] != NULL && useBranch(string(jetString+"Sphericity")))
@@ -3211,22 +3110,15 @@ void setOutputVariables( int jet_idx_truth, int jet_idx_topo, int jet_idx_groome
 	var_ThrustMaj[x] = (*var_ThrustMaj_vec[x])[jet_idx];
       if (var_ThrustMin_vec[x] != NULL && useBranch(string(jetString+"ThrustMin")))
 	var_ThrustMin[x] = (*var_ThrustMin_vec[x])[jet_idx];
-      if (var_VoronoiArea_vec[x] != NULL && useBranch(string(jetString+"VoronoiArea")))
-	var_VoronoiArea[x] = (*var_VoronoiArea_vec[x])[jet_idx];
+
       
       // tau21 and tauwta21 are set in the main loop, not here, because we have to calculate them
       if (useBranch(string(jetString+"TauWTA1")))
 	var_TauWTA1[x]=(*var_TauWTA1_vec[x])[jet_idx];
       if (useBranch(string(jetString+"TauWTA2")))
 	var_TauWTA2[x]=(*var_TauWTA2_vec[x])[jet_idx];
-      if (useBranch(string(jetString+"TauWTA3")))
-	var_TauWTA3[x]=(*var_TauWTA3_vec[x])[jet_idx];
       if (useBranch(string(jetString+"ZCUT12")))
 	var_ZCUT12[x]=(*var_ZCUT12_vec[x])[jet_idx];
-      if (useBranch(string(jetString+"ZCUT23")))
-	var_ZCUT23[x]=(*var_ZCUT23_vec[x])[jet_idx];
-      if (useBranch(string(jetString+"ZCUT34")))
-	var_ZCUT34[x]=(*var_ZCUT34_vec[x])[jet_idx];
 	
     } // end for loop
 
@@ -3270,42 +3162,24 @@ void clearOutputVariables()
   var_emfrac.clear();
   var_Tau1.clear();
   var_Tau2.clear();
-  var_Tau3.clear();
-  var_WIDTH.clear();
+
   var_SPLIT12.clear();
-  var_SPLIT23.clear();
-  var_SPLIT34.clear();
+
   var_Dip12.clear();
-  var_Dip13.clear();
-  var_Dip23.clear();
-  var_DipExcl12.clear();
   var_PlanarFlow.clear();
   var_Angularity.clear();
-  var_QW.clear();
-  var_PullMag.clear();
-  var_PullPhi.clear();
-  var_Pull_C00.clear();
-  var_Pull_C01.clear();
-  var_Pull_C10.clear();
-  var_Pull_C11.clear();
 
-  var_ActiveArea.clear();
   var_Aplanarity.clear();
   var_Sphericity.clear();
   var_ThrustMaj.clear();
   var_ThrustMin.clear();
-  var_VoronoiArea.clear();
+
 
   var_Tau21.clear();
   var_TauWTA2TauWTA1.clear();
   var_TauWTA1.clear();
   var_TauWTA2.clear();
-  var_TauWTA3.clear();
   var_ZCUT12.clear();
-  var_ZCUT23.clear();
-  var_ZCUT34.clear();
-
-
 
   var_leptons.clear();
   var_ptcone20.clear();
@@ -3338,27 +3212,12 @@ void resetOutputVariables()
       var_emfrac.push_back(-999);
       var_Tau1.push_back(-999);
       var_Tau2.push_back(-999);
-      var_Tau3.push_back(-999);
-      var_WIDTH.push_back(-999);
+
       var_SPLIT12.push_back(-999);
-      var_SPLIT23.push_back(-999);
-      var_SPLIT34.push_back(-999);
       var_Dip12.push_back(-999);
-      var_Dip13.push_back(-999);
-      var_Dip23.push_back(-999);
-      var_DipExcl12.push_back(-999);
       var_PlanarFlow.push_back(-999);
       var_Angularity.push_back(-999);
-      var_QW.push_back(-999);
-      var_PullMag.push_back(-999);
-      var_PullPhi.push_back(-999);
-      var_Pull_C00.push_back(-999);
-      var_Pull_C01.push_back(-999);
-      var_Pull_C10.push_back(-999);
-      var_Pull_C11.push_back(-999);
 
-      var_ActiveArea.push_back(-999);
-      var_VoronoiArea.push_back(-999);
       var_Aplanarity.push_back(-999);
       var_Sphericity.push_back(-999);
       var_ThrustMaj.push_back(-999);
@@ -3368,10 +3227,7 @@ void resetOutputVariables()
       var_TauWTA2TauWTA1.push_back(-999);
       var_TauWTA1.push_back(-999);
       var_TauWTA2.push_back(-999);
-      var_TauWTA3.push_back(-999);
       var_ZCUT12.push_back(-999);
-      var_ZCUT23.push_back(-999);
-      var_ZCUT34.push_back(-999);
 
     }
 } //resetOutputVariables
@@ -3419,6 +3275,7 @@ void setOutputBranches(TTree * tree, std::string & groomalgo, std::string & groo
       tree->Branch(std::string(jetString+"Tau1").c_str(),&var_Tau1.at(i),std::string(jetString+"Tau1/F").c_str());
       if (useBranch(string(jetString+"Tau2")))
       tree->Branch(std::string(jetString+"Tau2").c_str(),&var_Tau2.at(i),std::string(jetString+"Tau2/F").c_str());
+<<<<<<< HEAD
       if (useBranch(string(jetString+"Tau3")))
       tree->Branch(std::string(jetString+"Tau3").c_str(),&var_Tau3.at(i),std::string(jetString+"Tau3/F").c_str());
       if (useBranch(string(jetString+"WIDTH")))
@@ -3438,9 +3295,15 @@ void setOutputBranches(TTree * tree, std::string & groomalgo, std::string & groo
       if (useBranch(string(jetString+"DipExcl12")))
       tree->Branch(std::string(jetString+"DipExcl12").c_str(),&var_DipExcl12.at(i),std::string(jetString+"DipExcl12/F").c_str());
       if (useBranch(string(jetString+"PlanarFlow")))
+=======
+
+      tree->Branch(std::string(jetString+"SPLIT12").c_str(),&var_SPLIT12.at(i),std::string(jetString+"SPLIT12/F").c_str());
+      tree->Branch(std::string(jetString+"Dip12").c_str(),&var_Dip12.at(i),std::string(jetString+"Dip12/F").c_str());
+>>>>>>> removed variables
       tree->Branch(std::string(jetString+"PlanarFlow").c_str(),&var_PlanarFlow.at(i),std::string(jetString+"PlanarFlow/F").c_str());
       if (useBranch(string(jetString+"Angularity")))
       tree->Branch(std::string(jetString+"Angularity").c_str(),&var_Angularity.at(i),std::string(jetString+"Angularity/F").c_str());
+<<<<<<< HEAD
       if (useBranch(string(jetString+"QW")))
       tree->Branch(std::string(jetString+"QW").c_str(),&var_QW.at(i),std::string(jetString+"QW/F").c_str());
       if (useBranch(string(jetString+"PullMag")))
@@ -3491,6 +3354,26 @@ void setOutputBranches(TTree * tree, std::string & groomalgo, std::string & groo
       if (useBranch(string(jetString+"TauWTA2/TauWTA1")))
 	tree->Branch(std::string(jetString+"TauWTA2/TauWTA1").c_str(),&var_TauWTA2TauWTA1.at(2),std::string(jetString+"TauWTA2TauWTA1/F").c_str());  
       
+=======
+      tree->Branch(std::string(jetString+"YFilt").c_str(),&var_YFilt,std::string(jetString+"YFilt/F").c_str());
+
+
+      tree->Branch(std::string(jetString+"Aplanarity").c_str(),&var_Aplanarity,std::string(jetString+"Aplanarity/F").c_str());
+      tree->Branch(std::string(jetString+"Sphericity").c_str(),&var_Sphericity,std::string(jetString+"Sphericity/F").c_str());
+      tree->Branch(std::string(jetString+"ThrustMaj").c_str(),&var_ThrustMaj,std::string(jetString+"ThrustMaj/F").c_str());
+      tree->Branch(std::string(jetString+"ThrustMin").c_str(),&var_ThrustMin,std::string(jetString+"ThrustMin/F").c_str());
+      
+
+      tree->Branch(std::string(jetString+"TauWTA1").c_str(),&var_TauWTA1.at(i),std::string(jetString+"TauWTA1/F").c_str());
+      tree->Branch(std::string(jetString+"TauWTA2").c_str(),&var_TauWTA2.at(i),std::string(jetString+"TauWTA2/F").c_str());
+      tree->Branch(std::string(jetString+"ZCUT12").c_str(),&var_ZCUT12.at(i),std::string(jetString+"ZCUT12/F").c_str());
+
+	  
+      tree->Branch(std::string(returnJetType(samplePrefix, groomalgo, addLC,0)+"TauWTA2/TauWTA1").c_str(),&var_TauWTA2TauWTA1.at(0),std::string(jetString+"TauWTA2TauWTA1/F").c_str());
+      tree->Branch(std::string(returnJetType(samplePrefix, groomalgo, addLC,1)+"TauWTA2/TauWTA1").c_str(),&var_TauWTA2TauWTA1.at(1),std::string(jetString+"TauWTA2TauWTA1/F").c_str());
+      tree->Branch(std::string(jetString+"TauWTA2/TauWTA1").c_str(),&var_TauWTA2TauWTA1.at(2),std::string(jetString+"TauWTA2TauWTA1/F").c_str());  
+	  
+>>>>>>> removed variables
       // add a calculated variable Tau2/Tau1
       if (useBranch(string(returnJetType(samplePrefix, groomalgo, addLC,0)+"Tau21")))
 	tree->Branch(std::string(returnJetType(samplePrefix, groomalgo, addLC,0)+"Tau21").c_str(),&var_Tau21.at(0),std::string(jetString+"Tau21/F").c_str());
