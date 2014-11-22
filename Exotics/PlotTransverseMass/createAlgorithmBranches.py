@@ -1,6 +1,6 @@
 
 
-algorithms = ['CamKt12LCTopoSplitFilteredMu67SmallR0YCut9','CamKt12LCTopoSplitFilteredMu100SmallR30YCut4', 'CamKt12LCTopoSplitFilteredMu100SmallR30YCut0', 'CamKt12LCTopoSplitFilteredMu100SmallR30YCut9', 'CamKt12LCTopoSplitFilteredMu100SmallR30YCut12','CamKt12LCTopoSplitFilteredMu100SmallR30YCut15','AntiKt10LCTopoTrimmedPtFrac5SmallR20','AntiKt8LCTopoTrimmedPtFrac5SmallR20','AntiKt12LCTopoTrimmedPtFrac5SmallR20','CamKt6LCTopoTrimmedPtFrac5SmallR20','CamKt8LCTopoTrimmedPtFrac5SmallR20','CamKt10LCTopoTrimmedPtFrac5SmallR20','CamKt12LCTopoTrimmedPtFrac5SmallR20','CamKt6TopoPrunedCaRcutFactor50Zcut15','CamKt6TopoPrunedCaRcutFactor50Zcut10','CamKt8TopoPrunedCaRcutFactor50Zcut15','CamKt8TopoPrunedCaRcutFactor50Zcut10','CamKt12TopoPrunedCaRcutFactor50Zcut15','CamKt12TopoPrunedCaRcutFactor50Zcut10', 'CamKt6LCTopoSplitFilteredMu100SmallR30YCut4', 'CamKt6LCTopoSplitFilteredMu100SmallR30YCut0', 'CamKt6LCTopoSplitFilteredMu100SmallR30YCut9', 'CamKt8LCTopoSplitFilteredMu100SmallR30YCut4', 'CamKt8LCTopoSplitFilteredMu100SmallR30YCut0', 'CamKt8LCTopoSplitFilteredMu100SmallR30YCut9']
+algorithms = ['CamKt12LCTopoSplitFilteredMu67SmallR0YCut9','CamKt12LCTopoSplitFilteredMu100SmallR30YCut4', 'CamKt12LCTopoSplitFilteredMu100SmallR30YCut0', 'CamKt12LCTopoSplitFilteredMu100SmallR30YCut9', 'CamKt12LCTopoSplitFilteredMu100SmallR30YCut12','CamKt12LCTopoSplitFilteredMu100SmallR30YCut15','AntiKt10LCTopoTrimmedPtFrac5SmallR20','AntiKt8LCTopoTrimmedPtFrac5SmallR20','AntiKt12LCTopoTrimmedPtFrac5SmallR20','CamKt6LCTopoTrimmedPtFrac5SmallR20','CamKt8LCTopoTrimmedPtFrac5SmallR20','CamKt10LCTopoTrimmedPtFrac5SmallR20','CamKt12LCTopoTrimmedPtFrac5SmallR20','CamKt6LCTopoPrunedCaRcutFactor50Zcut15','CamKt6LCTopoPrunedCaRcutFactor50Zcut10','CamKt8LCTopoPrunedCaRcutFactor50Zcut15','CamKt8LCTopoPrunedCaRcutFactor50Zcut10','CamKt10LCTopoPrunedCaRcutFactor50Zcut15','CamKt10LCTopoPrunedCaRcutFactor50Zcut10','CamKt12LCTopoPrunedCaRcutFactor50Zcut15','CamKt12LCTopoPrunedCaRcutFactor50Zcut10', 'CamKt6LCTopoSplitFilteredMu100SmallR30YCut4', 'CamKt6LCTopoSplitFilteredMu100SmallR30YCut0', 'CamKt6LCTopoSplitFilteredMu100SmallR30YCut9', 'CamKt8LCTopoSplitFilteredMu100SmallR30YCut4', 'CamKt8LCTopoSplitFilteredMu100SmallR30YCut0', 'CamKt8LCTopoSplitFilteredMu100SmallR30YCut9']
 numbins = [] # give all 20 bins?
 axisvalues = [[0,1700],[0,1200],[0,300],[-5,5],[-4,4],[-2,2],[0,1],[0,100],[0,1],[0,0.3],[0,90],[0,30],[0,15],[-2,5],[-2,5],[-2,10],[-2,5],[0.1,1],[0,1],[0,150],[-1500,100],[-1500,100],[-1500,100],[-1500,100],[-1500,100],[-1500,100],[0,1]] #going to be 2d for min, max
 var_type = ['E','pt','m','eta','phi','emfrac','Tau1','Tau2','Tau3','WIDTH','SPLIT12','SPLIT23','SPLIT34','Dip12','Dip13','Dip23','DipExcl12','PlanarFlow','Angularity','QW','PullMag','PullPhi','Pull_C00','Pull_C01','Pull_C10','Pull_C11','constit_index','ActiveArea','Aplanarity','TauWTA1','TauWTA2','Sphericity','ThrustMaj', 'ThrustMin', 'VoronoiArea', 'ZCUT12','ZCUT23','ZCUT34']
@@ -18,6 +18,7 @@ subjet_vars = ['E','pt','m','eta','phi','constit_index','WIDTH']
 #loop through algorithms and add to branches file
 for alg in algorithms:
     # open output file
+    print alg
     f2 = open(alg+'_branches.txt','w')
     tcount = 0
     # branch prefix
@@ -27,6 +28,7 @@ for alg in algorithms:
         algprefix = alg[:alg.find('LC')+2]
     else: # if there is no LC in the name
         algprefix = alg[:alg.find('Topo')]
+        print alg
     # xAODs have Jets appended to the algorithm name
     jetsadd =''
     if alg.find('Jets') != -1:

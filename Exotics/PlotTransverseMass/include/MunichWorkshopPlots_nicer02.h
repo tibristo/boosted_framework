@@ -415,43 +415,22 @@ std::map<int, std::vector<float> *> var_phi_vec;
 std::map<int, std::vector<float> *> var_emfrac_vec;
 std::map<int, std::vector<float> *> var_Tau1_vec;
 std::map<int, std::vector<float> *> var_Tau2_vec;
-std::map<int, std::vector<float> *> var_Tau3_vec;
-std::map<int, std::vector<float> *> var_WIDTH_vec;
+
 std::map<int, std::vector<float> *> var_SPLIT12_vec;
-std::map<int, std::vector<float> *> var_SPLIT23_vec;
-std::map<int, std::vector<float> *> var_SPLIT34_vec;
+
 std::map<int, std::vector<float> *> var_Dip12_vec;
-std::map<int, std::vector<float> *> var_Dip13_vec;
-std::map<int, std::vector<float> *> var_Dip23_vec;
-std::map<int, std::vector<float> *> var_DipExcl12_vec;
 std::map<int, std::vector<float> *> var_PlanarFlow_vec;
 std::map<int, std::vector<float> *> var_Angularity_vec;
-std::map<int, std::vector<float> *> var_QW_vec;
-std::map<int, std::vector<float> *> var_PullMag_vec;
-std::map<int, std::vector<float> *> var_PullPhi_vec;
-std::map<int, std::vector<float> *> var_Pull_C00_vec;
-std::map<int, std::vector<float> *> var_Pull_C01_vec;
-std::map<int, std::vector<float> *> var_Pull_C10_vec;
-std::map<int, std::vector<float> *> var_Pull_C11_vec;
 
 std::map<int, std::vector<float> *> var_TauWTA1_vec; 
 std::map<int, std::vector<float> *> var_TauWTA2_vec; 
-std::map<int, std::vector<float> *> var_TauWTA3_vec; 
 std::map<int, std::vector<float> *> var_TauWTA2TauWTA1_vec; 
 std::map<int, std::vector<float> *> var_ZCUT12_vec;
-std::map<int, std::vector<float> *> var_ZCUT23_vec;
-std::map<int, std::vector<float> *> var_ZCUT34_vec;
 
-std::map<int, std::vector<float> *> var_ActiveArea_vec;
 std::map<int, std::vector<float> *> var_Aplanarity_vec;
 std::map<int, std::vector<float> *> var_Sphericity_vec;
 std::map<int, std::vector<float> *> var_ThrustMaj_vec;
 std::map<int, std::vector<float> *> var_ThrustMin_vec;
-std::map<int, std::vector<float> *> var_VoronoiArea_vec;
-
-
-
-
 
 
 std::vector<float> * var_YFilt_vec;
@@ -509,24 +488,10 @@ std::vector<float> var_phi;
 std::vector<float> var_emfrac;
 std::vector<float> var_Tau1;
 std::vector<float> var_Tau2;
-std::vector<float> var_Tau3;
-std::vector<float> var_WIDTH;
 std::vector<float> var_SPLIT12;
-std::vector<float> var_SPLIT23;
-std::vector<float> var_SPLIT34;
 std::vector<float> var_Dip12;
-std::vector<float> var_Dip13;
-std::vector<float> var_Dip23;
-std::vector<float> var_DipExcl12;
 std::vector<float> var_PlanarFlow;
 std::vector<float> var_Angularity;
-std::vector<float> var_QW;
-std::vector<float> var_PullMag;
-std::vector<float> var_PullPhi;
-std::vector<float> var_Pull_C00;
-std::vector<float> var_Pull_C01;
-std::vector<float> var_Pull_C10;
-std::vector<float> var_Pull_C11;
 std::vector<float> var_Tau21;
 Float_t var_YFilt;
 
@@ -566,22 +531,13 @@ Float_t var_yt;
 // these variables are only in Lily's samples, so we need to add a flag to say we are running on those samples
 std::vector<Float_t> var_TauWTA1; 
 std::vector<Float_t> var_TauWTA2; 
-std::vector<Float_t> var_TauWTA3; 
 std::vector<Float_t> var_TauWTA2TauWTA1; 
 std::vector<Float_t> var_ZCUT12;
-std::vector<Float_t> var_ZCUT23;
-std::vector<Float_t> var_ZCUT34;
 
-
-std::vector<Float_t> var_ActiveArea;
 std::vector<Float_t> var_Aplanarity;
 std::vector<Float_t> var_Sphericity;
 std::vector<Float_t> var_ThrustMaj;
 std::vector<Float_t> var_ThrustMin;
-std::vector<Float_t> var_VoronoiArea;
-
-
-
 
 // store the weights for the samples
 Float_t var_k_factor;
