@@ -117,6 +117,13 @@ void setVector(TChain *& tree, TObjArray *& list, vector<TLorentzVector> *& vec,
 void setVector(TChain *& tree, TObjArray *& list, vector<Float_t> *& vec, std::string branch);//, const char * branch);//std::string & branch);
 bool useBranch(std::string branch, bool partialmatch = false);
 void setLLJMass(int jetidx);
+double calculateFoxWolfram20(vector<TLorentzVector>& clusters);
+int calculateSoftDropTag(vector<TLorentzVector> & cluster);
+vector<double> calculateQJetsVol(vector<TLorentzVector> & EventParticles, float radius);
+std::vector<TLorentzVector> createClusters(int jettype, int jetidx);
+double calculateEEC(int jettype, float beta=0.3, float exp=2);
+void setRadius(std::string & prefix);
+
 
 enum class groomAlgoEnum{groomZero, TopoSplitFilteredMu67SmallR0YCut9, TopoSplitFilteredMu100SmallR30YCut4, TopoTrimmedPtFrac5SmallR30, TopoTrimmedPtFrac5SmallR20, TopoPrunedCaRcutFactor50Zcut10, TopoPrunedCaRcutFactor50Zcut20, AntiKt2LCTopo, AntiKt3LCTopo, AntiKt4LCTopo};
 enum sampleType{BACKGROUND,SIGNAL};
@@ -155,6 +162,13 @@ std::map<string, int> branchmap;
 float GEV = 1000.;
 float ELMASS = 0.511;
 float MUMASS = 105.7;
+
+bool calcQJets = false;
+bool calcFoxWolfram20 = false;
+bool calcSoftDrop = false;
+bool calcEEC = false;
+
+float radius = 1.0;
 
 TFile *inputFile[2];
 TTree *inputTree[2];
@@ -432,6 +446,12 @@ std::map<int, std::vector<float> *> var_Sphericity_vec;
 std::map<int, std::vector<float> *> var_ThrustMaj_vec;
 std::map<int, std::vector<float> *> var_ThrustMin_vec;
 
+// jet clusters
+std::vector<float> * var_cl_n_vec;
+std::vector<float> * var_cl_pt_vec;
+std::vector<float> * var_cl_eta_vec;
+std::vector<float> * var_cl_phi_vec;
+
 
 std::vector<float> * var_YFilt_vec;
 
@@ -464,6 +484,7 @@ std::vector<float> * var_mu_charge_vec;
 
 
 std::map<int, std::vector<std::vector < int>  > * > var_constit_index;
+std::map<int, std::vector < int>  * > var_constit_n;
 
 std::vector<std::vector <int> > * subjet_index;
 
@@ -539,6 +560,13 @@ std::vector<Float_t> var_Sphericity;
 std::vector<Float_t> var_ThrustMaj;
 std::vector<Float_t> var_ThrustMin;
 
+std::vector<Float_t> var_QjetVol;
+std::vector<Float_t> var_FoxWolfram20;
+std::vector<Float_t> var_softdrop;
+std::vector<Float_t> var_EEC_C1;
+std::vector<Float_t> var_EEC_C2;
+std::vector<Float_t> var_EEC_D1;
+std::vector<Float_t> var_EEC_D2;
 // store the weights for the samples
 Float_t var_k_factor;
 Float_t var_filter_eff;

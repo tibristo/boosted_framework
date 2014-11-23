@@ -23,11 +23,20 @@ OBJDIR   	= build
 EXEDIR  	= bin
 SRCS    	:= src/main.cpp #$(shell find $(SRCDIR) -name '*.$(SRCEXT)')
 OBJS    	:= build/main.o #$(patsubst $(SRCDIR)/%.$(SRCEXT),$(OBJDIR)/%.o,$(SRCS))
+OBJS+=build/Qjets.o build/QjetsPlugin.o build/QjetsRootCore.o
+SRCS+=/Disk/speyside8/lhcb/atlas/tibristo/boosted_framework/Exotics/QjetsPlugin/Root/Qjets.cxx
+SRCDIRQJ = /Disk/speyside8/lhcb/atlas/tibristo/boosted_framework/Exotics/QjetsPlugin/Root
+SRCS+=/Disk/speyside8/lhcb/atlas/tibristo/boosted_framework/Exotics/QjetsPlugin/Root/QjetsPlugin.cxx 
+SRCS+=/Disk/speyside8/lhcb/atlas/tibristo/boosted_framework/Exotics/QjetsPluginRootCore/Root/QjetsPluginRootCore.cxx
+SRCDIRQJRC = /Disk/speyside8/lhcb/atlas/tibristo/boosted_framework/Exotics/QjetsPluginRootCore/Root
 
-GARBAGE  = $(OBJDIR)/main.o $(EXEDIR)/$(EXENAME)
+GARBAGE  = $(OBJDIR)/*.o $(EXEDIR)/$(EXENAME)
 INCDIR+=-I/Disk/speyside8/lhcb/atlas/tibristo/fastjet-install/include
 INCDIR+=-I/usr/local/include
 INCDIR+=-I/Home/s1214155/usr/local/include
+#add qjetsplugin
+INCDIR+=-I/Disk/speyside8/lhcb/atlas/tibristo/boosted_framework/Exotics/QjetsPlugin/
+INCDIR+=-I/Disk/speyside8/lhcb/atlas/tibristo/boosted_framework/Exotics/QjetsPluginRootCore/
 #################
 ##Dependencies
 # Linux
@@ -47,7 +56,7 @@ LINKFLAGS    =
 endif
 
 ##Libraries
-LIBS       += $(ROOTLIBS) -lThread `/Disk/speyside8/lhcb/atlas/tibristo/fastjet-install/bin/fastjet-config --libs` -L/usr/local/lib -L/Home/s1214155/usr/local/lib -lboost_filesystem -lboost_system -lboost_program_options -L/Disk/speyside8/lhcb/atlas/tibristo/fastjet-install/lib
+LIBS       += $(ROOTLIBS) -lThread `/Disk/speyside8/lhcb/atlas/tibristo/fastjet-install/bin/fastjet-config --libs` -L/usr/local/lib -L/Home/s1214155/usr/local/lib -lboost_filesystem -lboost_system -lboost_program_options -lboost_regex -L/Disk/speyside8/lhcb/atlas/tibristo/fastjet-install/lib
 
 ##Targets
 all : $(EXEDIR)/$(EXENAME)
@@ -56,6 +65,17 @@ $(EXEDIR)/$(EXENAME) : $(OBJS)
 	$(CXX) -o $@ $(OBJS) $(LINKFLAGS) $(LIBS)
 
 $(OBJDIR)/main.o : $(SRCDIR)/main.$(SRCEXT)
+	$(CXX) $(CXXFLAGS) -c $< -o $@
+
+$(OBJDIR)/Qjets.o : $(SRCDIRQJ)/Qjets.cxx
+	$(CXX) $(CXXFLAGS) -c $< -o $@
+
+$(OBJDIR)/QjetsPlugin.o : $(SRCDIRQJ)/QjetsPlugin.cxx
+	$(CXX) $(CXXFLAGS) -c $< -o $@
+
+
+
+$(OBJDIR)/QjetsRootCore.o : $(SRCDIRQJRC)/QjetsPluginRootCore.cxx
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 clean   :
