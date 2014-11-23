@@ -21,7 +21,9 @@
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/xml_parser.hpp>
 #include <boost/foreach.hpp>
+#include <boost/regex.hpp>
 #include <algorithm>
+#include "QjetsPluginRootCore/QjetsPluginRootCore.h"
 //#include "LinkDef.h"
 using namespace boost::algorithm;
 using namespace std;
@@ -93,6 +95,10 @@ int main( int argc, char * argv[] ) {
       ("xAOD-jets", po::value<bool>(&xAODJets)->default_value(false),"Indicate if we are running over xAOD output and there is the word Jets appended to the algorithm name.")
       ("xAOD-emfrac", po::value<bool>(&xAODemfrac)->default_value(false),"Indicate if we are running over xAOD output and emfrac is not available.")
       ("hvtllqq-selection", po::value<bool>(&hvtllqq)->default_value(false),"Indicate if we are running the HVTllqq analysis selection.")
+      ("calcQjets", po::value<bool>(&calcQJets)->default_value(false),"Indicate if we are calculating the Qjet volatility.  Note this is potentially quite CPU intensive.")
+      ("calcFoxWolfram", po::value<bool>(&calcFoxWolfram20)->default_value(false),"Indicate if we are calculating FoxWolfram20.  Note this is potentially quite CPU intensive.")
+      ("calcSoftDrop", po::value<bool>(&calcSoftDrop)->default_value(false),"Indicate if we are calculating the soft drop tag.  Note this is potentially quite CPU intensive.")
+      ("calcEEC", po::value<bool>(&calcEEC)->default_value(false),"Indicate if we are calculating EEC.  Note this is potentially quite CPU intensive.")
       ;
         
     po::options_description cmdline_options;
@@ -1823,17 +1829,21 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
   // need branches for specific algorithms because otherwise we end up with a million branches that we don't need
   vector<std::pair<std::string,int> > branches;
 
-  std::string i = algorithm;//algoMap[ii];
-    std::cout << "Doing mass window plots for " << algorithms.AlgoNames[i] << std::endl;
+  std::string i = algorithm;
+  std::cout << "Doing mass window plots for " << algorithms.AlgoNames[i] << std::endl;
+  
+  std::string groomAlgoIndex = i;
+  std::string prefix = "";
+  // set the radius for the jet algorithm
+  setRadius(algorithms.AlgoPrefix[i]);
 
-    std::string groomAlgoIndex = i;
-    std::string prefix = "";
-    TObjArray * brancharray = inputTChain[0]->GetListOfBranches();
-    if (branchesFile != "")
-      {
-	std::cout << "branchesFile: " << branchesFile << std::endl;
-	branches = getListOfJetBranches(branchesFile, brancharray);
-      }
+  
+  TObjArray * brancharray = inputTChain[0]->GetListOfBranches();
+  if (branchesFile != "")
+    {
+      std::cout << "branchesFile: " << branchesFile << std::endl;
+      branches = getListOfJetBranches(branchesFile, brancharray);
+    }
     else
       {
 	std::cout << "branchesFile not defined" << std::endl;
@@ -1845,6 +1855,8 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
       signal = false;
       std::stringstream ss;
       ss << algorithms.AlgoNames[i] << "_" << pTbins[j];
+      
+
       // loop through background and signal
       for (int k = 0; k < 2; k++)
 	{
@@ -2140,7 +2152,49 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
 		    var_TauWTA2TauWTA1[1]=(*var_TauWTA2_vec[1])[leadTopoIndex]/(*var_TauWTA1_vec[1])[leadTopoIndex];
 		}
 		
-	    
+	      // the following need the clusters
+	      if (calcQJets || calcFoxWolfram20 || calcSoftDrop)
+		{
+		  std::vector<TLorentzVector> truthclusters = createClusters(jetType::TRUTH, leadTruthIndex);
+		  std::vector<TLorentzVector> groomedclusters = createClusters(jetType::GROOMED, leadGroomedIndex);
+
+		  if (calcQJets)
+		    {
+		      // truth jet
+		      var_QjetVol[jetType::TRUTH] = calculateQJetsVol(truthclusters, radius)[0];
+		      // groomed jet
+		      var_QjetVol[jetType::GROOMED] = calculateQJetsVol(groomedclusters, radius)[0];
+		    }
+		  if (calcFoxWolfram20)
+		    {
+		      // truth jet
+		      var_FoxWolfram20[jetType::TRUTH] = calculateFoxWolfram20(truthclusters);
+		      // groomed jet
+		      var_FoxWolfram20[jetType::GROOMED] = calculateFoxWolfram20(groomedclusters);
+		    }
+		  if (calcSoftDrop)
+		    {
+		      // truth jet
+		      var_softdrop[jetType::TRUTH] = calculateSoftDropTag(truthclusters);
+		      // groomed jet
+		      var_softdrop[jetType::GROOMED] = calculateSoftDropTag(groomedclusters);
+		    }
+		}
+	      if (calcEEC)
+		{
+		  //EEC:C1 - exp 2, beta 1 for truth and groomed
+		  var_EEC_C1[jetType::TRUTH] = calculateEEC(jetType::TRUTH, 1, 2);
+		  var_EEC_C1[jetType::GROOMED] = calculateEEC(jetType::TRUTH, 1, 2);
+		  //EEC:C2 - exp 2, beta 2 for truth and groomed
+		  var_EEC_C2[jetType::TRUTH] = calculateEEC(jetType::TRUTH, 2, 2);
+		  var_EEC_C2[jetType::GROOMED] = calculateEEC(jetType::GROOMED, 2, 2);
+		  //EEC:D1 - exp 3, beta 1 for truth and groomed
+		  var_EEC_D1[jetType::TRUTH] = calculateEEC(jetType::TRUTH, 1, 3);
+		  var_EEC_D1[jetType::GROOMED] = calculateEEC(jetType::GROOMED, 1, 3);
+		  //EEC:D2 - exp3, beta 2 for truth and groomed
+		  var_EEC_D2[jetType::TRUTH] = calculateEEC(jetType::TRUTH, 2, 3);
+		  var_EEC_D2[jetType::GROOMED] = calculateEEC(jetType::GROOMED, 2, 3);
+		}
 	      // make sure all of the other output variables have their values set
 	      setOutputVariables(leadTruthIndex, leadTopoIndex, leadGroomedIndex, lead_subjet, algorithms.AlgoNames[i] , i);
 	      outTree->Fill();
@@ -2226,6 +2280,10 @@ vector<std::pair<std::string,int> > getListOfJetBranches(std::string &algorithm,
 {
   // Ideally we want this stored in an XML file, but for now it'll have to be a standard text file because I'm short on time!
   vector<pair<string,int> > branches;
+
+  // some variables require cluster information, list them here:
+  vector<string> clustervariables {"FoxWolfram20","QJetsVol","SoftDrop","EEC_C1","EEC_C2","EEC_D1","EEC_D2"};
+  bool addClusterVariables = false;
   
   // reset branchmap
   branchmap.clear();
@@ -2239,6 +2297,25 @@ vector<std::pair<std::string,int> > getListOfJetBranches(std::string &algorithm,
     {
       trim(line);
       branchmap[line] = 1;
+      // check to see if this variable requires cluster info
+      if (!addClusterVariables)
+	    {
+	      int brlen = line.length();
+	      for (std::vector<std::string>::iterator it = clustervariables.begin(); it != clustervariables.end(); it++)
+		{
+		  if ((*it).length() <= brlen && line.compare(brlen-(*it).length(), (*it).length(), (*it)) == 0)
+		    addClusterVariables =true;
+		}
+	    }
+      
+    }
+  //add the clusters to the branchmap if we need them
+  if (addClusterVariables)
+    {
+      branchmap["cl_lc_n"]=1;
+      branchmap["cl_lc_pt"]=1;
+      branchmap["cl_lc_eta"]=1;
+      branchmap["cl_lc_phi"]=1;
     }
 
   // need to add some essential ones in case they get forgotten in that config file :)
@@ -2268,6 +2345,7 @@ vector<std::pair<std::string,int> > getListOfJetBranches(std::string &algorithm,
   branchmap["mu_charge"] = 1;
   in.close();
 
+
   // loop through all of the branches in the tree and check if they exist in the branch map
   TIter it(brancharray);
   TBranch * tb;
@@ -2276,10 +2354,17 @@ vector<std::pair<std::string,int> > getListOfJetBranches(std::string &algorithm,
       std::string name = tb->GetName();
       trim(name);
       if (branchmap.find(name) != branchmap.end() )
-	branches.push_back(make_pair(name, 1));
+	{
+	  branches.push_back(make_pair(name, 1));
+	  
+	}
       else
 	branches.push_back(make_pair(name, 0));
+
+
     }
+  // add the clusters to the branchmap and add to list of branches
+  
   return branches;
 } // getListOfBranches()
 
@@ -2768,8 +2853,14 @@ void setJetsBranches(TChain * tree, std::string &groomalgo,  std::string & groom
       setVector(tree, brancharray, var_TauWTA1_vec.at(i), std::string(jetString+"TauWTA1") );
       setVector(tree, brancharray, var_TauWTA2_vec.at(i), std::string(jetString+"TauWTA2") );
       setVector(tree, brancharray, var_ZCUT12_vec.at(i), std::string(jetString+"ZCUT12") );
-      
+
+
     } // end for loop over topo/truth/groom
+  // set up cluster variables
+  setVector(tree, brancharray, var_cl_pt_vec, std::string("cl_lc_pt"));
+  setVector(tree, brancharray, var_cl_n_vec, std::string("cl_lc_n"));
+  setVector(tree, brancharray, var_cl_eta_vec, std::string("cl_lc_eta"));
+  setVector(tree, brancharray, var_cl_phi_vec, std::string("cl_lc_phi"));
 
   std::string jetString = returnJetType( samplePrefix, groomalgo, addLC, 2); //set to truth/ topo/ groomed
 
@@ -2907,6 +2998,7 @@ void initVectors()
   jet_phi_groomed = 0;
   jet_pt_groomed = 0;
   jet_emfrac_groomed = 0;
+  
   for (int i = 0; i < 3; i++) // for jetType::TRUTH/TOPO/GROOMED
     {
 
@@ -2937,14 +3029,19 @@ void initVectors()
   var_YFilt_vec = 0;
   var_massFraction_vec = 0;
   var_ktycut2_vec = 0;
-
+  //subjets
   subjet_index = 0;    
   var_subjets_E_vec = 0;
   var_subjets_pt_vec = 0;
   var_subjets_m_vec = 0;
   var_subjets_eta_vec = 0;
   var_subjets_phi_vec = 0;
-  
+  // clusters
+  var_cl_pt_vec = 0;
+  var_cl_n_vec = 0;
+  var_cl_eta_vec = 0;
+  var_cl_phi_vec = 0;
+  // leptons
   var_electrons_vec = 0;
 
   var_electronPhi_vec = 0;
@@ -3111,7 +3208,7 @@ void setOutputVariables( int jet_idx_truth, int jet_idx_topo, int jet_idx_groome
       if (var_ThrustMin_vec[x] != NULL && useBranch(string(jetString+"ThrustMin")))
 	var_ThrustMin[x] = (*var_ThrustMin_vec[x])[jet_idx];
 
-      
+			       
       // tau21 and tauwta21 are set in the main loop, not here, because we have to calculate them
       if (useBranch(string(jetString+"TauWTA1")))
 	var_TauWTA1[x]=(*var_TauWTA1_vec[x])[jet_idx];
@@ -3181,6 +3278,14 @@ void clearOutputVariables()
   var_TauWTA2.clear();
   var_ZCUT12.clear();
 
+  var_FoxWolfram20.clear();
+  var_QjetVol.clear();
+  var_softdrop.clear();
+  var_EEC_C1.clear();
+  var_EEC_C2.clear();
+  var_EEC_D1.clear();
+  var_EEC_D2.clear();
+
   var_leptons.clear();
   var_ptcone20.clear();
   var_etcone20.clear();
@@ -3228,6 +3333,15 @@ void resetOutputVariables()
       var_TauWTA1.push_back(-999);
       var_TauWTA2.push_back(-999);
       var_ZCUT12.push_back(-999);
+
+      var_FoxWolfram20.push_back(-999);
+      var_QjetVol.push_back(-999);
+      var_softdrop.push_back(-999);
+      var_EEC_C1.push_back(-999);
+      var_EEC_C2.push_back(-999);
+      var_EEC_D1.push_back(-999);
+      var_EEC_D2.push_back(-999);
+
 
     }
 } //resetOutputVariables
@@ -3353,6 +3467,7 @@ void setOutputBranches(TTree * tree, std::string & groomalgo, std::string & groo
 	tree->Branch(std::string(returnJetType(samplePrefix, groomalgo, addLC,1)+"TauWTA2/TauWTA1").c_str(),&var_TauWTA2TauWTA1.at(1),std::string(jetString+"TauWTA2TauWTA1/F").c_str());
       if (useBranch(string(jetString+"TauWTA2/TauWTA1")))
 	tree->Branch(std::string(jetString+"TauWTA2/TauWTA1").c_str(),&var_TauWTA2TauWTA1.at(2),std::string(jetString+"TauWTA2TauWTA1/F").c_str());  
+<<<<<<< HEAD
       
 =======
       tree->Branch(std::string(jetString+"YFilt").c_str(),&var_YFilt,std::string(jetString+"YFilt/F").c_str());
@@ -3363,6 +3478,24 @@ void setOutputBranches(TTree * tree, std::string & groomalgo, std::string & groo
       tree->Branch(std::string(jetString+"ThrustMaj").c_str(),&var_ThrustMaj,std::string(jetString+"ThrustMaj/F").c_str());
       tree->Branch(std::string(jetString+"ThrustMin").c_str(),&var_ThrustMin,std::string(jetString+"ThrustMin/F").c_str());
       
+=======
+
+
+      if (useBranch(string(jetString+"QJetsVol")))
+	tree->Branch(std::string(jetString+"QJetsVol").c_str(), &var_QjetVol.at(i), std::string(jetString+"QJetsVol").c_str());
+      if (useBranch(string(jetString+"FoxWolfram20")))
+	tree->Branch(std::string(jetString+"FoxWolfram20").c_str(), &var_FoxWolfram20.at(i), std::string(jetString+"FoxWolfram20").c_str());
+      if (useBranch(string(jetString+"SoftDrop")))
+	tree->Branch(std::string(jetString+"SoftDrop").c_str(), &var_softdrop.at(i), std::string(jetString+"SoftDrop").c_str());
+      if (useBranch(string(jetString+"EEC_C1")))
+	tree->Branch(std::string(jetString+"EEC_C1").c_str(), &var_EEC_C1.at(i), std::string(jetString+"EEC_C1").c_str());
+      if (useBranch(string(jetString+"EEC_C2")))
+	tree->Branch(std::string(jetString+"EEC_C2").c_str(), &var_EEC_C2.at(i), std::string(jetString+"EEC_C2").c_str());
+      if (useBranch(string(jetString+"EEC_D1")))
+	tree->Branch(std::string(jetString+"EEC_D1").c_str(), &var_EEC_D1.at(i), std::string(jetString+"EEC_D1").c_str());
+      if (useBranch(string(jetString+"EEC_D2")))
+	tree->Branch(std::string(jetString+"EEC_D2").c_str(), &var_EEC_D2.at(i), std::string(jetString+"EEC_D2").c_str());
+>>>>>>> Added qjets vol, softdrop tag, eec, fox wolfram.  Has not yet been tested, but it does compile.  QjetsPlugin is in a sep folder and should be added to the git repo.
 
       tree->Branch(std::string(jetString+"TauWTA1").c_str(),&var_TauWTA1.at(i),std::string(jetString+"TauWTA1/F").c_str());
       tree->Branch(std::string(jetString+"TauWTA2").c_str(),&var_TauWTA2.at(i),std::string(jetString+"TauWTA2/F").c_str());
@@ -3612,3 +3745,248 @@ void Algorithms::load(const std::string & filename)
 
 } // algorithms::load()
 
+
+
+/*
+ * Calculate the Energy correction using formula EEC = sum1*sum2/(sum3^2)
+ * Sum1 = Sum(ijk) : pt(i)*pt(j)*pt(k) * [dR(ij)dR(ik)dR(jk) ]^beta
+ * Sum2 = Sum(i) : pt(i)
+ * Sum3 = Sum(ij) : pt(i)*pt(j)* [dR(ij)]^beta
+ *
+ * @param jettype The jet type - truth, topo or groomed
+ * @param beta The beta value which is the power that dR is raised to in Sum1.
+ * @param exp The power that Sum3 is raised to.
+ * @return double containing eec
+ */
+double calculateEEC(int jettype, float beta, float exp)
+{
+  double Sum1=0;
+  
+  int size = (*var_pt_vec[jettype]).size();
+  // calculate sum1
+  for(int i=0; i<size; i++){
+    for(int j=i+1; j<size; j++){
+      for(int k=j+1; k<size; k++){
+	// calculate deltaR values
+	float dr_ij = DeltaR((*var_eta_vec[jettype])[i],(*var_phi_vec[jettype])[i],(*var_eta_vec[jettype])[j],(*var_phi_vec[jettype])[j]);
+	float dr_ik = DeltaR((*var_eta_vec[jettype])[i],(*var_phi_vec[jettype])[i],(*var_eta_vec[jettype])[k],(*var_phi_vec[jettype])[k]);
+	float dr_jk = DeltaR((*var_eta_vec[jettype])[j],(*var_phi_vec[jettype])[j],(*var_eta_vec[jettype])[k],(*var_phi_vec[jettype])[k]);
+	
+	Sum1 += ((*var_pt_vec[jettype])[i]/1000.)*((*var_pt_vec[jettype])[j]/1000.)*((*var_pt_vec[jettype])[k]/1000.) * pow( dr_ij * dr_ik * dr_jk, beta );
+      }
+    }
+  }
+
+  // sum2
+  double Sum2=0;
+  for(int i=0; i<size; i++){
+    Sum2 += (*var_pt_vec[jettype])[i]/1000.;
+  }
+
+  //sum3
+  double Sum3=0;
+  for(int i=0; i<size; i++){
+    for(int j=i+1; j<size; j++){
+      float dr_ij = DeltaR((*var_eta_vec[jettype])[i],(*var_phi_vec[jettype])[i],(*var_eta_vec[jettype])[j],(*var_phi_vec[jettype])[j]);
+      Sum3 += ((*var_pt_vec[jettype])[i]/1000.)*((*var_pt_vec[jettype])[j]/1000.) * pow( dr_ij, beta );
+    }
+  }
+
+  if (Sum3 == 0) // don't want to divide by zero
+    return 0;
+  return Sum1*Sum2/pow(Sum3, exp);
+
+}//calculateEEC
+
+/*
+ * Create TLVs containing the clusters for a given jet.
+ *
+ * @param jettype The type of jet - truth, topo or groomed.
+ * @param jetidx The index of the jet in the truth/ topo or groomed collection.
+ *
+ * @return A vector of TLV containing all of the clusters or constituents of the jet.
+ */
+std::vector<TLorentzVector> createClusters(int jettype, int jetidx)
+{
+  // number of constituents
+  int size = (*var_constit_n[jettype]).size();
+  vector<TLorentzVector> cl;
+  for (int i = 0; i < size; i ++)
+    {
+      // get the index in the cl_lc collection
+      int idx = (*var_constit_index[jettype])[jetidx][i];
+      // create TLV for this cluster
+      TLorentzVector constit(0., 0., 0., 0.);
+      constit.SetPtEtaPhiM((*var_cl_pt_vec)[idx]/1000., (*var_cl_eta_vec)[idx], (*var_cl_phi_vec)[idx], 0.);
+      // add to vector
+      cl.push_back(constit);
+    }
+  return cl;
+} // createClusters
+
+
+/*
+ * Calculate FoxWolfram20.
+ * Formula used:
+ * H_l = Sum_ij{frac{pi*pj}{E^2}*P_l(cos\theta_{ij}}, where P_l are legendre polynomials
+ * Using the ratio between the 2nd and 0th moments. 
+ *
+ * @param clusters vector<TLV> of constituents of jet being analysed.
+ * @return The calculated FoxWolfram20 value
+ */
+double calculateFoxWolfram20(vector<TLorentzVector> & clusters)
+{
+  // don't forget to assign the cl_ variables
+  // The cluster variables should be for a single jet...
+  float esum = 0;
+  vector<double> FoxWolframMoments (5,0.0);
+  // loop through i and j
+  for (int i = 0; i < clusters.size(); i++)
+    {
+      //TLorentzVector cli;
+      //cli.SetPtEtaPhiM((*var_cl_pt_vec)[i], (*var_cl_eta_vec)[i], (*var_cl_phi_vec)[i], 0);
+      double pti = clusters[i].Pt();
+      for (int j = i+1; j < clusters.size(); j++)
+	{
+	  //TLorentzVector clj;
+	  //clj.SetPtEtaPhiM((*var_cl_pt_vec)[j], (*var_cl_eta_vec)[j], (*var_cl_phi_vec)[j], 0);
+	  double ptj = clusters[j].Pt();
+	  double costheta12 = TMath::Cos(clusters[j].Angle(clusters[i].Vect()));
+
+	  // calculate the legendre polynomials
+	  double p0 = 1.;
+	  double p1 = costheta12;
+	  double p2 = 0.5*(3.*costheta12*costheta12 - 1.);
+	  double p3 = 0.5*(5.*costheta12*costheta12*costheta12 - 3.*costheta12);
+	  double p4 = 0.125*(35.*costheta12*costheta12*costheta12*costheta12 - 30.*costheta12*costheta12 + 3.);
+	  
+	  // add to the moments array
+	  FoxWolframMoments[0] += pti*ptj*p0;
+	  FoxWolframMoments[1] += pti*ptj*p1;
+	  FoxWolframMoments[2] += pti*ptj*p2;
+	  FoxWolframMoments[3] += pti*ptj*p3;
+	  FoxWolframMoments[4] += pti*ptj*p4;
+			     
+	} // loop over j
+      esum+=clusters[i].E();
+
+    } // loop i
+
+  // divide by E^2
+  for (int x = 0 ; x < 5; x++)
+    {
+      FoxWolframMoments[x]/= esum*esum;
+
+    }
+  //ratio of 2nd and 0th moments
+  return double(FoxWolframMoments[2]/FoxWolframMoments[0]);
+
+} // calculateFoxWolfram20
+
+/*
+ * Calculate the soft drop tag for a given jet.  This will be at a certain eff and fake rate. Definition found here: http://arxiv.org/pdf/1402.2657.pdf. Soft drop: highest pT, parameters: Beta=-1, zcut=0.04,0.06 and 0.08.
+ * Code based on code found here: https://svnweb.cern.ch/trac/atlasoff/browser/PhysicsAnalysis/JetPhys/JetSubStructure/tags/JetSubStructure-00-00-21-10/src/SubstructureMethods/TaggingMethods.h
+ *
+ * @param cluster A vector<TLV> containing constituents of jet.
+ *
+ * @return Return the soft drop tag/ highest softdrop level with given eff and fake rate.
+ */
+int calculateSoftDropTag(vector<TLorentzVector> & cluster)
+{
+  // recluster jet with CA - don't be confused by the 1.5 radius- if a jet with R=0.4 is read in, then only the constituents from the jet will be used
+  // in the rebuilt jet
+  double radius=1.0;   
+  fastjet::JetDefinition jd(fastjet::cambridge_algorithm, radius);
+  boost::shared_ptr<const fastjet::ClusterSequence> cs(new const fastjet::ClusterSequence(cluster, jd));
+  std::vector<fastjet::PseudoJet> jetVect = fastjet::sorted_by_pt(cs->inclusive_jets(0.));
+  
+  double beta = -1.0;
+  int softdrop_level = 0;
+  int highest_softdrop_level = 0;
+  
+  // set up pseudojets for parents and current jet
+  fastjet::PseudoJet parent1, parent2;
+  fastjet::PseudoJet currjet(jetVect[0]);
+
+  // loop until current jet has no more parents.
+  while (cs->has_parents(currjet, parent1, parent2))
+    {
+      if(parent1.perp2() < parent2.perp())
+	{
+	  std::swap(parent1,parent2);
+	}
+      
+      double ptfraction = parent2.perp()/(parent1.perp() + parent2.perp());
+      double power = pow((sqrt(parent1.plain_distance(parent2)))/radius, beta);
+      // check pt fraction of current jet of pt of parents.
+      if (ptfraction > 0.04*power) softdrop_level = 1; //eff 55%, fake rake 5%
+      if (ptfraction > 0.06*power) softdrop_level = 2; //eff 30%, fake rate 2%
+      if (ptfraction > 0.08*power) softdrop_level = 3; //eff 20%, fake rate 1%
+      if (softdrop_level > highest_softdrop_level)
+	highest_softdrop_level = softdrop_level;
+      currjet = parent1;
+    }
+  
+  return highest_softdrop_level;
+} //calculateSoftDropTag
+
+/*
+ * Calculate the QJets Volatility of a given jet. Qjet vol = sqrt(<m^2>-<m>^2)/<m>., where numerator is RMS, denominator is mean of mass distribution.
+ *
+ * @param EventParticles A vector<TLV> containing constituents of jets being analysed.
+ * @param radius  The radius of the jets. 
+ *
+ * @return QJets volatility for jets being analysed.
+ */
+vector<double> calculateQJetsVol(vector<TLorentzVector> & EventParticles, float radius)
+{
+  // sort input particles by pt
+  sort(EventParticles.begin(), EventParticles.end(), ComparePt);
+
+  //Declare Qjet maker object                                                                                              
+  QjetsPluginRootCore QjetMaker(/*jet_radius = */ 0.7, /*nqjets = */ 100, /*zcut = */ 0.01, /*dcut = */ 0.5, /*exp_min = */ 0.,  /*exp_max = */ 0., /*rig = */ 100);
+
+  //Initialize to set new parameters                                                                                                                                                       //dcut=(sorted_by_pt(inclusive_jets)[0]).m()/(sorted_by_pt(inclusive_jets)[0]).perp();  //set to m/pt
+  float dcut = EventParticles[0].M()/EventParticles[0].Pt();
+  QjetMaker.Initialize(/*jet_radius = */ radius, /*nqjets = */ 25, /*zcut = */ 0.1, /*dcut = */ dcut, /*exp_min = */ 0.,  /*exp_max = */ 0., /*rig = */ 0.1);
+
+  //run Qjet maker on the input particles (clusers, tracks, or truth particles) in an event
+  QjetMaker.MakeJets(EventParticles);
+
+  // calculate the volatility for each jet.
+  vector<double> qjet_vol;
+  for (int i = 0; i < QjetMaker.jets.size() ; i++)
+    {
+      double qjet_vol_i = QjetMaker.QJet_Mrms[i]/QjetMaker.QJet_Mavg[i];
+      qjet_vol.push_back(qjet_vol_i);
+    }
+  
+  return qjet_vol;
+
+}//calculateQJetsVol
+
+/*
+ * Set the radius for the jet algorithm using the prefix of the algorithm.
+ *
+ * @param prefix The prefix of the jet algorithm, which contains the radius.
+ */
+void setRadius(std::string & prefix)
+{
+
+  // set up the regex pattern, finds numbers at the end of the string.
+  const char * pattern = "\\d+";
+  boost::regex re(pattern);
+  boost::sregex_iterator it(prefix.begin(), prefix.end(), re);
+  boost::sregex_iterator end;
+  
+  string number = "";
+  for ( ; it!=end; it++)
+    {
+      number.append((*it).str());
+    }
+  // convert the string to a float
+  radius = stof(number);
+  // divide by 10 to get the correct value
+  radius/=10;
+
+} //setRadius
