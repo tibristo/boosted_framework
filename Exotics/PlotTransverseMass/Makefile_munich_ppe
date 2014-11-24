@@ -23,20 +23,20 @@ OBJDIR   	= build
 EXEDIR  	= bin
 SRCS    	:= src/main.cpp #$(shell find $(SRCDIR) -name '*.$(SRCEXT)')
 OBJS    	:= build/main.o #$(patsubst $(SRCDIR)/%.$(SRCEXT),$(OBJDIR)/%.o,$(SRCS))
-OBJS+=build/Qjets.o build/QjetsPlugin.o build/QjetsRootCore.o
-SRCS+=/Disk/speyside8/lhcb/atlas/tibristo/boosted_framework/Exotics/QjetsPlugin/Root/Qjets.cxx
-SRCDIRQJ = /Disk/speyside8/lhcb/atlas/tibristo/boosted_framework/Exotics/QjetsPlugin/Root
-SRCS+=/Disk/speyside8/lhcb/atlas/tibristo/boosted_framework/Exotics/QjetsPlugin/Root/QjetsPlugin.cxx 
-SRCS+=/Disk/speyside8/lhcb/atlas/tibristo/boosted_framework/Exotics/QjetsPluginRootCore/Root/QjetsPluginRootCore.cxx
-SRCDIRQJRC = /Disk/speyside8/lhcb/atlas/tibristo/boosted_framework/Exotics/QjetsPluginRootCore/Root
+OBJS+=build/Qjets.o build/QjetsPlugin.o
+
+SRCS+=/Disk/speyside8/lhcb/atlas/tibristo/boosted_framework/Exotics/Qjets/Qjets.C
+SRCS+=/Disk/speyside8/lhcb/atlas/tibristo/boosted_framework/Exotics/Qjets/QjetsPlugin.C
+SRCDIRQJ = /Disk/speyside8/lhcb/atlas/tibristo/boosted_framework/Exotics/Qjets
+
 
 GARBAGE  = $(OBJDIR)/*.o $(EXEDIR)/$(EXENAME)
 INCDIR+=-I/Disk/speyside8/lhcb/atlas/tibristo/fastjet-install/include
 INCDIR+=-I/usr/local/include
 INCDIR+=-I/Home/s1214155/usr/local/include
+
 #add qjetsplugin
-INCDIR+=-I/Disk/speyside8/lhcb/atlas/tibristo/boosted_framework/Exotics/QjetsPlugin/
-INCDIR+=-I/Disk/speyside8/lhcb/atlas/tibristo/boosted_framework/Exotics/QjetsPluginRootCore/
+INCDIR+=-I/Disk/speyside8/lhcb/atlas/tibristo/boosted_framework/Exotics/Qjets/
 #################
 ##Dependencies
 # Linux
@@ -56,10 +56,14 @@ LINKFLAGS    =
 endif
 
 ##Libraries
-LIBS       += $(ROOTLIBS) -lThread `/Disk/speyside8/lhcb/atlas/tibristo/fastjet-install/bin/fastjet-config --libs` -L/usr/local/lib -L/Home/s1214155/usr/local/lib -lboost_filesystem -lboost_system -lboost_program_options -lboost_regex -L/Disk/speyside8/lhcb/atlas/tibristo/fastjet-install/lib
+LIBS       += $(ROOTLIBS) -lTreePlayer -lThread `/Disk/speyside8/lhcb/atlas/tibristo/fastjet-install/bin/fastjet-config --libs` -L/usr/local/lib -L/Home/s1214155/usr/local/lib -lQjets -lboost_filesystem -lboost_system -lboost_program_options -lboost_regex -L/Disk/speyside8/lhcb/atlas/tibristo/fastjet-install/lib -L./lib
 
 ##Targets
-all : $(EXEDIR)/$(EXENAME)
+
+FILES = build/Qjets.o build/QjetsPlugin.o
+
+all : lib/libQjets.a $(EXEDIR)/$(EXENAME)
+
 
 $(EXEDIR)/$(EXENAME) : $(OBJS)
 	$(CXX) -o $@ $(OBJS) $(LINKFLAGS) $(LIBS)
@@ -67,16 +71,21 @@ $(EXEDIR)/$(EXENAME) : $(OBJS)
 $(OBJDIR)/main.o : $(SRCDIR)/main.$(SRCEXT)
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-$(OBJDIR)/Qjets.o : $(SRCDIRQJ)/Qjets.cxx
+$(OBJDIR)/Qjets.o : $(SRCDIRQJ)/Qjets.C
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-$(OBJDIR)/QjetsPlugin.o : $(SRCDIRQJ)/QjetsPlugin.cxx
+$(OBJDIR)/QjetsPlugin.o : $(SRCDIRQJ)/QjetsPlugin.C
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 
 
-$(OBJDIR)/QjetsRootCore.o : $(SRCDIRQJRC)/QjetsPluginRootCore.cxx
-	$(CXX) $(CXXFLAGS) -c $< -o $@
+lib/libQjets.a: $(FILES) $(FILES:.cc=.o)
+	ar cq lib/libQjets.a $(FILES)
+
+lib/libQjets.so: $(FILES) $(FILES:.cc=.o)
+	gcc $(SOFLAGS) -o $@ $(FILES)
+
+
 
 clean   :
 	$(RM) $(GARBAGE)
