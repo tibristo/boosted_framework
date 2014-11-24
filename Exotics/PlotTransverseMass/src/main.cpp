@@ -23,11 +23,15 @@
 #include <boost/foreach.hpp>
 #include <boost/regex.hpp>
 #include <algorithm>
-#include "QjetsPluginRootCore/QjetsPluginRootCore.h"
+#include "QjetsPlugin.h"
 //#include "LinkDef.h"
 using namespace boost::algorithm;
 using namespace std;
 namespace po = boost::program_options;
+
+// used for controlling cout statements for debugging
+#define DEBUG 0
+
 
 bool ComparePt(TLorentzVector a, TLorentzVector b) { return a.Pt() > b.Pt(); }
 
@@ -2129,29 +2133,42 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
 	      // the following need the clusters
 	      if (calcQJets || calcFoxWolfram20 || calcSoftDrop)
 		{
-		  std::vector<TLorentzVector> truthclusters = createClusters(jetType::TRUTH, leadTruthIndex);
-		  std::vector<TLorentzVector> groomedclusters = createClusters(jetType::GROOMED, leadGroomedIndex);
+		  std::vector<TLorentzVector> truthclusters;
+		  // check if the clusters are created properly before using them for calculations
+		  bool runTruthClusters = createClusters(jetType::TRUTH, leadTruthIndex, truthclusters);
+		  if (DEBUG)
+		    printTLV(truthclusters);
+		  std::vector<TLorentzVector> groomedclusters;
+		  bool runGroomedClusters = createClusters(jetType::GROOMED, leadGroomedIndex, groomedclusters);
+		  if (DEBUG)
+		    printTLV(groomedclusters);
 
 		  if (calcQJets)
 		    {
 		      // truth jet
-		      var_QjetVol[jetType::TRUTH] = calculateQJetsVol(truthclusters, radius)[0];
+		      if (runTruthClusters)
+			var_QjetVol[jetType::TRUTH] = calculateQJetsVol_v2(truthclusters);//[0];
 		      // groomed jet
-		      var_QjetVol[jetType::GROOMED] = calculateQJetsVol(groomedclusters, radius)[0];
+		      if (runGroomedClusters)
+			var_QjetVol[jetType::GROOMED] = calculateQJetsVol_v2(groomedclusters);//[0];
 		    }
 		  if (calcFoxWolfram20)
 		    {
 		      // truth jet
-		      var_FoxWolfram20[jetType::TRUTH] = calculateFoxWolfram20(truthclusters);
+		      if (runTruthClusters)
+			var_FoxWolfram20[jetType::TRUTH] = calculateFoxWolfram20(truthclusters);
 		      // groomed jet
-		      var_FoxWolfram20[jetType::GROOMED] = calculateFoxWolfram20(groomedclusters);
+		      if (runGroomedClusters)
+			var_FoxWolfram20[jetType::GROOMED] = calculateFoxWolfram20(groomedclusters);
 		    }
 		  if (calcSoftDrop)
 		    {
 		      // truth jet
-		      var_softdrop[jetType::TRUTH] = calculateSoftDropTag(truthclusters);
+		      if (runTruthClusters)
+			var_softdrop[jetType::TRUTH] = calculateSoftDropTag(truthclusters);
 		      // groomed jet
-		      var_softdrop[jetType::GROOMED] = calculateSoftDropTag(groomedclusters);
+		      if (runGroomedClusters)
+			var_softdrop[jetType::GROOMED] = calculateSoftDropTag(groomedclusters);
 		    }
 		}
 	      if (calcEEC)
@@ -2469,6 +2486,26 @@ void setVector(TChain *& tree, TObjArray *& list, vector<TLorentzVector> *& vec,
 }
 
 /*
+ * Set up the branch address for a vector<Int_t>.
+ *
+ * @param tree Reference to a TChain pointer.  This is the input TTree.
+ * @param list Reference to a TObjArray pointer that contains a list of all branches in the tree.
+ * @param vec Reference to a vector<Int_t> pointer which will be used to read in from the file.
+ * @param branch The name of the branch we are setting the address for.
+ */
+void setVector(TChain *& tree, TObjArray *& list, vector<Int_t> *& vec, string branch)//const char * branch)
+{
+  // first check to see if the branch is actually in the tree, then check to see if we are interested in using it
+  if (list->FindObject(branch.c_str()) && useBranch(branch))
+    tree->SetBranchAddress(branch.c_str(), &vec);
+  else
+    {
+      std::cout << "missing branch " << branch << ", might cause unexpected behaviour, removing from branchmap" << std::endl;
+      branchmap.erase(branch);
+    }
+}
+
+/*
  * Set up the branch address for a vector<Float_t>.  Overloaded version of the one for vector<TLV>.
  *
  * @param tree Reference to a TChain pointer.  This is the input TTree.
@@ -2512,6 +2549,8 @@ void eraseJet(int jet)
     var_emfrac_vec[i]->erase(var_emfrac_vec[i]->begin()+jet);
   if (var_constit_index[i] != NULL && var_constit_index[i]->size() > jet)
     var_constit_index[i]->erase(var_constit_index[i]->begin()+jet);
+  if (var_constit_n[i] != NULL && var_constit_n[i]->size() > jet)
+    var_constit_n[i]->erase(var_constit_n[i]->begin()+jet);
   if (var_Tau1_vec[i] != NULL && var_Tau1_vec[i]->size() > jet)
     var_Tau1_vec[i]->erase(var_Tau1_vec[i]->begin()+jet);
   if (var_Tau2_vec[i] != NULL && var_Tau2_vec[i]->size() > jet)
@@ -2811,6 +2850,9 @@ void setJetsBranches(TChain * tree, std::string &groomalgo,  std::string & groom
       setVector(tree, brancharray, var_Tau1_vec.at(i), std::string(jetString+"Tau1") );
       setVector(tree, brancharray, var_Tau2_vec.at(i), std::string(jetString+"Tau2") );
 
+      setVector(tree, brancharray, var_constit_n.at(i), std::string(jetString+"constit_n") );
+      if (brancharray->FindObject(std::string(jetString+"constit_index").c_str()) && useBranch(std::string(jetString+"constit_index")))
+	tree->SetBranchAddress(std::string(jetString+"constit_index").c_str(), &var_constit_index.at(i));
 
       setVector(tree, brancharray, var_SPLIT12_vec.at(i), std::string(jetString+"SPLIT12") );
 
@@ -2830,9 +2872,16 @@ void setJetsBranches(TChain * tree, std::string &groomalgo,  std::string & groom
 
 
     } // end for loop over topo/truth/groom
+
+
+
+
   // set up cluster variables
+  if (brancharray->FindObject(std::string("cl_lc_n").c_str()) && useBranch(string("cl_lc_n")))
+    tree->SetBranchAddress(std::string("cl_lc_n").c_str(), &var_cl_n );
+  else
+    std::cout << "branch not found: cl_lc_n" << std::endl;
   setVector(tree, brancharray, var_cl_pt_vec, std::string("cl_lc_pt"));
-  setVector(tree, brancharray, var_cl_n_vec, std::string("cl_lc_n"));
   setVector(tree, brancharray, var_cl_eta_vec, std::string("cl_lc_eta"));
   setVector(tree, brancharray, var_cl_phi_vec, std::string("cl_lc_phi"));
 
@@ -2983,6 +3032,7 @@ void initVectors()
       var_phi_vec[i] = 0;
       var_emfrac_vec[i] = 0;
       var_constit_index[i] = 0;
+      var_constit_n[i] = 0;
       var_Tau1_vec[i] = 0;
       var_Tau2_vec[i] = 0;
       var_SPLIT12_vec[i] = 0;
@@ -3012,7 +3062,7 @@ void initVectors()
   var_subjets_phi_vec = 0;
   // clusters
   var_cl_pt_vec = 0;
-  var_cl_n_vec = 0;
+  var_cl_n = 0;
   var_cl_eta_vec = 0;
   var_cl_phi_vec = 0;
   // leptons
@@ -3715,25 +3765,35 @@ double calculateEEC(int jettype, float beta, float exp)
  *
  * @param jettype The type of jet - truth, topo or groomed.
  * @param jetidx The index of the jet in the truth/ topo or groomed collection.
+ * @param cluster A vector<TLV> that will have the clusters added to it.
  *
- * @return A vector of TLV containing all of the clusters or constituents of the jet.
+ * @return A bool indicating if it was a success or not.  If the index ==-1 (which happens for truth jets) it will return false, for example.
  */
-std::vector<TLorentzVector> createClusters(int jettype, int jetidx)
+bool createClusters(int jettype, int jetidx, vector<TLorentzVector> & cluster)
 {
   // number of constituents
-  int size = (*var_constit_n[jettype]).size();
-  vector<TLorentzVector> cl;
+  int size = (*var_constit_index[jettype])[jetidx].size();
   for (int i = 0; i < size; i ++)
     {
       // get the index in the cl_lc collection
       int idx = (*var_constit_index[jettype])[jetidx][i];
+      // if index is -1 there is no cluster info for this jet
+      if (idx == -1)
+	return false;
       // create TLV for this cluster
       TLorentzVector constit(0., 0., 0., 0.);
+      if (DEBUG == 1)
+	{
+	  std::cout << "cluster idx: " << idx << std::endl;
+	  std::cout << "cluster pt: " << (*var_cl_pt_vec)[idx] << std::endl;
+	  std::cout << "cluster eta: " << (*var_cl_eta_vec)[idx] << std::endl;
+	  std::cout << "cluster phi: " << (*var_cl_phi_vec)[idx] << std::endl;
+	}
       constit.SetPtEtaPhiM((*var_cl_pt_vec)[idx]/1000., (*var_cl_eta_vec)[idx], (*var_cl_phi_vec)[idx], 0.);
       // add to vector
-      cl.push_back(constit);
+      cluster.push_back(constit);
     }
-  return cl;
+  return true;
 } // createClusters
 
 
@@ -3842,40 +3902,62 @@ int calculateSoftDropTag(vector<TLorentzVector> & cluster)
   return highest_softdrop_level;
 } //calculateSoftDropTag
 
+
 /*
- * Calculate the QJets Volatility of a given jet. Qjet vol = sqrt(<m^2>-<m>^2)/<m>., where numerator is RMS, denominator is mean of mass distribution.
+ * This method is based on the code from here:  http://jets.physics.harvard.edu/Qjets/html/Welcome.html
+ * Take cells from an event, cluster them into jets, and perform Q-jet pruning on the hardest one
+
+ * The main parameters governing the behavior of the algorithm are 
+ * zcut: this is the z-cut used in the pruning algorithm (typically 0.1 or 0.15)
+ * dcut_fctr: this is used in determining the angular dcut used in pruning. 
+ as in the pruning algorithm, dcut = dcut_fctr * 2 m / pT (dcut_fctr is typically 0.5)
+ * exp_min and exp_max determine the form of d_ij used in clustering the jet we have d_ij = min(pTi,pTj)^exp_min * max(pTi,pTj)^exp_max * R_ij^2, so for kT clustering, (exp_min,exp_max) = (2,0), while for C/A clustering they are (0,0)
+ * rigidity: this determines how close the algorithm is to "classical" C/A or kT. This is denoted as \alpha in the Qjets paper
  *
- * @param EventParticles A vector<TLV> containing constituents of jets being analysed.
- * @param radius  The radius of the jets. 
- *
- * @return QJets volatility for jets being analysed.
- */
-vector<double> calculateQJetsVol(vector<TLorentzVector> & EventParticles, float radius)
+ * @param clusters a vector<TLV> containing the input clusters for the jet
+ * @return The q-jet volatility
+*/
+double calculateQJetsVol_v2(vector<TLorentzVector> & clusters)
 {
-  // sort input particles by pt
-  sort(EventParticles.begin(), EventParticles.end(), ComparePt);
+  // sort input clusters by pt
+  sort(clusters.begin(), clusters.end(), ComparePt);
 
-  //Declare Qjet maker object                                                                                              
-  QjetsPluginRootCore QjetMaker(/*jet_radius = */ 0.7, /*nqjets = */ 100, /*zcut = */ 0.01, /*dcut = */ 0.5, /*exp_min = */ 0.,  /*exp_max = */ 0., /*rig = */ 100);
-
-  //Initialize to set new parameters                                                                                                                                                       //dcut=(sorted_by_pt(inclusive_jets)[0]).m()/(sorted_by_pt(inclusive_jets)[0]).perp();  //set to m/pt
-  float dcut = EventParticles[0].M()/EventParticles[0].Pt();
-  QjetMaker.Initialize(/*jet_radius = */ radius, /*nqjets = */ 25, /*zcut = */ 0.1, /*dcut = */ dcut, /*exp_min = */ 0.,  /*exp_max = */ 0., /*rig = */ 0.1);
-
-  //run Qjet maker on the input particles (clusers, tracks, or truth particles) in an event
-  QjetMaker.MakeJets(EventParticles);
-
-  // calculate the volatility for each jet.
-  vector<double> qjet_vol;
-  for (int i = 0; i < QjetMaker.jets.size() ; i++)
+  // create vector<PseudoJets> called input_particles, using input clusters for input
+  vector<fastjet::PseudoJet> input_particles;
+  for (std::vector<TLorentzVector>::iterator it = clusters.begin(); it != clusters.end(); it++)
     {
-      double qjet_vol_i = QjetMaker.QJet_Mrms[i]/QjetMaker.QJet_Mavg[i];
-      qjet_vol.push_back(qjet_vol_i);
+      input_particles.push_back(fastjet::PseudoJet((*it).Px(), (*it).Py(), (*it).Pz(), (*it).E()));
     }
-  
-  return qjet_vol;
 
-}//calculateQJetsVol
+  fastjet::JetDefinition jet_def(fastjet::antikt_algorithm,radius,fastjet::E_scheme, fastjet::Best);
+  fastjet::ClusterSequence clust_seq(input_particles, jet_def);  
+  vector<fastjet::PseudoJet> inclusive_jets = clust_seq.inclusive_jets();
+  
+  // set up the parameters for the reclustering.
+  // dcut = m/pt
+  double dcut_fctr = sorted_by_pt(inclusive_jets)[0].m()/sorted_by_pt(inclusive_jets)[0].perp();
+  double zcut(0.1), exp_min(0.), exp_max(0.), rigidity(0.1);
+  double truncation_fctr(0.0);
+ 
+  // initialise the pluging
+  QjetsPlugin qjet_plugin(zcut, dcut_fctr, exp_min, exp_max, rigidity, truncation_fctr);
+  fastjet::JetDefinition qjet_def(&qjet_plugin);
+
+  vector<fastjet::PseudoJet> constits = clust_seq.constituents(sorted_by_pt(inclusive_jets)[0]);
+
+  vector<double> masses;
+
+  for(unsigned int i = 0 ; i < 100000 ; i++){
+    fastjet::ClusterSequence qjet_seq(constits, qjet_def);
+    vector<fastjet::PseudoJet> inclusive_jets2 = sorted_by_pt(qjet_seq.inclusive_jets());
+    masses.push_back(inclusive_jets2[0].m());
+  }
+
+  // calculate variance and mean of mass distribution
+  double massmean = mean(masses);
+  double variance = var(masses, massmean);
+  return (double)sqrt(variance)/massmean;
+} // calculateQJetsVol_v2
 
 /*
  * Set the radius for the jet algorithm using the prefix of the algorithm.
@@ -3902,3 +3984,21 @@ void setRadius(std::string & prefix)
   radius/=10;
 
 } //setRadius
+
+/*
+ * Print the entries in a vector<TLV>.
+ *
+ * @param tlv The vector of TLVs to print.
+ */
+void printTLV(vector<TLorentzVector> & tlv)
+{
+  for (int i = 0; i < tlv.size(); i++)
+    {
+      std::cout << "Entry in tlv number: " << i << std::endl;
+      std::cout << "Pt: " << tlv[i].Pt() << std::endl;
+      std::cout << "M: " << tlv[i].M() << std::endl;
+      std::cout << "Eta: " << tlv[i].Eta() << std::endl;
+      std::cout << "Phi: " << tlv[i].Phi() << std::endl;
+    }
+  
+} //printTLV

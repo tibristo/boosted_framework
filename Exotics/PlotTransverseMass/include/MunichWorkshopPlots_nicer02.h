@@ -115,14 +115,42 @@ std::vector<float> dummyCharge(int size);
 void setVector(TChain *& tree, TObjArray *& list, vector<TLorentzVector> *& vec, std::string branch);//, const char * branch);//std::string & branch);
 
 void setVector(TChain *& tree, TObjArray *& list, vector<Float_t> *& vec, std::string branch);//, const char * branch);//std::string & branch);
+void setVector(TChain *& tree, TObjArray *& list, vector<Int_t> *& vec, std::string branch);//, const char * branch);//std::string & branch);
 bool useBranch(std::string branch, bool partialmatch = false);
 void setLLJMass(int jetidx);
 double calculateFoxWolfram20(vector<TLorentzVector>& clusters);
 int calculateSoftDropTag(vector<TLorentzVector> & cluster);
 vector<double> calculateQJetsVol(vector<TLorentzVector> & EventParticles, float radius);
-std::vector<TLorentzVector> createClusters(int jettype, int jetidx);
+double calculateQJetsVol_v2(vector<TLorentzVector> & clusters);
+bool createClusters(int jettype, int jetidx, vector<TLorentzVector> & cluster);
 double calculateEEC(int jettype, float beta=0.3, float exp=2);
 void setRadius(std::string & prefix);
+void printTLV(vector<TLorentzVector> & tlv);
+
+
+inline double mean(vector<double>& masses){
+  double ret(0.);
+  for(vector<double>::iterator it = masses.begin(); it != masses.end(); it++)
+    ret += (*it);
+  return ret/masses.size();
+}
+
+inline double var(vector<double>& masses){
+  double ret(0.), avg(mean(masses));
+  for(vector<double>::iterator it = masses.begin(); it != masses.end(); it++)
+    ret += ((*it)-avg)*((*it)-avg);
+  return ret/masses.size();
+}
+
+// overloaded version where the avg is passed as well and doesn't need to be recalculated
+inline double var(vector<double>& masses, double avg){
+  double ret(0.);
+  // average is mean(masses)
+  for(vector<double>::iterator it = masses.begin(); it != masses.end(); it++)
+    ret += ((*it)-avg)*((*it)-avg);
+  return ret/masses.size();
+}
+
 
 
 enum class groomAlgoEnum{groomZero, TopoSplitFilteredMu67SmallR0YCut9, TopoSplitFilteredMu100SmallR30YCut4, TopoTrimmedPtFrac5SmallR30, TopoTrimmedPtFrac5SmallR20, TopoPrunedCaRcutFactor50Zcut10, TopoPrunedCaRcutFactor50Zcut20, AntiKt2LCTopo, AntiKt3LCTopo, AntiKt4LCTopo};
@@ -447,7 +475,7 @@ std::map<int, std::vector<float> *> var_ThrustMaj_vec;
 std::map<int, std::vector<float> *> var_ThrustMin_vec;
 
 // jet clusters
-std::vector<float> * var_cl_n_vec;
+Int_t var_cl_n;
 std::vector<float> * var_cl_pt_vec;
 std::vector<float> * var_cl_eta_vec;
 std::vector<float> * var_cl_phi_vec;
