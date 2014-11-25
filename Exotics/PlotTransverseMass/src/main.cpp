@@ -1958,7 +1958,7 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
 	  // Setting up this with a high limit of 3.5 TeV so we don't miss anything.  Lots of bins - 200, so we can
 	  // do a lot of tuning of the scale factor regions later on!
 	  pt_reweight = new TH1F(std::string("pt_reweight"+bkg).c_str(),std::string("pt_reweight_"+bkg).c_str(), 200, 0, 3500);
-	  cluster_vs_truthpt = new TH2F("ClusterVsTruthJetPt","ClusterVsTruthJetPt",40,1400, 2600, 40 ,0 , 2000);
+	  cluster_vs_truthpt = new TH2F("ClusterVsTruthJetPt","ClusterVsTruthJetPt",40, 100, 1000, 40 ,0 , 1000);
 	  cluster_vs_truthpt->GetXaxis()->SetTitle("Truth pT (GeV)");
 	  cluster_vs_truthpt->GetYaxis()->SetTitle("Leading cluster pT (GeV)");
 	  
