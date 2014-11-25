@@ -117,7 +117,7 @@ void setVector(TChain *& tree, TObjArray *& list, vector<TLorentzVector> *& vec,
 
 void setVector(TChain *& tree, TObjArray *& list, vector<Float_t> *& vec, std::string branch);//, const char * branch);//std::string & branch);
 void setVector(TChain *& tree, TObjArray *& list, vector<Int_t> *& vec, std::string branch);//, const char * branch);//std::string & branch);
-bool useBranch(std::string branch, bool partialmatch = false);
+bool useBranch(std::string const& branch, bool partialmatch = false);
 void setLLJMass(int jetidx);
 double calculateFoxWolfram20(vector<TLorentzVector>& clusters);
 int calculateSoftDropTag(vector<TLorentzVector> & cluster);

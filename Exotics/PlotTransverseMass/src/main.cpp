@@ -1882,15 +1882,24 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
 	  boost::filesystem::create_directory(dir);
 
 	  // create a ttree cache to speed up branch reads
-	  inputTChain[tchainIdx]->SetCacheSize(10000000);
+	  inputTChain[tchainIdx]->SetCacheSize(20000000);
 
-
+	  // the branches map was done using a branch array from the background sample. Instead of creating a union of the
+	  // branch array from signal and background the check is just done here.  The reason is two fold - I don't want to 
+	  // fight with ROOT and what is inside the TObjArray, and since we only run this once for the signal and once for the
+	  // background the overhead is minimal.
+	  brancharray = 0;
+	  brancharray = inputTChain[tchainIdx]->GetListOfBranches();
 
 	  // turn off the branches we're not interested in
 	  UInt_t * found = 0;
 	  for (std::vector<std::pair<string,int > >::iterator it = branches.begin(); it != branches.end(); it++)
 	    {
 	      found = 0;
+	      // if the branch is not in this sample just skip it
+	      if (!brancharray->FindObject((*it).first.c_str()))
+		continue;
+	      // if the branch is in the samlple but not being used, turn it off
 	      if ((*it).second == 0)
 		{
 		  inputTChain[tchainIdx]->SetBranchStatus((*it).first.c_str(),0,found);
@@ -1900,6 +1909,7 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
 		      (*it).second = -1;
 		  }
 		}
+	      // otherwise add it to the ttree cache
 	      else if ((*it).second == 1)
 		{
 		  //std::cout << (*it).first << std::endl;
@@ -2464,7 +2474,7 @@ std::string returnSubJetType(std::string & samplePrefix, std::string & groomalgo
  *
  * @return bool indicating if it is in the branchmap
  */
-bool useBranch(std::string branch, bool partialmatch)
+bool useBranch(std::string const& branch, bool partialmatch)
 {
   // look for the key in the branch map
   if (!partialmatch)
