@@ -103,6 +103,7 @@ int main( int argc, char * argv[] ) {
       ("calcFoxWolfram", po::value<bool>(&calcFoxWolfram20)->default_value(false),"Indicate if we are calculating FoxWolfram20.  Note this is potentially quite CPU intensive.")
       ("calcSoftDrop", po::value<bool>(&calcSoftDrop)->default_value(false),"Indicate if we are calculating the soft drop tag.  Note this is potentially quite CPU intensive.")
       ("calcEEC", po::value<bool>(&calcEEC)->default_value(false),"Indicate if we are calculating EEC.  Note this is potentially quite CPU intensive.")
+      ("calcClusters", po::value<bool>(&calcClusters)->default_value(false),"Reconstruct TLVs of the topo clusters.  This is done automatically if doing qjets, foxwolfram, softdrop or EEC.")
       ;
         
     po::options_description cmdline_options;
@@ -1957,6 +1958,9 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
 	  // Setting up this with a high limit of 3.5 TeV so we don't miss anything.  Lots of bins - 200, so we can
 	  // do a lot of tuning of the scale factor regions later on!
 	  pt_reweight = new TH1F(std::string("pt_reweight"+bkg).c_str(),std::string("pt_reweight_"+bkg).c_str(), 200, 0, 3500);
+	  cluster_vs_truthpt = new TH2F("ClusterVsTruthJetPt","ClusterVsTruthJetPt",40,1400, 2600, 40 ,0 , 2000);
+	  cluster_vs_truthpt->GetXaxis()->SetTitle("Truth pT (GeV)");
+	  cluster_vs_truthpt->GetYaxis()->SetTitle("Leading cluster pT (GeV)");
 	  
 	  // set up the number of events in total
 	  NEvents = entries;
@@ -2157,15 +2161,24 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
 		}
 		
 	      // the following need the clusters
-	      if (calcQJets || calcFoxWolfram20 || calcSoftDrop)
+	      if (calcQJets || calcFoxWolfram20 || calcSoftDrop || calcClusters)
 		{
 		  std::vector<TLorentzVector> truthclusters;
 		  // check if the clusters are created properly before using them for calculations
 		  bool runTruthClusters = createClusters(jetType::TRUTH, leadTruthIndex, truthclusters);
+		  		  
 		  if (DEBUG)
 		    printTLV(truthclusters);
 		  std::vector<TLorentzVector> groomedclusters;
 		  bool runGroomedClusters = createClusters(jetType::GROOMED, leadGroomedIndex, groomedclusters);
+
+		  // fill the largest cluster for the groomed, truth matched jet vs truth jet pt
+		  if (runGroomedClusters)
+		    {
+		      sort(groomedclusters.begin(), groomedclusters.end(), ComparePt);
+		      cluster_vs_truthpt->Fill((*jet_pt_truth)[leadTruthIndex]/1000., groomedclusters[0].Pt());
+		    }
+
 		  if (DEBUG)
 		    printTLV(groomedclusters);
 
@@ -2173,10 +2186,10 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
 		    {
 		      // truth jet
 		      if (runTruthClusters)
-			var_QjetVol[jetType::TRUTH] = calculateQJetsVol_v2(truthclusters);//[0];
+			var_QjetVol[jetType::TRUTH] = calculateQJetsVol_v2(truthclusters);
 		      // groomed jet
 		      if (runGroomedClusters)
-			var_QjetVol[jetType::GROOMED] = calculateQJetsVol_v2(groomedclusters);//[0];
+			var_QjetVol[jetType::GROOMED] = calculateQJetsVol_v2(groomedclusters);
 		    }
 		  if (calcFoxWolfram20)
 		    {
@@ -2222,6 +2235,8 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
 	  // write the rweight th1f things to the outfile...
 	  // calculate the overall reweight with a new histogram!
 	  outTree->GetCurrentFile()->Write();
+	  // write histograms to file
+	  cluster_vs_truthpt->Write();
 	  pt_reweight->Write();
 	  pt_reweight_arr[tchainIdx] = (TH1F*)pt_reweight->Clone();
 	  // stupid clone method needs this so that it doesn't delete this histo when closing the file
@@ -3859,15 +3874,24 @@ double calculateEEC(int jettype, float beta, float exp)
  */
 bool createClusters(int jettype, int jetidx, vector<TLorentzVector> & cluster)
 {
+  // check that the variables are not null before we create a TLV out of them.
+  if (var_cl_pt_vec == NULL || var_cl_eta_vec == NULL || var_cl_phi_vec == NULL)
+    return false;
+
   // number of constituents
   int size = (*var_constit_index[jettype])[jetidx].size();
+  int cl_size = (*var_cl_pt_vec).size();
   for (int i = 0; i < size; i ++)
     {
       // get the index in the cl_lc collection
       int idx = (*var_constit_index[jettype])[jetidx][i];
       // if index is -1 there is no cluster info for this jet
-      if (idx == -1)
-	return false;
+      if (idx == -1 || idx >= cl_size)
+	{
+	  if (DEBUG)
+	    std::cout << "warning: the index for the cluster is out of bounds" << std::endl;
+	  return false;
+	}
       // create TLV for this cluster
       TLorentzVector constit(0., 0., 0., 0.);
       if (DEBUG == 1)
@@ -3877,6 +3901,7 @@ bool createClusters(int jettype, int jetidx, vector<TLorentzVector> & cluster)
 	  std::cout << "cluster eta: " << (*var_cl_eta_vec)[idx] << std::endl;
 	  std::cout << "cluster phi: " << (*var_cl_phi_vec)[idx] << std::endl;
 	}
+
       constit.SetPtEtaPhiM((*var_cl_pt_vec)[idx]/1000., (*var_cl_eta_vec)[idx], (*var_cl_phi_vec)[idx], 0.);
       // add to vector
       cluster.push_back(constit);
@@ -4035,7 +4060,7 @@ double calculateQJetsVol_v2(vector<TLorentzVector> & clusters)
 
   vector<double> masses;
 
-  for(unsigned int i = 0 ; i < 100000 ; i++){
+  for(int i = 0 ; i < nqjets ; i++){
     fastjet::ClusterSequence qjet_seq(constits, qjet_def);
     vector<fastjet::PseudoJet> inclusive_jets2 = sorted_by_pt(qjet_seq.inclusive_jets());
     masses.push_back(inclusive_jets2[0].m());

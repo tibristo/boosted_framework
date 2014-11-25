@@ -1,5 +1,6 @@
 
 #include <TH1F.h>
+#include <TH2F.h>
 #include "TChain.h"
 #include <TH1I.h>
 #include "TH1.h"
@@ -195,8 +196,10 @@ bool calcQJets = false;
 bool calcFoxWolfram20 = false;
 bool calcSoftDrop = false;
 bool calcEEC = false;
+bool calcClusters = false;
 
 float radius = 1.0;
+int nqjets = 25;
 
 TFile *inputFile[2];
 TTree *inputTree[2];
@@ -208,6 +211,9 @@ Int_t leadTruthIndex = 0;
 Int_t leadTopoIndex = 0;
 TH1F * pt_reweight = 0;
 TH1F * pt_reweight_arr[2];
+
+TH2F * cluster_vs_truthpt = 0;
+
 Float_t normalisation = 1.0;
 Int_t NEvents = 0;
 std::map<int, float> NEvents_weighted;
