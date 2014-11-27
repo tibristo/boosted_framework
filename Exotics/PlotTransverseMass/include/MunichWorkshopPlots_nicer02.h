@@ -14,6 +14,7 @@
 #include <iostream>
 #include <cstdlib>
 #include <map>
+#include <unordered_map>
 #include <cmath>
 
 #include "TROOT.h"
@@ -85,13 +86,13 @@ void plotVariables(TTree * tree, vector<std::string> & branches);
 std::vector<std::string> getListOfBranches(std::string &algorithm);
 //void make68Plots(int algidx, TChain * bkg, TChain * sig);
 void makeMassWindowFile(bool applyMassWindow, std::string & algorithm);
-void setJetsBranches(TChain * tree, std::string & algorithm, std::string & groomIdx);
+void setJetsBranches(TChain * tree, std::string & algorithm, std::string & groomIdx, std::unordered_map<std::string,bool> & current_branchmap);
 void addInfoBranches(TTree * tree);
 void addSubJets(TTree * tree, std::string & algorithm, std::string & groomIdx);
 //void getBranchesSelection(TTree * tree, std::string & algorithm);
 void setSelectionVectors();
 void runAlgorithm(TChain *inputTree, TChain *inputTree1, TString groomAlgo, std::string & groomAlgoIndex, bool massHistos);
-vector<std::pair<std::string,int> > getListOfJetBranches(std::string & algorithm, TObjArray * brancharray);
+vector<std::pair<std::string,bool> > getListOfJetBranches(std::string & algorithm, std::unordered_map<std::string, bool> & brancharray);
 void initVectors();
 std::pair<int,int> getTwoLeadingSubjets(std::vector<int> & indices, std::vector<float> * subjets);
 std::string returnJetType(std::string & samplePrefix, std::string & groomalgo, bool addLC, int idx);
@@ -113,11 +114,11 @@ void setLeptons(TChain * tree, TObjArray * list);
 void addLeptonBranches(std::string & jetString, TChain * tree);
 void setLeptonVectors();
 std::vector<float> dummyCharge(int size);
-void setVector(TChain *& tree, TObjArray *& list, vector<TLorentzVector> *& vec, std::string branch);//, const char * branch);//std::string & branch);
+bool setVector(TChain *& tree, std::unordered_map<std::string, int> & list, vector<TLorentzVector> *& vec, std::string branch);//, const char * branch);//std::string & branch);
 
-void setVector(TChain *& tree, TObjArray *& list, vector<Float_t> *& vec, std::string branch);//, const char * branch);//std::string & branch);
-void setVector(TChain *& tree, TObjArray *& list, vector<Int_t> *& vec, std::string branch);//, const char * branch);//std::string & branch);
-bool useBranch(std::string const& branch, bool partialmatch = false);
+bool setVector(TChain *& tree, std::unordered_map<std::string, int> & list, vector<Float_t> *& vec, std::string branch);//, const char * branch);//std::string & branch);
+bool setVector(TChain *& tree, std::unordered_map<std::string, int> & list, vector<Int_t> *& vec, std::string branch);//, const char * branch);//std::string & branch);
+bool useBranch(std::string const & branch, bool partialmatch = false);
 void setLLJMass(int jetidx);
 double calculateFoxWolfram20(vector<TLorentzVector>& clusters);
 int calculateSoftDropTag(vector<TLorentzVector> & cluster);
@@ -127,7 +128,12 @@ bool createClusters(int jettype, int jetidx, vector<TLorentzVector> & cluster);
 double calculateEEC(int jettype, float beta=0.3, float exp=2);
 void setRadius(std::string & prefix);
 void printTLV(vector<TLorentzVector> & tlv);
+std::unordered_map<std::string,bool> createBranchMap(TObjArray *& arr);
 
+vector<TLorentzVector> * tlvvec();
+vector<float> * floatvec();
+vector<int> * intvec();
+vector< vector<int> > * vecintvec();
 
 inline double mean(vector<double>& masses){
   double ret(0.);
@@ -184,10 +190,13 @@ struct Algorithms
 struct Algorithms algorithms;
 /////
 
+long global_counter = 0;
+long passed_counter = 0;
+
 std::string fileid_global;
 std::string treeName;
 std::string branchesFile;
-std::map<string, int> branchmap;
+std::unordered_map<std::string, bool> branchmap;
 float GEV = 1000.;
 float ELMASS = 0.511;
 float MUMASS = 105.7;
@@ -197,6 +206,7 @@ bool calcFoxWolfram20 = false;
 bool calcSoftDrop = false;
 bool calcEEC = false;
 bool calcClusters = false;
+bool calcTauWTA21 = false;
 
 float radius = 1.0;
 int nqjets = 25;
