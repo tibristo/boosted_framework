@@ -13,7 +13,7 @@ RM           = rm -f
 AR           = ar cru
 
 ##Flags
-CXXFLAGS     = -O2 -g -fPIC -funroll-loops -std=c++11 #-Wall 
+CXXFLAGS     = -O3 -fPIC -funroll-loops -std=c++11 -pg #-Wall 
 
 EXENAME		= PlotsMunichWorkshop
 SRCEXT   	= cpp
@@ -25,15 +25,24 @@ SRCS    	:= src/main.cpp # src/LinkDefDict.cpp #$(shell find $(SRCDIR) -name '*.
 
 OBJS    	:= build/main.o #build/LinkDefDict.o #$(patsubst $(SRCDIR)/%.$(SRCEXT),$(OBJDIR)/%.o,$(SRCS))
 
+OBJS+=build/Qjets.o build/QjetsPlugin.o
+
+SRCS+=/home/tim/boosted_framework/Exotics/Qjets/Qjets.C
+SRCS+=/home/tim/boosted_framework/Exotics/Qjets/QjetsPlugin.C
+SRCDIRQJ = /home/tim/boosted_framework/Exotics/Qjets
+
+INCDIR+=-I/usr/local/include
 GARBAGE  = $(OBJDIR)/main.o $(EXEDIR)/$(EXENAME)
 INCDIR+=-I/home/tim/Programs/fastjet-install/include
+#add qjetsplugin
+INCDIR+=-I/home/tim/boosted_framework/Exotics/Qjets/
 #################
 ##Dependencies
 # Linux
 ifeq "$(UNAME)" "Linux"
 RANLIB       = ranlib
 CXXFLAGS    += -I$(INCDIR) $(ROOTCFLAGS) #-I$(GSLINC)
-LINKFLAGS    = -g $(shell root-config --nonew) $(shell root-config --ldflags) -Wl,--no-as-needed
+LINKFLAGS    = $(shell root-config --nonew) $(shell root-config --ldflags) -Wl,--no-as-needed -pg
 endif
 
 
@@ -48,17 +57,36 @@ LINKFLAGS    =
 endif
 
 ##Libraries
-LIBS       += $(ROOTLIBS) -lThread `/home/tim/Programs/fastjet-install/bin/fastjet-config --libs` -L/usr/local/lib -lboost_filesystem -lboost_system -lboost_program_options
+#LIBS       += $(ROOTLIBS) -lThread `/home/tim/Programs/fastjet-install/bin/fastjet-config --libs` -L/usr/local/lib -lboost_filesystem -lboost_system -lboost_program_options
+LIBS       += $(ROOTLIBS) -lTreePlayer -lThread `/home/tim/Programs/fastjet-install/bin/fastjet-config --libs` -L/usr/local/lib -lQjets -lboost_filesystem -lboost_system -lboost_program_options -lboost_regex -L/home/tim/Programs/fastjet-install/lib -L./lib
 
 
 ##Targets
-all : $(EXEDIR)/$(EXENAME)
+
+FILES = build/Qjets.o build/QjetsPlugin.o
+
+all : lib/libQjets.a $(EXEDIR)/$(EXENAME)
 
 $(EXEDIR)/$(EXENAME) : $(OBJS)
 	$(CXX) -o $@ $(OBJS) $(LINKFLAGS) $(LIBS)
 
 $(OBJDIR)/main.o : $(SRCDIR)/main.$(SRCEXT)
 	$(CXX) $(CXXFLAGS) -c $< -o $@
+
+
+$(OBJDIR)/Qjets.o : $(SRCDIRQJ)/Qjets.C
+	$(CXX) $(CXXFLAGS) -c $< -o $@
+
+$(OBJDIR)/QjetsPlugin.o : $(SRCDIRQJ)/QjetsPlugin.C
+	$(CXX) $(CXXFLAGS) -c $< -o $@
+
+
+
+lib/libQjets.a: $(FILES) $(FILES:.cc=.o)
+	ar cq lib/libQjets.a $(FILES)
+
+lib/libQjets.so: $(FILES) $(FILES:.cc=.o)
+	gcc $(SOFLAGS) -o $@ $(FILES)
 
 
 clean   :

@@ -24,6 +24,7 @@
 #include <boost/regex.hpp>
 #include <algorithm>
 #include "QjetsPlugin.h"
+
 //#include "LinkDef.h"
 using namespace boost::algorithm;
 using namespace std;
@@ -32,8 +33,6 @@ namespace po = boost::program_options;
 // used for controlling cout statements for debugging
 #define DEBUG 0
 
-
-bool ComparePt(TLorentzVector a, TLorentzVector b) { return a.Pt() > b.Pt(); }
 
 template<class T>
 ostream& operator<<(ostream& os, const vector<T>& v)
@@ -104,6 +103,7 @@ int main( int argc, char * argv[] ) {
       ("calcSoftDrop", po::value<bool>(&calcSoftDrop)->default_value(false),"Indicate if we are calculating the soft drop tag.  Note this is potentially quite CPU intensive.")
       ("calcEEC", po::value<bool>(&calcEEC)->default_value(false),"Indicate if we are calculating EEC.  Note this is potentially quite CPU intensive.")
       ("calcClusters", po::value<bool>(&calcClusters)->default_value(false),"Reconstruct TLVs of the topo clusters.  This is done automatically if doing qjets, foxwolfram, softdrop or EEC.")
+      ("calcTauWTA21", po::value<bool>(&calcTauWTA21)->default_value(true),"Calculate TauWTA2/TauWTA1.")
       ;
         
     po::options_description cmdline_options;
@@ -462,7 +462,9 @@ void getMassHistograms(TTree *inputTree, TTree *inputTree1, TString groomAlgo, s
 
       reclus_jets = Recluster(small_jets);
       
-      sort(reclus_jets.begin(), reclus_jets.end(), ComparePt);
+      sort(reclus_jets.begin(), reclus_jets.end(), [] (TLorentzVector a, TLorentzVector b){
+	  return a.Pt() > b.Pt();
+	});//ComparePt);
 
 
       qcd_CA12_groomed_pt= new vector<float>();
@@ -697,7 +699,9 @@ void getMassHistograms(TTree *inputTree, TTree *inputTree1, TString groomAlgo, s
       
       reclus_jets = Recluster(small_jets);
       
-      sort(reclus_jets.begin(), reclus_jets.end(), ComparePt);
+      sort(reclus_jets.begin(), reclus_jets.end(), [] (TLorentzVector a, TLorentzVector b){
+	  return a.Pt() > b.Pt();
+	});//ComparePt);
 
       Wp_CA12_groomed_pt= new vector<float>();
       Wp_CA12_groomed_eta= new vector<float>();
@@ -1832,7 +1836,7 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
   bool signal = false;
 
   // need branches for specific algorithms because otherwise we end up with a million branches that we don't need
-  vector<std::pair<std::string,int> > branches;
+  vector<std::pair<std::string,bool> > branches;
 
   std::string i = algorithm;
   std::cout << "Doing mass window plots for " << algorithms.AlgoNames[i] << std::endl;
@@ -1844,15 +1848,17 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
 
   
   TObjArray * brancharray = inputTChain[0]->GetListOfBranches();
+  std::unordered_map<string, bool> brancharray_initial = createBranchMap(brancharray);
+  
   if (branchesFile != "")
     {
       std::cout << "branchesFile: " << branchesFile << std::endl;
-      branches = getListOfJetBranches(branchesFile, brancharray);
+      branches = getListOfJetBranches(branchesFile, brancharray_initial);
     }
     else
       {
 	std::cout << "branchesFile not defined" << std::endl;
-	branches = getListOfJetBranches(algorithms.AlgoNames[i], brancharray);
+	branches = getListOfJetBranches(algorithms.AlgoNames[i], brancharray_initial);
       }
     // loop through the different pt bins. j == 0 is the inclusive one
     for (int j=0; j<1; j++){//nPtBins; j++){
@@ -1888,21 +1894,27 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
 	  // branch array from signal and background the check is just done here.  The reason is two fold - I don't want to 
 	  // fight with ROOT and what is inside the TObjArray, and since we only run this once for the signal and once for the
 	  // background the overhead is minimal.
+	  // If using TObjArray::FindObject() it will return a virtual TObject*, which will then run a comparison if testing for
+	  // existence.  A solution is to add all of the names of the objects in the tree to a map, which will have faster 
+	  // lookup, because no comparisons are run.
 	  brancharray = 0;
 	  brancharray = inputTChain[tchainIdx]->GetListOfBranches();
+	  std::unordered_map<std::string,bool> current_branchmap = createBranchMap(brancharray);
 
 	  // turn off the branches we're not interested in
 	  UInt_t * found = 0;
-	  for (std::vector<std::pair<string,int > >::iterator it = branches.begin(); it != branches.end(); it++)
+	  for (std::vector<std::pair<std::string, bool > >::iterator it = branches.begin(); it != branches.end(); it++)
 	    {
 	      found = 0;
 	      // if the branch is not in this sample just skip it
-	      if (!brancharray->FindObject((*it).first.c_str()))
+	      if (current_branchmap.find((*it).first) == current_branchmap.end())
 		continue;
 	      // if the branch is in the samlple but not being used, turn it off
 	      if ((*it).second == 0)
 		{
 		  inputTChain[tchainIdx]->SetBranchStatus((*it).first.c_str(),0,found);
+		  // make sure that the global map stores this as false
+		  //branchmap[(*it).first] = false;
 		  // if the branch is not found in the tchain, then set it up in the branches file.
 		  {
 		    if ((&found) != 0)
@@ -1919,9 +1931,10 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
 	      
 	    }
 	  inputTChain[tchainIdx]->GetEntries();
-	  setJetsBranches(inputTChain[tchainIdx], algorithms.AlgoNames[i], i); //set all of the branches for the output tree for the jets	  
+	  setJetsBranches(inputTChain[tchainIdx], algorithms.AlgoNames[i], i, current_branchmap); //set all of the branches for the output tree for the jets	  
 
 	  // output file
+	  ofstream clusterfile(string("clusterfile"+bkg+".csv"));
 	  TFile * outfile = new TFile(std::string(algorithm+fileid_global+"/"+ss_fname.str()).c_str(),"RECREATE");   
 	  TTree * outTree = new TTree(treeName.c_str(),treeName.c_str());
 
@@ -1953,6 +1966,9 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
 
 	  std::cout << "total entries: " << entries << std::endl;
 	  
+	  // counter for how many events pass selection
+	  passed_counter = 0;
+
 	  // mass variable
 	  double mass = 0;
 	  for (long n = 0; n < entries; n++)
@@ -2131,7 +2147,7 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
 	      var_Tau21[2]=(*var_Tau2_vec[2])[leadGroomedIndex]/(*var_Tau1_vec[2])[leadGroomedIndex];
 	    
 	      // set up tauwta variables and zcut12
-	      if (useBranch(string("TauWTA2TauWTA1"),true) && useBranch(string("TauWTA2"), true) && useBranch(string("TauWTA1"), true) )
+	      if (calcTauWTA21)//useBranch(string("TauWTA2TauWTA1"),true) && useBranch(string("TauWTA2"), true) && useBranch(string("TauWTA1"), true) )
 		{
 		  // need to check if these branches are on....
 		  if (var_TauWTA1_vec[0] != NULL && var_TauWTA2_vec[0] != NULL)
@@ -2157,11 +2173,12 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
 		  bool runGroomedClusters = createClusters(jetType::GROOMED, leadGroomedIndex, groomedclusters);
 
 		  // fill the largest cluster for the groomed, truth matched jet vs truth jet pt
-		  if (runGroomedClusters)
+		  /*if (runGroomedClusters)
 		    {
 		      sort(groomedclusters.begin(), groomedclusters.end(), ComparePt);
 		      cluster_vs_truthpt->Fill((*jet_pt_truth)[leadTruthIndex]/1000., groomedclusters[0].Pt());
-		    }
+		      clusterfile << (*jet_pt_truth)[leadTruthIndex]/1000. << "," << groomedclusters[0].Pt() << "," << DeltaR((*jet_eta_truth)[leadTruthIndex], (*jet_phi_truth)[leadTruthIndex], groomedclusters[0].Eta(), groomedclusters[0].Phi()) << endl;
+		      }*/
 
 		  if (DEBUG)
 		    printTLV(groomedclusters);
@@ -2211,7 +2228,11 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
 		}
 	      // make sure all of the other output variables have their values set
 	      setOutputVariables(leadTruthIndex, leadTopoIndex, leadGroomedIndex, lead_subjet, algorithms.AlgoNames[i] , i);
-	      outTree->Fill();
+	      
+	      // count how many entries have passed selection
+	      passed_counter += 1;
+
+	      outTree->Fill();	      
 	      pt_reweight->Fill((*jet_pt_truth)[chosenLeadTruthJetIndex]/1000.0);
 
 	    } // end loop over nentries
@@ -2237,6 +2258,7 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
 	  for (std::map<int,float>::iterator it = NEvents_weighted.begin(); it!= NEvents_weighted.end(); it++)
 	    ev_out << it->first << "," << NEvents_weighted[it->first] << std::endl;
 	  ev_out.close();
+	  clusterfile.close();
 	  delete outfile;
 
 	} // end loop of datatype
@@ -2289,13 +2311,13 @@ std::pair<int,int> getTwoLeadingSubjets(std::vector<int> & jet_idx, std::vector<
  *
  * @param algorithm The name of the algorithm being run.  If this is a valid branches file it will use this variable
  *        as a filename, otherwise it will use algorithm+"_branches.txt".
- * @param brancharray A TObjArray pointer containing all of the branches in the input tree
+ * @param brancharray A map<string,int> containing all of the branches in the input tree
  * @return vector of pairs containing all of the branches and if they should be on or off.
  */
-vector<std::pair<std::string,int> > getListOfJetBranches(std::string &algorithm, TObjArray * brancharray)
+vector<std::pair<std::string,bool> > getListOfJetBranches(std::string &algorithm, std::unordered_map<std::string, bool> & brancharray)
 {
   // Ideally we want this stored in an XML file, but for now it'll have to be a standard text file because I'm short on time!
-  vector<pair<string,int> > branches;
+  vector<pair<string,bool> > branches;
 
   // some variables require cluster information, list them here:
   vector<string> clustervariables {"FoxWolfram20","QJetsVol","SoftDrop","EEC_C1","EEC_C2","EEC_D1","EEC_D2"};
@@ -2312,7 +2334,7 @@ vector<std::pair<std::string,int> > getListOfJetBranches(std::string &algorithm,
   while (getline(in, line))
     {
       trim(line);
-      branchmap[line] = 1;
+      branchmap[line] = true;
       // check to see if this variable requires cluster info
       if (!addClusterVariables)
 	    {
@@ -2328,58 +2350,59 @@ vector<std::pair<std::string,int> > getListOfJetBranches(std::string &algorithm,
   //add the clusters to the branchmap if we need them
   if (addClusterVariables)
     {
-      branchmap["cl_lc_n"]=1;
-      branchmap["cl_lc_pt"]=1;
-      branchmap["cl_lc_eta"]=1;
-      branchmap["cl_lc_phi"]=1;
+      branchmap["cl_lc_n"] = true;
+      branchmap["cl_lc_pt"] = true;
+      branchmap["cl_lc_eta"] = true;
+      branchmap["cl_lc_phi"] = true;
     }
 
   // need to add some essential ones in case they get forgotten in that config file :)
-  branchmap["RunNumber"] = 1;
-  branchmap["mc_channel_number"] = 1;
-  branchmap["vxp_n"] = 1;
-  branchmap["nVertices"] = 1;
-  branchmap["averageIntPerXing"] = 1;
-  branchmap["mc_event_weight"] = 1;
+  branchmap["RunNumber"] = true;
+  branchmap["mc_channel_number"] = true;
+  branchmap["vxp_n"] = true;
+  branchmap["nVertices"] = true;
+  branchmap["averageIntPerXing"] = true;
+  branchmap["mc_event_weight"] = true;
 
   // need to add leptons
-  branchmap["electrons"] = 1;
+  branchmap["electrons"] = true;
 
-  branchmap["el_pt"] = 1;
-  branchmap["el_eta"] = 1;
-  branchmap["el_phi"] = 1;
-  branchmap["el_ptcone20"] = 1;
-  branchmap["el_etcone20"] = 1;
+  branchmap["el_pt"] = true;
+  branchmap["el_eta"] = true;
+  branchmap["el_phi"] = true;
+  branchmap["el_ptcone20"] = true;
+  branchmap["el_etcone20"] = true;
 
-  branchmap["muons"] = 1;
+  branchmap["muons"] = true;
 
-  branchmap["mu_pt"] = 1;
-  branchmap["mu_eta"] = 1;
-  branchmap["mu_phi"] = 1;
-  branchmap["mu_ptcone20"] = 1;
-  branchmap["mu_etcone20"] = 1;
-  branchmap["mu_charge"] = 1;
+  branchmap["mu_pt"] = true;
+  branchmap["mu_eta"] = true;
+  branchmap["mu_phi"] = true;
+  branchmap["mu_ptcone20"] = true;
+  branchmap["mu_etcone20"] = true;
+  branchmap["mu_charge"] = true;
   in.close();
 
 
   // loop through all of the branches in the tree and check if they exist in the branch map
-  TIter it(brancharray);
-  TBranch * tb;
-  while (tb = (TBranch *) it.Next())
+  for (std::unordered_map<std::string,bool>::iterator tb = brancharray.begin(); tb != brancharray.end(); tb++)
     {
-      std::string name = tb->GetName();
+      std::string name = (*tb).first;
       trim(name);
       if (branchmap.find(name) != branchmap.end() )
 	{
-	  branches.push_back(make_pair(name, 1));
+	  branches.push_back(make_pair(name, true));
 	  
 	}
       else
-	branches.push_back(make_pair(name, 0));
+	{
+	  branches.push_back(make_pair(name, false));
+	  // even if the branch is not used we want to know
+	  //branchmap[name] = false;
+	}
 
 
     }
-  // add the clusters to the branchmap and add to list of branches
   
   return branches;
 } // getListOfBranches()
@@ -2441,32 +2464,46 @@ std::string returnSubJetType(std::string & samplePrefix, std::string & groomalgo
 }// return subjettype
 
 /*
- * Check if a branch is in the branchmap so we don't try to set branch addresses we aren't using
+ * Check if a branch is in the branchmap so we don't try to set branch addresses we aren't using.  On the first iteration
+ * this is checked for all calls on the first event and adds them to a map.  This means for future events we no longer
+ * have to search the branchmap for the key because we have ensured it is there - faster!
  *
  * @param branch Name of the branch to check
  * @param partialmatch Only look for substrings of keys that match the string
  *
  * @return bool indicating if it is in the branchmap
  */
-bool useBranch(std::string const& branch, bool partialmatch)
+bool useBranch(std::string const& br, bool partialmatch)
 {
+  string branch = br;
+  //if (passed_counter != 0)
+    //return branchmap[branch];
   // look for the key in the branch map
   if (!partialmatch)
     {
-      if (branchmap.find(branch) != branchmap.end())
-	return true;
+      if (branchmap.find(branch) != branchmap.end() && branchmap[branch])
+	{
+	  //branchmap[branch] = true;
+	  return true;
+	}
+
     }
   // look for a partial match
   else
     {
       int brlen = branch.length();
-      for (std::map<std::string, int>::iterator it = branchmap.begin(); it != branchmap.end(); it++)
+      for (std::unordered_map<std::string, bool>::iterator it = branchmap.begin(); it != branchmap.end(); it++)
 	{
 	  if (it->first.length() >= brlen && it->first.compare(it->first.length()-brlen, brlen, branch) == 0)
-	    return true;
+	    {
+	      branchmap[branch] = true;
+	      return true;
+	    }
 	}
-    }
 
+    }
+  // set this so that we have a map that we _know_ has the branch in and we don't have to iterate through the map.
+  //branchmap[branch] = false;
   return false;
 }
 
@@ -2494,60 +2531,72 @@ void addInfoBranches(TTree * tree)
  * Set up the branch address for a vector<TLorentzVector>.
  *
  * @param tree Reference to a TChain pointer.  This is the input TTree.
- * @param list Reference to a TObjArray pointer that contains a list of all branches in the tree.
+ * @param list Reference map<string,int> that contains a list of all branches in the tree.
  * @param vec Reference to a vector<TLV> pointer which will be used to read in from the file.
  * @param branch The name of the branch we are setting the address for.
+ * @return bool indicating if the branch was successfully set
  */
-void setVector(TChain *& tree, TObjArray *& list, vector<TLorentzVector> *& vec, string branch)//const char * branch)
+bool setVector(TChain *& tree, std::unordered_map<std::string, bool> & list, vector<TLorentzVector> *& vec, string branch)//const char * branch)
 {
   // first check to see if the branch is actually in the tree, then check to see if we are interested in using it
-  if (list->FindObject(branch.c_str()) && useBranch(branch))
+  if (list.find(branch) != list.end() && useBranch(branch))
     tree->SetBranchAddress(branch.c_str(), &vec);
   else
     {
       std::cout << "missing branch " << branch << ", might cause unexpected behaviour, removing from branchmap" << std::endl;
+      //branchmap[branch] =false;
       branchmap.erase(branch);
+      return false;
     }
+  return true;
 }
 
 /*
  * Set up the branch address for a vector<Int_t>.
  *
  * @param tree Reference to a TChain pointer.  This is the input TTree.
- * @param list Reference to a TObjArray pointer that contains a list of all branches in the tree.
+ * @param list Reference to a map<string,int> that contains a list of all branches in the tree.
  * @param vec Reference to a vector<Int_t> pointer which will be used to read in from the file.
  * @param branch The name of the branch we are setting the address for.
+ * @return bool indicating if the branch was successfully set
  */
-void setVector(TChain *& tree, TObjArray *& list, vector<Int_t> *& vec, string branch)//const char * branch)
+bool setVector(TChain *& tree, std::unordered_map<std::string, bool> & list, vector<Int_t> *& vec, string branch)//const char * branch)
 {
   // first check to see if the branch is actually in the tree, then check to see if we are interested in using it
-  if (list->FindObject(branch.c_str()) && useBranch(branch))
+  if (list.find(branch) != list.end() && useBranch(branch))
     tree->SetBranchAddress(branch.c_str(), &vec);
   else
     {
       std::cout << "missing branch " << branch << ", might cause unexpected behaviour, removing from branchmap" << std::endl;
+      //branchmap[branch] =false;
       branchmap.erase(branch);
+      return false;
     }
+  return true;
 }
 
 /*
  * Set up the branch address for a vector<Float_t>.  Overloaded version of the one for vector<TLV>.
  *
  * @param tree Reference to a TChain pointer.  This is the input TTree.
- * @param list Reference to a TObjArray pointer that contains a list of all branches in the tree.
+ * @param list Reference to a map<string,int> that contains a list of all branches in the tree.
  * @param vec Reference to a vector<Float_t> pointer which will be used to read in from the file.
  * @param branch The name of the branch we are setting the address for.
+ * @return bool indicating if the branch was successfully set
  */
-void setVector(TChain *& tree, TObjArray *& list, vector<Float_t> *& vec, string branch)//const char * branch)
+bool setVector(TChain *& tree, std::unordered_map<std::string,bool> & list, vector<Float_t> *& vec, string branch)//const char * branch)
 {
   // first check to see if the branch is actually in the tree, then check to see if we are interested in using it
-  if (list->FindObject(branch.c_str()) && useBranch(branch))
+  if (list.find(branch)!=list.end() && useBranch(branch))
     tree->SetBranchAddress(branch.c_str(), &vec);
   else
     {
       std::cout << "missing branch " << branch << ", might cause unexpected behaviour, removing from branchmap" << std::endl;
+      //branchmap[branch] = false;
       branchmap.erase(branch);
+      return false;
     }
+  return true;
 }
 
 /*
@@ -2817,11 +2866,10 @@ bool leptonSelection(int lepType)
  * @param groomalgo The shortened name of the algorithm being used, like TopoSplitFiltered
  * @param groomIdx The full name of the algorithm.
  */
-void setJetsBranches(TChain * tree, std::string &groomalgo,  std::string & groomIdx)
+void setJetsBranches(TChain * tree, std::string &groomalgo,  std::string & groomIdx, std::unordered_map<std::string,bool> & brancharray)
 {
   std::string samplePrefix = "";
-  // get a list of all the branches in the tree
-  TObjArray * brancharray = tree->GetListOfBranches();
+
   bool addLC = false; // we use this variable to indicate whether "LC" should be in the algorithm string
   samplePrefix = algorithms.AlgoPrefix[groomIdx];
   
@@ -2832,11 +2880,11 @@ void setJetsBranches(TChain * tree, std::string &groomalgo,  std::string & groom
   tree->SetBranchAddress("mc_channel_number", &mc_channel_number);
 
   // double check to make sure the branch exists in the tree
-  if (brancharray->FindObject("RunNumber"))
+  if (brancharray.find("RunNumber") != brancharray.end() && branchmap["RunNumber"])
     tree->SetBranchAddress("RunNumber", &runNumberIn);
-  if (brancharray->FindObject("nVertices"))
+  if (brancharray.find("nVertices")  != brancharray.end() && branchmap["nVertices"])
     tree->SetBranchAddress("nVertices", &nvtxIn);
-  if (brancharray->FindObject("averageIntPerXing"))
+  if (brancharray.find("averageIntPerXing") != brancharray.end() && branchmap["averageIntPerXing"])
     tree->SetBranchAddress("averageIntPerXing",&avgIntpXingIn);
 
   
@@ -2844,56 +2892,95 @@ void setJetsBranches(TChain * tree, std::string &groomalgo,  std::string & groom
   // set up the branch addresses for the lepton variables if running hvtllqq analysis
   if (hvtllqq)
     {
-      setVector(tree, brancharray, var_electrons_vec, std::string("electrons"));
-      setVector(tree, brancharray, var_electronPt_vec, std::string("el_pt"));
-      setVector(tree, brancharray, var_electronEta_vec, "el_eta");
-      setVector(tree, brancharray, var_electronPhi_vec, "el_phi");
-      setVector(tree, brancharray, var_el_ptcone20_vec, "el_ptcone20");
-      setVector(tree, brancharray, var_el_etcone20_vec, "el_etcone20");
+      if (!setVector(tree, brancharray, var_electrons_vec, std::string("electrons")))
+	{
+	  var_electrons_vec = tlvvec();
+	}
+      if (!setVector(tree, brancharray, var_electronPt_vec, std::string("el_pt")))
+	{
+	  var_electronPt_vec = floatvec();
+	}
+      if (!setVector(tree, brancharray, var_electronEta_vec, "el_eta"))
+	var_electronEta_vec = floatvec();
+      if (!setVector(tree, brancharray, var_electronPhi_vec, "el_phi"))
+	var_electronPhi_vec = floatvec();
+      if (!setVector(tree, brancharray, var_el_ptcone20_vec, "el_ptcone20"))
+	var_el_ptcone20_vec = floatvec();
+      if (!setVector(tree, brancharray, var_el_etcone20_vec, "el_etcone20"))
+	var_el_etcone20_vec = floatvec();
       
-      setVector(tree, brancharray, var_muons_vec, "muons");
-      setVector(tree, brancharray, var_muonPt_vec, "mu_pt");
-      setVector(tree, brancharray, var_muonEta_vec, "mu_eta");
-      setVector(tree, brancharray, var_muonPhi_vec, "mu_phi");
-      setVector(tree, brancharray, var_mu_ptcone20_vec, "mu_ptcone20");
-      setVector(tree, brancharray, var_mu_etcone20_vec, "mu_etcone20");
-      setVector(tree, brancharray, var_mu_charge_vec, "mu_charge");
+      if (!setVector(tree, brancharray, var_muons_vec, "muons"))
+	var_muons_vec = tlvvec();
+      if (!setVector(tree, brancharray, var_muonPt_vec, "mu_pt"))
+	var_muonPt_vec = floatvec();
+      if (!setVector(tree, brancharray, var_muonEta_vec, "mu_eta"))
+	var_muonEta_vec = floatvec();
+      if (!setVector(tree, brancharray, var_muonPhi_vec, "mu_phi"))
+	var_muonPhi_vec = floatvec();
+      if (!setVector(tree, brancharray, var_mu_ptcone20_vec, "mu_ptcone20"))
+	var_mu_ptcone20_vec = floatvec();
+      if (!setVector(tree, brancharray, var_mu_etcone20_vec, "mu_etcone20"))
+	var_mu_etcone20_vec = floatvec();
+      if (!setVector(tree, brancharray, var_mu_charge_vec, "mu_charge"))
+	var_mu_charge_vec = floatvec();
     }
 
   // there is only yfilt stored for groomed jets
-  setVector(tree, brancharray, var_YFilt_vec, std::string(returnJetType(samplePrefix, groomalgo, addLC,2)+"YFilt") );
+  if (!setVector(tree, brancharray, var_YFilt_vec, std::string(returnJetType(samplePrefix, groomalgo, addLC,2)+"YFilt") ))
+    var_YFilt_vec = floatvec();
   // loop through the truth, toppo and groomed jets and set up the branches for the different variables
   for (int i = 0; i < jetType::MAX; i++) // truth, topo, groomed
     {
       std::string jetString = returnJetType(samplePrefix, groomalgo, addLC,i); //set to truth/ topo/ groomed
-      setVector(tree, brancharray, var_E_vec.at(i), std::string(jetString+"E") );
-      setVector(tree, brancharray, var_pt_vec.at(i), std::string(jetString+"pt") );
-      setVector(tree, brancharray, var_m_vec.at(i), std::string(jetString+"m") );
-      setVector(tree, brancharray, var_eta_vec.at(i), std::string(jetString+"eta") );
-      setVector(tree, brancharray, var_phi_vec.at(i), std::string(jetString+"phi") );
-      setVector(tree, brancharray, var_emfrac_vec.at(i), std::string(jetString+"emfrac") );
-      setVector(tree, brancharray, var_Tau1_vec.at(i), std::string(jetString+"Tau1") );
-      setVector(tree, brancharray, var_Tau2_vec.at(i), std::string(jetString+"Tau2") );
+      if (!setVector(tree, brancharray, var_E_vec.at(i), std::string(jetString+"E") ))
+	var_E_vec[i] = floatvec();
+      if (!setVector(tree, brancharray, var_pt_vec.at(i), std::string(jetString+"pt") ))
+	var_pt_vec[i] = floatvec();
+      if (!setVector(tree, brancharray, var_m_vec.at(i), std::string(jetString+"m") ))
+	var_m_vec[i] = floatvec();
+      if (!setVector(tree, brancharray, var_eta_vec.at(i), std::string(jetString+"eta") ))
+	var_eta_vec[i] = floatvec();
+      if (!setVector(tree, brancharray, var_phi_vec.at(i), std::string(jetString+"phi") ))
+	var_phi_vec[i] = floatvec();
+      if (!setVector(tree, brancharray, var_emfrac_vec.at(i), std::string(jetString+"emfrac") ))
+	var_emfrac_vec[i] = floatvec();
+      if (!setVector(tree, brancharray, var_Tau1_vec.at(i), std::string(jetString+"Tau1") ))
+	var_Tau1_vec[i] = floatvec();
+      if (!setVector(tree, brancharray, var_Tau2_vec.at(i), std::string(jetString+"Tau2") ))
+	var_Tau2_vec[i] = floatvec();
 
-      setVector(tree, brancharray, var_constit_n.at(i), std::string(jetString+"constit_n") );
-      if (brancharray->FindObject(std::string(jetString+"constit_index").c_str()) && useBranch(std::string(jetString+"constit_index")))
+      if (!setVector(tree, brancharray, var_constit_n.at(i), std::string(jetString+"constit_n") ))
+	var_constit_n[i] = intvec();
+      if (brancharray.find(std::string(jetString+"constit_index")) != brancharray.end() && useBranch(std::string(jetString+"constit_index")))
 	tree->SetBranchAddress(std::string(jetString+"constit_index").c_str(), &var_constit_index.at(i));
+      else
+	var_constit_index[i] = vecintvec();
 
-      setVector(tree, brancharray, var_SPLIT12_vec.at(i), std::string(jetString+"SPLIT12") );
+      if (!setVector(tree, brancharray, var_SPLIT12_vec.at(i), std::string(jetString+"SPLIT12") ))
+	var_SPLIT12_vec[i] = floatvec();
 
-      setVector(tree, brancharray, var_Dip12_vec.at(i), std::string(jetString+"Dip12") );
-      setVector(tree, brancharray, var_PlanarFlow_vec.at(i), std::string(jetString+"PlanarFlow") );
-      setVector(tree, brancharray, var_Angularity_vec.at(i), std::string(jetString+"Angularity") );
+      if (!setVector(tree, brancharray, var_Dip12_vec.at(i), std::string(jetString+"Dip12") ))
+	var_Dip12_vec[i] = floatvec();
+      if (!setVector(tree, brancharray, var_PlanarFlow_vec.at(i), std::string(jetString+"PlanarFlow") ))
+	var_PlanarFlow_vec[i] = floatvec();
+      if (!setVector(tree, brancharray, var_Angularity_vec.at(i), std::string(jetString+"Angularity") ))
+	var_Angularity_vec[i] = floatvec();
 
+      if (!setVector(tree, brancharray, var_Aplanarity_vec.at(i), std::string(jetString+"Aplanarity") ))
+	var_Aplanarity_vec[i] = floatvec();
+      if (!setVector(tree, brancharray, var_Sphericity_vec.at(i), std::string(jetString+"Sphericity") ))
+	var_Sphericity_vec[i] = floatvec();
+      if (!setVector(tree, brancharray, var_ThrustMaj_vec.at(i), std::string(jetString+"ThrustMaj") ))
+	var_ThrustMaj_vec[i] = floatvec();
+      if (!setVector(tree, brancharray, var_ThrustMin_vec.at(i), std::string(jetString+"ThrustMin") ))
+	var_ThrustMin_vec[i] = floatvec();
 
-      setVector(tree, brancharray, var_Aplanarity_vec.at(i), std::string(jetString+"Aplanarity") );
-      setVector(tree, brancharray, var_Sphericity_vec.at(i), std::string(jetString+"Sphericity") );
-      setVector(tree, brancharray, var_ThrustMaj_vec.at(i), std::string(jetString+"ThrustMaj") );
-      setVector(tree, brancharray, var_ThrustMin_vec.at(i), std::string(jetString+"ThrustMin") );
-
-      setVector(tree, brancharray, var_TauWTA1_vec.at(i), std::string(jetString+"TauWTA1") );
-      setVector(tree, brancharray, var_TauWTA2_vec.at(i), std::string(jetString+"TauWTA2") );
-      setVector(tree, brancharray, var_ZCUT12_vec.at(i), std::string(jetString+"ZCUT12") );
+      if (!setVector(tree, brancharray, var_TauWTA1_vec.at(i), std::string(jetString+"TauWTA1") ))
+	var_TauWTA1_vec[i] = floatvec();
+      if (!setVector(tree, brancharray, var_TauWTA2_vec.at(i), std::string(jetString+"TauWTA2") ))
+	var_TauWTA2_vec[i] = floatvec();
+      if (!setVector(tree, brancharray, var_ZCUT12_vec.at(i), std::string(jetString+"ZCUT12") ))
+	var_ZCUT12_vec[i] = floatvec();
 
 
     } // end for loop over topo/truth/groom
@@ -2902,26 +2989,38 @@ void setJetsBranches(TChain * tree, std::string &groomalgo,  std::string & groom
 
 
   // set up cluster variables
-  if (brancharray->FindObject(std::string("cl_lc_n").c_str()) && useBranch(string("cl_lc_n")))
+  if (brancharray.find(std::string("cl_lc_n")) != brancharray.end() && useBranch(string("cl_lc_n")))
     tree->SetBranchAddress(std::string("cl_lc_n").c_str(), &var_cl_n );
   else
-    std::cout << "branch not found: cl_lc_n" << std::endl;
-  setVector(tree, brancharray, var_cl_pt_vec, std::string("cl_lc_pt"));
-  setVector(tree, brancharray, var_cl_eta_vec, std::string("cl_lc_eta"));
-  setVector(tree, brancharray, var_cl_phi_vec, std::string("cl_lc_phi"));
+    {
+      std::cout << "branch not found: cl_lc_n" << std::endl;
+      var_cl_n = -99;
+    }
+  if (!setVector(tree, brancharray, var_cl_pt_vec, std::string("cl_lc_pt")))
+      var_cl_pt_vec = floatvec();
+  if (!setVector(tree, brancharray, var_cl_eta_vec, std::string("cl_lc_eta")))
+      var_cl_eta_vec = floatvec();
+  if (!setVector(tree, brancharray, var_cl_phi_vec, std::string("cl_lc_phi")))
+      var_cl_phi_vec = floatvec();
 
   std::string jetString = returnJetType( samplePrefix, groomalgo, addLC, 2); //set to truth/ topo/ groomed
 
   if (subjetspre) // if the sample has the pre-calculated subjet variables
     {
-      if(brancharray->FindObject(std::string(jetString+"config_massFraction").c_str() ) )
+      if(brancharray.find(std::string(jetString+"config_massFraction"))  != brancharray.end() )
 	tree->SetBranchAddress(std::string(jetString+"config_massFraction").c_str(),&var_massFraction_vec);
       else
-	std::cout << "branch not found: " << std::string(jetString+"config_massFraction") << std::endl;
-      if(brancharray->FindObject(std::string(jetString+"config_ktycut2").c_str()))
+	{
+	  std::cout << "branch not found: " << std::string(jetString+"config_massFraction") << std::endl;
+	  var_massFraction_vec = -99;
+	}
+      if(brancharray.find(std::string(jetString+"config_ktycut2"))  != brancharray.end())
 	tree->SetBranchAddress(std::string(jetString+"config_ktycut2").c_str(),&var_ktycut2_vec);
       else
-	std::cout << "branch not found: " << std::string(jetString+"config_ktycut2") << std::endl;
+	{
+	  std::cout << "branch not found: " << std::string(jetString+"config_ktycut2") << std::endl;
+	  var_ktycut2_vec = -99;
+	}
     }
 
   if (!subjetscalc) // if the sample has the subjet branches available to create massdrop and yt
@@ -2933,7 +3032,7 @@ void setJetsBranches(TChain * tree, std::string &groomalgo,  std::string & groom
   tree->SetBranchStatus(std::string(algorithms.subjetIndex[groomIdx]).c_str(),1);
   tree->SetBranchAddress(std::string(algorithms.subjetIndex[groomIdx]).c_str(),&subjet_index);
 
-  if(!tree->GetListOfBranches()->FindObject(std::string(algorithms.subjetIndex[groomIdx]).c_str())) {
+  if(brancharray.find(std::string(algorithms.subjetIndex[groomIdx])) == brancharray.end()) {
     std::cout << "subjet branch is not here, change the config file otherwise segfaults will come for ye" << std::endl;
     exit(EXIT_FAILURE);
     return;
@@ -3198,7 +3297,7 @@ void setOutputVariables( int jet_idx_truth, int jet_idx_topo, int jet_idx_groome
     }
 
   // yfilt only exists for groomed jets
-  if (var_YFilt_vec != NULL && useBranch(string(returnJetType(samplePrefix, groomalgo, addLC,2)+"YFilt")))
+  if (var_YFilt_vec != NULL)// && useBranch(string(returnJetType(samplePrefix, groomalgo, addLC,2)+"YFilt")))
     var_YFilt=(*var_YFilt_vec)[jet_idx];
   // loop through the different types of jets and set the output variables
   for (int x = 0; x < jetType::MAX ; x++)
@@ -3223,47 +3322,47 @@ void setOutputVariables( int jet_idx_truth, int jet_idx_topo, int jet_idx_groome
       
       // before setting the output variable we check to see if the variable we are setting up is
       // not null and if we are wanting to write out that information anyway.
-      if (var_E_vec[x] != NULL && useBranch(string(jetString+"E")))
+      //if (var_E_vec[x] != NULL)// && useBranch(string(jetString+"E")))
 	var_E[x]=(*var_E_vec[x])[jet_idx];
-      if (var_pt_vec[x] != NULL && useBranch(string(jetString+"pt")))
+      //if (var_pt_vec[x] != NULL)// && useBranch(string(jetString+"pt")))
 	var_pt[x]=(*var_pt_vec[x])[jet_idx];
-      if (var_m_vec[x] != NULL && useBranch(string(jetString+"m")))
+      //if (var_m_vec[x] != NULL)// && useBranch(string(jetString+"m")))
 	var_m[x]=(*var_m_vec[x])[jet_idx];
-      if (var_eta_vec[x] != NULL && useBranch(string(jetString+"eta")))
+      //if (var_eta_vec[x] != NULL)// && useBranch(string(jetString+"eta")))
 	var_eta[x]=(*var_eta_vec[x])[jet_idx];
-      if (var_phi_vec[x] != NULL && useBranch(string(jetString+"phi")))
+      //if (var_phi_vec[x] != NULL)// && useBranch(string(jetString+"phi")))
 	var_phi[x]=(*var_phi_vec[x])[jet_idx];
-      if (x!=0 && xAODemfrac && useBranch(string(jetString +"emfrac")))
+      if (x!=0 && xAODemfrac && var_emfrac_vec[x] != NULL)//useBranch(string(jetString +"emfrac")))
 	var_emfrac[x]=(*var_emfrac_vec[x])[jet_idx];
-      if (var_Tau1_vec[x] != NULL && useBranch(string(jetString+"Tau1")))
+      //if (var_Tau1_vec[x] != NULL)// && useBranch(string(jetString+"Tau1")))
 	var_Tau1[x]=(*var_Tau1_vec[x])[jet_idx];
-      if (var_Tau2_vec[x] != NULL && useBranch(string(jetString+"Tau2")))
+      //if (var_Tau2_vec[x] != NULL)// && useBranch(string(jetString+"Tau2")))
 	var_Tau2[x]=(*var_Tau2_vec[x])[jet_idx];
-      if (var_SPLIT12_vec[x] != NULL && useBranch(string(jetString+"SPLIT12")))
+      //if (var_SPLIT12_vec[x] != NULL)// && useBranch(string(jetString+"SPLIT12")))
 	var_SPLIT12[x]=(*var_SPLIT12_vec[x])[jet_idx];
-      if (var_Dip12_vec[x] != NULL && useBranch(string(jetString+"Dip12")))
+      //if (var_Dip12_vec[x] != NULL)// && useBranch(string(jetString+"Dip12")))
 	var_Dip12[x]=(*var_Dip12_vec[x])[jet_idx];
-      if (var_PlanarFlow_vec[x] != NULL && useBranch(string(jetString+"PlanarFlow")))
+      //if (var_PlanarFlow_vec[x] != NULL)// && useBranch(string(jetString+"PlanarFlow")))
 	var_PlanarFlow[x]=(*var_PlanarFlow_vec[x])[jet_idx];
-      if (var_Angularity_vec[x] != NULL && useBranch(string(jetString+"Angularity")))
+      //if (var_Angularity_vec[x] != NULL)// && useBranch(string(jetString+"Angularity")))
 	var_Angularity[x]=(*var_Angularity_vec[x])[jet_idx];
 
-      if (var_Aplanarity_vec[x] != NULL && useBranch(string(jetString+"Aplanarity")))
+      //if (var_Aplanarity_vec[x] != NULL)// && useBranch(string(jetString+"Aplanarity")))
 	var_Aplanarity[x] = (*var_Aplanarity_vec[x])[jet_idx];
-      if (var_Sphericity_vec[x] != NULL && useBranch(string(jetString+"Sphericity")))
+      //if (var_Sphericity_vec[x] != NULL)// && useBranch(string(jetString+"Sphericity")))
 	var_Sphericity[x] = (*var_Sphericity_vec[x])[jet_idx];
-      if (var_ThrustMaj_vec[x] != NULL && useBranch(string(jetString+"ThrustMaj")))
+      //if (var_ThrustMaj_vec[x] != NULL)// && useBranch(string(jetString+"ThrustMaj")))
 	var_ThrustMaj[x] = (*var_ThrustMaj_vec[x])[jet_idx];
-      if (var_ThrustMin_vec[x] != NULL && useBranch(string(jetString+"ThrustMin")))
+      //if (var_ThrustMin_vec[x] != NULL)// && useBranch(string(jetString+"ThrustMin")))
 	var_ThrustMin[x] = (*var_ThrustMin_vec[x])[jet_idx];
 
 			       
       // tau21 and tauwta21 are set in the main loop, not here, because we have to calculate them
-      if (useBranch(string(jetString+"TauWTA1")))
+      //if (var_TauWTA1_vec[x] != NULL )//useBranch(string(jetString+"TauWTA1")))
 	var_TauWTA1[x]=(*var_TauWTA1_vec[x])[jet_idx];
-      if (useBranch(string(jetString+"TauWTA2")))
+      //if (var_TauWTA2_vec[x] != NULL ) //useBranch(string(jetString+"TauWTA2")))
 	var_TauWTA2[x]=(*var_TauWTA2_vec[x])[jet_idx];
-      if (useBranch(string(jetString+"ZCUT12")))
+      //if (var_ZCUT12_vec[x] != NULL ) //useBranch(string(jetString+"ZCUT12")))
 	var_ZCUT12[x]=(*var_ZCUT12_vec[x])[jet_idx];
 	
     } // end for loop
@@ -3794,11 +3893,11 @@ double calculateEEC(int jettype, float beta, float exp)
  *
  * @return A bool indicating if it was a success or not.  If the index ==-1 (which happens for truth jets) it will return false, for example.
  */
-bool createClusters(int jettype, int jetidx, vector<TLorentzVector> & cluster)
+bool createClusters(int jettype, int jetidx, std::vector<TLorentzVector> & cluster)
 {
   // check that the variables are not null before we create a TLV out of them.
-  if (var_cl_pt_vec == NULL || var_cl_eta_vec == NULL || var_cl_phi_vec == NULL)
-    return false;
+  //if (var_cl_pt_vec == NULL || var_cl_eta_vec == NULL || var_cl_phi_vec == NULL)
+  //return false;
 
   // number of constituents
   int size = (*var_constit_index[jettype])[jetidx].size();
@@ -3807,8 +3906,8 @@ bool createClusters(int jettype, int jetidx, vector<TLorentzVector> & cluster)
     {
       // get the index in the cl_lc collection
       int idx = (*var_constit_index[jettype])[jetidx][i];
-      // if index is -1 there is no cluster info for this jet
-      if (idx == -1 || idx >= cl_size)
+      // if index is out of bounds there is no cluster info for this jet
+      if (idx < 0 || idx >= cl_size)
 	{
 	  if (DEBUG)
 	    std::cout << "warning: the index for the cluster is out of bounds" << std::endl;
@@ -3818,13 +3917,14 @@ bool createClusters(int jettype, int jetidx, vector<TLorentzVector> & cluster)
       TLorentzVector constit(0., 0., 0., 0.);
       if (DEBUG == 1)
 	{
+	  std::cout << "jet type: " << jettype << std::endl;
 	  std::cout << "cluster idx: " << idx << std::endl;
 	  std::cout << "cluster pt: " << (*var_cl_pt_vec)[idx] << std::endl;
 	  std::cout << "cluster eta: " << (*var_cl_eta_vec)[idx] << std::endl;
 	  std::cout << "cluster phi: " << (*var_cl_phi_vec)[idx] << std::endl;
 	}
 
-      constit.SetPtEtaPhiM((*var_cl_pt_vec)[idx]/1000., (*var_cl_eta_vec)[idx], (*var_cl_phi_vec)[idx], 0.);
+      constit.SetPtEtaPhiM((*var_cl_pt_vec)[idx], (*var_cl_eta_vec)[idx], (*var_cl_phi_vec)[idx], 0.);
       // add to vector
       cluster.push_back(constit);
     }
@@ -3955,7 +4055,10 @@ int calculateSoftDropTag(vector<TLorentzVector> & cluster)
 double calculateQJetsVol_v2(vector<TLorentzVector> & clusters)
 {
   // sort input clusters by pt
-  sort(clusters.begin(), clusters.end(), ComparePt);
+  std::cout << "calc qjets" << std::endl;
+  sort(clusters.begin(), clusters.end(), [] (TLorentzVector a, TLorentzVector b){
+	  return a.Pt() > b.Pt();
+	});//ComparePt);
 
   // create vector<PseudoJets> called input_particles, using input clusters for input
   vector<fastjet::PseudoJet> input_particles;
@@ -4037,3 +4140,71 @@ void printTLV(vector<TLorentzVector> & tlv)
     }
   
 } //printTLV
+
+/*
+ * Create a map with the names of all of the branches within a tree from a TObjArray.
+ *
+ * @param arr The input TObjArray from which the map will be created.
+ * @return map<string,bool> with list of branches in array.  All are set to false
+ */
+std::unordered_map<std::string, bool> createBranchMap(TObjArray *& arr)
+{
+  std::unordered_map<std::string, bool> br_map;
+  // create object to iterate through the TObjArray
+  TIter it(arr);
+  TBranch * tb;
+  while (tb = (TBranch *) it.Next())
+    {
+      std::string name = tb->GetName();
+      // set map value
+      br_map[name] = false;
+    }
+  
+  return br_map;
+
+} // createBranchMap
+
+
+/*
+ * create a float vector and add a variable to it so it is not empty
+ */
+vector<float> * floatvec()
+{
+  vector<float> * tmp = new vector<float>();
+  tmp->push_back(-999);
+  return tmp;
+} //floatvec
+
+/*
+ * create an int vector and add a variable to it so it is not empty
+ */
+vector<int> * intvec()
+{
+  vector<int> * tmp = new vector<int>();
+  tmp->push_back(-999);
+  return tmp;
+} //intvec
+
+
+/*
+ * create a tlv vector and add a variable to it so it is not empty
+ */
+vector<TLorentzVector> * tlvvec()
+{
+  vector<TLorentzVector> * tmp = new vector<TLorentzVector>();
+  TLorentzVector tlv (0.,0.,0.,0.);
+  tmp->push_back(tlv);
+  return tmp;
+} //tlvvec
+
+/*
+ * create a vector<vector<int> > and add a variable to it so it is not empty
+ */
+vector< vector<int> > * vecintvec()
+{
+  vector<int> vec;
+  vec.push_back(-999);
+  vector<vector<int> > * tmp = new vector<vector<int> > ();
+  tmp->push_back(vec);
+  return tmp;
+} //vecintvec
