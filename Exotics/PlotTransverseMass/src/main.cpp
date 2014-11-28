@@ -2305,7 +2305,7 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
 	  std::stringstream ss2; // store the name of the output file and include the i and j indices!
 	  std::string bkg2 = signal ? "sig": "bkg";
 	  // add all of the file name elements
-	  ss2 << algorithms.AlgoNames[i] << fileid_global << "/" << ss.str() << "_" << bkg2 << ".nevents";
+	  ss2 << algorithm << fileid_global << "/" << ss.str() << "_" << bkg2 << ".nevents";
 	  // open the output file
 	  ofstream ev_out(ss2.str());
 	  // write out the weighted events to a text file
@@ -2318,7 +2318,7 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
 	} // end loop of datatype
 
       // create the reweighting file
-      std::string fname = algorithms.AlgoNames[i]+fileid_global+"/" + ss.str() + ".ptweights";
+      std::string fname = algorithm+fileid_global+"/" + ss.str() + ".ptweights";
       createPtReweightFile(pt_reweight_arr[sampleType::BACKGROUND], pt_reweight_arr[sampleType::SIGNAL], fname);
     } // end loop over pt bins
 
