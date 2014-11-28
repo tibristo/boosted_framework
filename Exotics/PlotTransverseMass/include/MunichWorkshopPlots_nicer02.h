@@ -90,7 +90,6 @@ void setJetsBranches(TChain * tree, std::string & algorithm, std::string & groom
 void addInfoBranches(TTree * tree);
 void addSubJets(TTree * tree, std::string & algorithm, std::string & groomIdx);
 //void getBranchesSelection(TTree * tree, std::string & algorithm);
-void setSelectionVectors();
 void runAlgorithm(TChain *inputTree, TChain *inputTree1, TString groomAlgo, std::string & groomAlgoIndex, bool massHistos);
 vector<std::pair<std::string,bool> > getListOfJetBranches(std::string & algorithm, std::unordered_map<std::string, bool> & brancharray);
 void initVectors();
@@ -129,11 +128,19 @@ double calculateEEC(int jettype, float beta=0.3, float exp=2);
 void setRadius(std::string & prefix);
 void printTLV(vector<TLorentzVector> & tlv);
 std::unordered_map<std::string,bool> createBranchMap(TObjArray *& arr);
+void SignalHandlerMapAccess(int signal);
 
-vector<TLorentzVector> * tlvvec();
+typedef void (*SignalHandlerPointer)(int);
+
+
+/*vector<TLorentzVector> * tlvvec();
 vector<float> * floatvec();
 vector<int> * intvec();
-vector< vector<int> > * vecintvec();
+vector< vector<int> > * vecintvec();*/
+void tlvvec(vector<TLorentzVector> *& tmp);
+void floatvec(vector<float> * & tmp);
+void intvec(vector<int> * & tmp);
+void vecintvec(vector< vector<int> > *& tmp);
 
 inline double mean(vector<double>& masses){
   double ret(0.);
@@ -208,6 +215,8 @@ bool calcEEC = false;
 bool calcClusters = false;
 bool calcTauWTA21 = false;
 
+bool recluster = false;
+
 float radius = 1.0;
 int nqjets = 25;
 
@@ -226,7 +235,7 @@ TH2F * cluster_vs_truthpt = 0;
 
 Float_t normalisation = 1.0;
 Int_t NEvents = 0;
-std::map<int, float> NEvents_weighted;
+std::map<long, float> NEvents_weighted;
 Float_t mc_event_weight = 1.0;
 Float_t mc_event_weight_out = 1.0;
 UInt_t mc_channel_number  = 0;
@@ -457,9 +466,9 @@ static inline std::string &rtrim(std::string &s) {
 
 
 //store all the weights for different runNumbers:
-std::map<long, float> k_factors;
-std::map<long, float> filt_eff;
-std::map<long, float> xs;
+std::unordered_map<long, float> k_factors;
+std::unordered_map<long, float> filt_eff;
+std::unordered_map<long, float> xs;
 //std::map<int, float> ;
 
 
@@ -527,7 +536,7 @@ std::vector<float> * var_mu_etcone20_vec;
 std::vector<float> * var_mu_charge_vec;
 
 
-std::map<int, std::vector<std::vector < int>  > * > var_constit_index;
+std::unordered_map<int, std::vector<std::vector < int>  > * > var_constit_index;
 std::map<int, std::vector < int>  * > var_constit_n;
 
 std::vector<std::vector <int> > * subjet_index;
