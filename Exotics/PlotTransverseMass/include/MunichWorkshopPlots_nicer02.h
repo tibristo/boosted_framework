@@ -474,6 +474,7 @@ std::unordered_map<long, float> xs;
 
 
 
+<<<<<<< HEAD
 std::map<int, std::vector<float> *> var_E_vec;
 std::map<int, std::vector<float> *> var_pt_vec;
 std::map<int, std::vector<float> *> var_m_vec;
@@ -519,6 +520,32 @@ std::map<int, std::vector<float> *> var_VoronoiArea_vec;
 
 
 
+=======
+std::vector<std::vector<float> *> var_E_vec;
+std::vector<std::vector<float> *> var_pt_vec;
+std::vector<std::vector<float> *> var_m_vec;
+std::vector<std::vector<float> *> var_eta_vec;
+std::vector<std::vector<float> *> var_phi_vec;
+std::vector<std::vector<float> *> var_emfrac_vec;
+std::vector<std::vector<float> *> var_Tau1_vec;
+std::vector<std::vector<float> *> var_Tau2_vec;
+
+std::vector<std::vector<float> *> var_SPLIT12_vec;
+
+std::vector<std::vector<float> *> var_Dip12_vec;
+std::vector<std::vector<float> *> var_PlanarFlow_vec;
+std::vector<std::vector<float> *> var_Angularity_vec;
+
+std::vector<std::vector<float> *> var_TauWTA1_vec; 
+std::vector<std::vector<float> *> var_TauWTA2_vec; 
+std::vector<std::vector<float> *> var_TauWTA2TauWTA1_vec; 
+std::vector<std::vector<float> *> var_ZCUT12_vec;
+
+std::vector<std::vector<float> *> var_Aplanarity_vec;
+std::vector<std::vector<float> *> var_Sphericity_vec;
+std::vector<std::vector<float> *> var_ThrustMaj_vec;
+std::vector<std::vector<float> *> var_ThrustMin_vec;
+>>>>>>> changed from map to vector
 
 // jet clusters
 Int_t var_cl_n;
@@ -557,8 +584,8 @@ std::vector<float> * var_mu_etcone20_vec;
 std::vector<float> * var_mu_charge_vec;
 
 
-std::unordered_map<int, std::vector<std::vector < int>  > * > var_constit_index;
-std::map<int, std::vector < int>  * > var_constit_n;
+std::vector<std::vector<std::vector < int>  > * > var_constit_index;
+std::vector< std::vector < int>  * > var_constit_n;
 
 std::vector<std::vector <int> > * subjet_index;
 
