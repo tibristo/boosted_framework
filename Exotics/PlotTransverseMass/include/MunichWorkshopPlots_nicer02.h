@@ -64,14 +64,12 @@
 
 
 
-//Declarations
-//bool CheckBranchExists( string BranchName );
+//Declarations of alllllll the methods. check cpp file for details of methods.
+
 float DeltaR(float eta1,float phi1,float eta2,float phi2);
 double mpv(TH1F* histo);
 void Qw(double &minWidth, double &topEdge, TH1F* histo, double frac);
 
-//void cleanBranches();
-//void defineStrings(TString *AlgoList, TString *binLabel, TString *pTbins, TString *finePtBins);
 void createHistos(std::string & algo);
 void getMassHistograms(TTree *inputTree, TTree *inputTree1, TString groomAlgo, std::string & groomAlgoIndex);
 void initializeVariables();
@@ -84,16 +82,14 @@ void makePtPlots(std::string & algorithm);
 void setMassBranch(TTree * tree, std::string &algorithm, std::string & groomAlgoIndex);
 void plotVariables(TTree * tree, vector<std::string> & branches);
 std::vector<std::string> getListOfBranches(std::string &algorithm);
-//void make68Plots(int algidx, TChain * bkg, TChain * sig);
 void makeMassWindowFile(bool applyMassWindow, std::string & algorithm);
 void setJetsBranches(TChain * tree, std::string & algorithm, std::string & groomIdx, std::unordered_map<std::string,bool> & current_branchmap);
 void addInfoBranches(TTree * tree);
 void addSubJets(TTree * tree, std::string & algorithm, std::string & groomIdx);
-//void getBranchesSelection(TTree * tree, std::string & algorithm);
 void runAlgorithm(TChain *inputTree, TChain *inputTree1, TString groomAlgo, std::string & groomAlgoIndex, bool massHistos);
 vector<std::pair<std::string,bool> > getListOfJetBranches(std::string & algorithm, std::unordered_map<std::string, bool> & brancharray);
 void initVectors();
-std::pair<int,int> getTwoLeadingSubjets(std::vector<int> & indices, std::vector<float> * subjets);
+std::pair<int,int> getTwoLeadingSubjets(std::vector<int> & indices, std::vector<float> *& subjets);
 std::string returnJetType(std::string & samplePrefix, std::string & groomalgo, bool addLC, int idx);
 std::string returnSubJetType(std::string & samplePrefix, std::string & groomalgo, bool addLC);
 void clearVectors();
@@ -113,10 +109,10 @@ void setLeptons(TChain * tree, TObjArray * list);
 void addLeptonBranches(std::string & jetString, TChain * tree);
 void setLeptonVectors();
 std::vector<float> dummyCharge(int size);
-bool setVector(TChain *& tree, std::unordered_map<std::string, int> & list, vector<TLorentzVector> *& vec, std::string branch);//, const char * branch);//std::string & branch);
+bool setVector(TChain *& tree, std::unordered_map<std::string, int> & list, vector<TLorentzVector> *& vec, std::string branch);
 
-bool setVector(TChain *& tree, std::unordered_map<std::string, int> & list, vector<Float_t> *& vec, std::string branch);//, const char * branch);//std::string & branch);
-bool setVector(TChain *& tree, std::unordered_map<std::string, int> & list, vector<Int_t> *& vec, std::string branch);//, const char * branch);//std::string & branch);
+bool setVector(TChain *& tree, std::unordered_map<std::string, int> & list, vector<Float_t> *& vec, std::string branch);
+bool setVector(TChain *& tree, std::unordered_map<std::string, int> & list, vector<Int_t> *& vec, std::string branch);
 bool useBranch(std::string const & branch, bool partialmatch = false);
 void setLLJMass(int jetidx);
 double calculateFoxWolfram20(vector<TLorentzVector>& clusters);
@@ -130,18 +126,16 @@ void printTLV(vector<TLorentzVector> & tlv);
 std::unordered_map<std::string,bool> createBranchMap(TObjArray *& arr);
 void SignalHandlerMapAccess(int signal);
 
+// typedef for the exception when accessing a missing element from a map
 typedef void (*SignalHandlerPointer)(int);
 
-
-/*vector<TLorentzVector> * tlvvec();
-vector<float> * floatvec();
-vector<int> * intvec();
-vector< vector<int> > * vecintvec();*/
+// return dummy vectors
 void tlvvec(vector<TLorentzVector> *& tmp);
 void floatvec(vector<float> * & tmp);
 void intvec(vector<int> * & tmp);
 void vecintvec(vector< vector<int> > *& tmp);
 
+// calculate the mean of a vector of masses
 inline double mean(vector<double>& masses){
   double ret(0.);
   for(vector<double>::iterator it = masses.begin(); it != masses.end(); it++)
@@ -149,6 +143,7 @@ inline double mean(vector<double>& masses){
   return ret/masses.size();
 }
 
+// calculate the RMS of a vector of masses. 
 inline double var(vector<double>& masses){
   double ret(0.), avg(mean(masses));
   for(vector<double>::iterator it = masses.begin(); it != masses.end(); it++)
@@ -166,21 +161,17 @@ inline double var(vector<double>& masses, double avg){
 }
 
 
-
-enum class groomAlgoEnum{groomZero, TopoSplitFilteredMu67SmallR0YCut9, TopoSplitFilteredMu100SmallR30YCut4, TopoTrimmedPtFrac5SmallR30, TopoTrimmedPtFrac5SmallR20, TopoPrunedCaRcutFactor50Zcut10, TopoPrunedCaRcutFactor50Zcut20, AntiKt2LCTopo, AntiKt3LCTopo, AntiKt4LCTopo};
+// enums used for sample types, jet types, histogram types and lepton types
 enum sampleType{BACKGROUND,SIGNAL};
 enum jetType{TRUTH,TOPO,GROOMED,MAX};
 enum histType{TRUTHJET,GROOMEDJET,LEADTRUTHJET};
 enum leptonType{FAIL,ELECTRON,MUON};
 
-vector<int> algoMap; // stores the algorithm used for inputTree[x] in the case that we are not using all the input types - split/filter, trim, prune and recluster
-std::map<int, int> fileMap; // stores the index of the input file for each grooming algorithm
-
 //DECLARATIONS FOR RECLUSTERING FUNCTIONS
-
 vector<fastjet::PseudoJet> ObjsToPJ(vector<TLorentzVector> jets);
 vector<TLorentzVector> Recluster(vector<TLorentzVector> small_jets, double PTcut=15, double fcut=0.05, double jetRad=1.0);
 
+// struct that is used for reading in the xml containing the algorithm information
 struct Algorithms
 {
   std::unordered_map<std::string, std::string> AlgoNames; // the jet groomieng alg
@@ -194,45 +185,84 @@ struct Algorithms
   void load(const std::string & filename);
 };
 
+// create one of the algorithm structs
 struct Algorithms algorithms;
 /////
 
-long global_counter = 0;
+// how many events pass selection
 long passed_counter = 0;
 
-std::string fileid_global;
-std::string treeName;
-std::string branchesFile;
-std::unordered_map<std::string, bool> branchmap;
+// settings for histograms
+const int nAlgosMax=12;
+int nAlgos=0;
+
+const int nPtBins=6;
+TString pTbins[nPtBins];
+const int nFineBins=12;
+TString finePtBins[nFineBins];
+std::vector<pair<float,float> > ptrange;
+
+
+
+// defines
 float GEV = 1000.;
 float ELMASS = 0.511;
 float MUMASS = 105.7;
 
+// global variables used per analysis
+std::string fileid_global;
+std::string treeName;
+std::string branchesFile;
+std::unordered_map<std::string, bool> branchmap;
+
+// settings for selection
 bool calcQJets = false;
 bool calcFoxWolfram20 = false;
 bool calcSoftDrop = false;
 bool calcEEC = false;
 bool calcClusters = false;
 bool calcTauWTA21 = false;
-
 bool recluster = false;
+
+
+bool xAODJets = false;
+bool xAODemfrac = false;
+bool hvtllqq = false;
+
 
 float radius = 1.0;
 int nqjets = 25;
 
-TFile *inputFile[2];
-TTree *inputTree[2];
+
 TChain *inputTChain[2];
 
-//get the branches we want to use
-Int_t leadGroomedIndex = 0;
-Int_t leadTruthIndex = 0;
-Int_t leadTopoIndex = 0;
+// histograms
 TH1F * pt_reweight = 0;
 TH1F * pt_reweight_arr[2];
-
 TH2F * cluster_vs_truthpt = 0;
 
+TH1F *qcd_finePtBin_mass[3][nFineBins];
+TH1F *Wprime_finePtBin_mass[3][nFineBins];
+
+TH1F *qcd_Lead_CA12_mass[3][nPtBins]; 
+TH1F *Wprime_Lead_CA12_mass[3][nPtBins];
+TH1F *qcd_Lead_CA12_pt[3];
+TH1F *Wprime_Lead_CA12_pt[3];
+TH1F *Wprime_Lead_CA12_scaled_pt;
+TH1F *pTweights;
+TH1F *qcd_PtReweight;
+TH1F *Wp_PtReweight;
+
+TH1F * hMassLow[nPtBins];
+TH1F * hMassHigh[nPtBins];
+TH1F * hMPV[nPtBins];
+TH1F * hWmass[nPtBins];
+TH1F * hQCDeff[nPtBins];
+TH1F * hQCDeff_finePt;
+TH1F * windowsVsPt;
+
+
+// variables in every tree
 Float_t normalisation = 1.0;
 Int_t NEvents = 0;
 std::map<long, float> NEvents_weighted;
@@ -247,9 +277,8 @@ Float_t avgIntpXingIn = 0;
 // xaod expects UInt_t, but D3PDs Int_t. This is annoying and will cause problems
 UInt_t nvtxIn = 0;
 UInt_t nvtxOut = 0;
-bool xAODJets = false;
-bool xAODemfrac = false;
-bool hvtllqq = false;
+
+// variables for reading from trees
 //QCD split filtering with Y cut 9
 vector<float> * qcd_CA12_truth_pt = 0;
 vector<float> * qcd_CA12_truth_eta = 0;
@@ -271,28 +300,8 @@ vector<float> * qcd_CA12_groomed_mass = 0;
 vector<float> * qcd_CA12_groomed_E = 0;
 vector<float> * qcd_CA12_groomed_emfrac = 0;
 
-
-vector<float> * jet_eta_truth = 0;
-vector<float> * jet_phi_truth = 0;
-//vector<float> * jet_emfrac_truth = 0;
-vector<float> * jet_pt_truth = 0;
-vector<float> * jet_m_truth = 0;
-
-vector<float> * jet_eta_topo = 0;
-vector<float> * jet_phi_topo = 0;
-vector<float> * jet_emfrac_topo = 0;
-vector<float> * jet_pt_topo = 0;
-
-vector<float> * jet_eta_groomed = 0;
-vector<float> * jet_phi_groomed = 0;
-vector<float> * jet_emfrac_groomed = 0;
-vector<float> * jet_pt_groomed = 0;
-
-
 UInt_t qcd_mc_channel_number = 0; 
 Float_t qcd_mc_event_weight = 0; 
-
-
 
 //Wprime split filtering both cuts
 
@@ -318,9 +327,7 @@ vector<float> * Wp_CA12_groomed_mass = 0;
 vector<float> * Wp_CA12_groomed_E = 0;
 vector<float> * Wp_CA12_groomed_emfrac = 0;
 
-vector<float> * currTree_mass = 0;
 
-// create a hashtable/ map for all the variables we want to plot.... Index on variable name - we can read this in from xml config
 
 //counters for efficiency issues
 int nEvt_0=0; //total events
@@ -337,31 +344,9 @@ int nEvt1_3=0; // events with split cut 9 matched to truth jet matches to proper
 int nEvt1_4=0;
 
 
-const int nAlgosMax=12;
-int nAlgos=0;
-//TString AlgoList[nAlgosMax];
-//std::string AlgoNames[nAlgosMax];
-//std::map<std::string, std::string> subjetMap;
-//std::string AlgoPrefix[nAlgosMax];
-//std::map<std::string, std::string> subjetIndex;
-//TString binLabel[nAlgosMax-2];
-const int nPtBins=6;
-TString pTbins[nPtBins];
-const int nFineBins=12;
-TString finePtBins[nFineBins];
-std::vector<pair<float,float> > ptrange;
+// settings for algorithm
 
-TH1F *qcd_finePtBin_mass[3][nFineBins];
-TH1F *Wprime_finePtBin_mass[3][nFineBins];
-
-TH1F *qcd_Lead_CA12_mass[3][nPtBins]; 
-TH1F *Wprime_Lead_CA12_mass[3][nPtBins];
-TH1F *qcd_Lead_CA12_pt[3];
-TH1F *Wprime_Lead_CA12_pt[3];
-TH1F *Wprime_Lead_CA12_scaled_pt;
-TH1F *pTweights;
-TH1F *qcd_PtReweight;
-TH1F *Wp_PtReweight;
+// values calculated for signal and background mass windows
 TString AlgoListN;
 TString pTbinsN[nPtBins];
 TString pTFinebinsN[nFineBins];
@@ -379,17 +364,6 @@ double BottomEdgeMassWindow_finePt[nFineBins];
 double QCDfrac_finePt[nFineBins];
 
 
-TH1F * hMassLow[nPtBins];
-TH1F * hMassHigh[nPtBins];
-TH1F * hMPV[nPtBins];
-TH1F * hWmass[nPtBins];
-TH1F * hQCDeff[nPtBins];
-
-TH1F * hQCDeff_finePt;
-
-
-TH1F * windowsVsPt;
-
 // ROC
 TGraph *finePtBin_mass_curve[3][nFineBins];
 TGraph *Lead_CA12_mass_curve[3][nPtBins];
@@ -398,15 +372,15 @@ TGraph *Lead_CA12_scaled_pt_curve[3];
 TGraph *pTweights_curve;
 TGraph *PtReweight_curve;
 
-
+// for drawing histograms
 TCanvas * c1[3][nPtBins]; 
 TCanvas * c3[3][nFineBins];
 TCanvas * c2[nPtBins];
 TPad *pad1[nPtBins];
 TPad *pad2[nPtBins];
 
-
-void defineStrings(/*TString *AlgoList, TString *binLabel,*/ TString *pTbins, TString *finePtBins){//, std::map<std::string, std::string> subjetMap){
+// define strings for a bunch of the pt ranges and pt bins
+void defineStrings(TString *pTbins, TString *finePtBins){
 
   pTbins[0]="inclusive";
   pTbins[1]="gtr1000";
@@ -453,12 +427,9 @@ void defineStrings(/*TString *AlgoList, TString *binLabel,*/ TString *pTbins, TS
   pTFinebinsN[9]="2250 < p_{T}^{CA12} < 2500 GeV";
   pTFinebinsN[10]="2500 < p_{T}^{CA12} < 2750 GeV";
   pTFinebinsN[11]="2750 < p_{T}^{CA12} < 3000 GeV";
-
-
-
 }
 
-
+// trim whitespace from rhs of string
 static inline std::string &rtrim(std::string &s) {
   s.erase(std::find_if(s.rbegin(), s.rend(), std::not1(std::ptr_fun<int, int>(std::isspace))).base(), s.end());
   return s;
@@ -469,11 +440,8 @@ static inline std::string &rtrim(std::string &s) {
 std::unordered_map<long, float> k_factors;
 std::unordered_map<long, float> filt_eff;
 std::unordered_map<long, float> xs;
-//std::map<int, float> ;
 
-
-
-
+<<<<<<< HEAD
 <<<<<<< HEAD
 std::map<int, std::vector<float> *> var_E_vec;
 std::map<int, std::vector<float> *> var_pt_vec;
@@ -521,6 +489,10 @@ std::map<int, std::vector<float> *> var_VoronoiArea_vec;
 
 
 =======
+=======
+// variables used for reading in from tree.
+// the double vector is to store the variable for truth, topo and groomed
+>>>>>>> Added python script to calculate the mass window
 std::vector<std::vector<float> *> var_E_vec;
 std::vector<std::vector<float> *> var_pt_vec;
 std::vector<std::vector<float> *> var_m_vec;
@@ -529,53 +501,44 @@ std::vector<std::vector<float> *> var_phi_vec;
 std::vector<std::vector<float> *> var_emfrac_vec;
 std::vector<std::vector<float> *> var_Tau1_vec;
 std::vector<std::vector<float> *> var_Tau2_vec;
-
 std::vector<std::vector<float> *> var_SPLIT12_vec;
-
 std::vector<std::vector<float> *> var_Dip12_vec;
 std::vector<std::vector<float> *> var_PlanarFlow_vec;
 std::vector<std::vector<float> *> var_Angularity_vec;
-
 std::vector<std::vector<float> *> var_TauWTA1_vec; 
 std::vector<std::vector<float> *> var_TauWTA2_vec; 
 std::vector<std::vector<float> *> var_TauWTA2TauWTA1_vec; 
 std::vector<std::vector<float> *> var_ZCUT12_vec;
-
 std::vector<std::vector<float> *> var_Aplanarity_vec;
 std::vector<std::vector<float> *> var_Sphericity_vec;
 std::vector<std::vector<float> *> var_ThrustMaj_vec;
 std::vector<std::vector<float> *> var_ThrustMin_vec;
 >>>>>>> changed from map to vector
 
-// jet clusters
+// reading in jet clusters
 Int_t var_cl_n;
 std::vector<float> * var_cl_pt_vec;
 std::vector<float> * var_cl_eta_vec;
 std::vector<float> * var_cl_phi_vec;
 
-
+// extra variables to read in
 std::vector<float> * var_YFilt_vec;
 
 Float_t var_massFraction_vec;
 Float_t var_ktycut2_vec;
 
-
-
 // electrons in
 vector<TLorentzVector> * var_electrons_vec;
 std::vector<TLorentzVector> electrons;
-
 std::vector<float> * var_electronPt_vec;
 std::vector<float> * var_electronEta_vec;
 std::vector<float> * var_electronPhi_vec;
-//std::vector<float> * var_electronT_vec;
 std::vector<float> * var_el_ptcone20_vec;
 std::vector<float> * var_el_etcone20_vec;
 
 // muons in
 std::vector<TLorentzVector> * var_muons_vec;
 std::vector<TLorentzVector> muons;
-
 std::vector<float> * var_muonPt_vec;
 std::vector<float> * var_muonEta_vec;
 std::vector<float> * var_muonPhi_vec;
@@ -583,25 +546,20 @@ std::vector<float> * var_mu_ptcone20_vec;
 std::vector<float> * var_mu_etcone20_vec;
 std::vector<float> * var_mu_charge_vec;
 
-
+// jet constituents
 std::vector<std::vector<std::vector < int>  > * > var_constit_index;
 std::vector< std::vector < int>  * > var_constit_n;
 
+// subjet variables
 std::vector<std::vector <int> > * subjet_index;
-
 std::vector<float> * var_subjets_E_vec;
 std::vector<float> * var_subjets_pt_vec;
 std::vector<float> * var_subjets_m_vec;
 std::vector<float> * var_subjets_eta_vec;
 std::vector<float> * var_subjets_phi_vec;
-//std::vector<float> var_massdrop_vec;
-//std::vector<float> var_yt_vec;
-//std::map<int, std::vector<float> > var_Tau21_vec;
-
 
 // variables that we write out to the outfile
-
-// store one value each for truth, topo, groomed
+// store one value each for truth, topo, groomed - use a vector
 std::vector<float> var_E;
 std::vector<float> var_pt;
 std::vector<float> var_m;
@@ -629,9 +587,7 @@ std::vector<float> var_Pull_C01;
 std::vector<float> var_Pull_C10;
 std::vector<float> var_Pull_C11;
 std::vector<float> var_Tau21;
-Float_t var_YFilt;
-
-
+Float_t var_YFilt; // only for groomed
 
 
 // leptons out
@@ -645,14 +601,9 @@ Float_t var_ptll;
 // store leading jet pt, before any truth matching or selections
 Float_t var_leadingJetPt;
 
+// if it is an electron or muon event
 Int_t var_isElectronEvent = false;
 
-// muons out
-/*
-std::vector<TLorentzVector> var_muons;
-std::vector<float> var_mu_ptcone20;
-std::vector<float> var_mu_etcone20;
-*/
 std::vector<float> var_charge;
 
 // these variables are only stored for the subjets of the groomed jets, so we don't need a vector
@@ -664,7 +615,7 @@ Float_t var_subjets_phi;
 Float_t var_massdrop;
 Float_t var_yt;
 
-// these variables are only in Lily's samples, so we need to add a flag to say we are running on those samples
+// extra output variables
 std::vector<Float_t> var_TauWTA1; 
 std::vector<Float_t> var_TauWTA2; 
 std::vector<Float_t> var_TauWTA3; 
@@ -691,13 +642,13 @@ std::vector<Float_t> var_EEC_C1;
 std::vector<Float_t> var_EEC_C2;
 std::vector<Float_t> var_EEC_D1;
 std::vector<Float_t> var_EEC_D2;
+
 // store the weights for the samples
 Float_t var_k_factor;
 Float_t var_filter_eff;
 Float_t var_xs;
 
-
-
+// if subjets are being used
 bool subjetscalc;
 bool subjetspre;
 
