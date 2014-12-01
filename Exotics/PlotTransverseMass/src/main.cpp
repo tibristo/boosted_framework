@@ -3180,47 +3180,33 @@ void addLeptonBranches(string & jetString, TTree * tree)
 void initVectors()
 {
 
-  // have the vectors for the above histograms so we can do the reading in stuff from the TTree
-  jet_eta_truth = 0;
-  jet_phi_truth = 0;
-  jet_pt_truth = 0;
-  jet_m_truth = 0;
-  jet_eta_topo = 0;
-  jet_phi_topo = 0;
-  jet_pt_topo = 0;
-  jet_emfrac_topo = 0;
-  jet_eta_groomed = 0;
-  jet_phi_groomed = 0;
-  jet_pt_groomed = 0;
-  jet_emfrac_groomed = 0;
-  
   for (int i = 0; i < 3; i++) // for jetType::TRUTH/TOPO/GROOMED
     {
 
-      var_E_vec[i] = 0;
-      var_pt_vec[i] = 0;
-      var_m_vec[i] = 0;
-      var_eta_vec[i] = 0;
-      var_phi_vec[i] = 0;
-      var_emfrac_vec[i] = 0;
-      var_constit_index[i] = 0;
-      var_constit_n[i] = 0;
-      var_Tau1_vec[i] = 0;
-      var_Tau2_vec[i] = 0;
-      var_SPLIT12_vec[i] = 0;
-      var_Dip12_vec[i] = 0;
-      var_PlanarFlow_vec[i] = 0;
-      var_Angularity_vec[i] = 0;
+      var_E_vec.push_back(0);
+      var_pt_vec.push_back(0);
+      var_m_vec.push_back(0);
+      var_eta_vec.push_back(0);
+      var_phi_vec.push_back(0);
+      var_emfrac_vec.push_back(0);
+      var_constit_index.push_back(0);
+      var_constit_n.push_back(0);
+      var_Tau1_vec.push_back(0);
+      var_Tau2_vec.push_back(0);
+      var_SPLIT12_vec.push_back(0);
+      var_Dip12_vec.push_back(0);
+      var_PlanarFlow_vec.push_back(0);
+      var_Angularity_vec.push_back(0);
 
-      var_Aplanarity_vec[i] = 0;
-      var_Sphericity_vec[i] = 0;
-      var_ThrustMaj_vec[i] = 0;
-      var_ThrustMin_vec[i] = 0;
+      var_Aplanarity_vec.push_back(0);
+      var_Sphericity_vec.push_back(0);
+      var_ThrustMaj_vec.push_back(0);
+      var_ThrustMin_vec.push_back(0);
   
-      var_TauWTA1_vec[i] = 0;
-      var_TauWTA2_vec[i] = 0;
+      var_TauWTA1_vec.push_back(0);
+      var_TauWTA2_vec.push_back(0);
       
-      var_ZCUT12_vec[i] = 0;
+      var_ZCUT12_vec.push_back(0);
     }  
   var_YFilt_vec = 0;
   var_massFraction_vec = 0;
