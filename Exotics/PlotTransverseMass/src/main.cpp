@@ -1849,6 +1849,9 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
   
   std::string groomAlgoIndex = algorithm;
   std::string prefix = "";
+  prefix = algorithms.AlgoPrefix[algorithm];
+  std::string algorithmName = algorithms.AlgoNames[algorithm];
+  std::string algorithmType = algorithms.AlgoType[groomAlgoIndex];
   // set the radius for the jet algorithm
   setRadius(algorithms.AlgoPrefix[algorithm]);
 
@@ -1866,7 +1869,7 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
   else
     {
       std::cout << "branchesFile not defined" << std::endl;
-      branches = getListOfJetBranches(algorithms.AlgoNames[i], brancharray_initial);
+      branches = getListOfJetBranches(algorithmName, brancharray_initial);
     }
   
   // loop through the different pt bins. j == 0 is the inclusive one
@@ -1876,7 +1879,7 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
       
       // set up a stringstream to use for file names that can easily have integers added to it
       std::stringstream ss;
-      ss << algorithms.AlgoNames[algorithm] << "_" << pTbins[j];
+      ss << algorithmName << "_" << pTbins[j];
       
 
       // loop through background and signal
@@ -1945,7 +1948,7 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
 	  // load all files and get number of entries
 	  long entries = (long)inputTChain[tchainIdx]->GetEntries();
 	  //set all of the branches for the output tree for the jets	  
-	  setJetsBranches(inputTChain[tchainIdx], algorithms.AlgoNames[algorithm], algorithm, current_branchmap); 
+	  setJetsBranches(inputTChain[tchainIdx], algorithmName, algorithm, current_branchmap); 
 
 	  // output file to store cluster info
 	  ofstream clusterfile(string("clusterfile"+bkg+".csv"));
@@ -1957,11 +1960,11 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
 	  // reset all of the output variables so that they have default values
 	  resetOutputVariables();
 	  // set up all of the branches for the output tree
-	  setOutputBranches(outTree, algorithms.AlgoNames[i], i);
+	  setOutputBranches(outTree, algorithmName, algorithm);
 
 	  // if we are going to add the subjet branches we set them up here
 	  if (subjetscalc || subjetspre)
-	    addSubJets(outTree, algorithms.AlgoNames[i], i);
+	    addSubJets(outTree, algorithmName, algorithm);
 	  // add branches for runnumber, mc_event_number etc.
 	  addInfoBranches(outTree);
 
@@ -1997,12 +2000,6 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
 		std::cout << "Entry: "<< n << " / " << entries <<  std::endl;
 
 	      // increment event counter for MC channel
-	      //float &stored_ev = NEvents_weighted[mc_channel_number];
-	      //if (stored_ev) 
-	      //stored_ev+=mc_event_weight;
-	      //NEvents_weighted[mc_channel_number]+=mc_event_weight;
-	      //else
-	      //stored_ev = mc_event_weight;
 	      if (NEvents_weighted.find(mc_channel_number) != NEvents_weighted.end())
 		NEvents_weighted[mc_channel_number] += mc_event_weight;
 	      else
@@ -2019,7 +2016,7 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
 		}
 	      
 	       // if we're doing a truth matching algorithm then don't apply pt range cuts on truth - it will be done on groomed
-	      if (algorithms.AlgoType[groomAlgoIndex].find("truthmatch") == std::string::npos) // check the pt is in the correct bin
+	      if (algorithmType.find("truthmatch") == std::string::npos) // check the pt is in the correct bin
 		{
 		  if ((*var_pt_vec[jetType::TRUTH])[0]/1000.0 < ptrange[j].first || (*var_pt_vec[jetType::TRUTH])[0]/1000.0 > ptrange[j].second)
 		    continue;
@@ -2045,7 +2042,7 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
 		}
 	      
 	      // do truth matching with topo jets
-	      if (algorithms.AlgoType[groomAlgoIndex].find("truthmatch") != std::string::npos)
+	      if (algorithmType.find("truthmatch") != std::string::npos)
 		{
 		  //check which is the CA12 ungroomed reco jet with EMfrac<0.99 and |eta|<1.2
 		  //loop over all topo jets and get the leading with cuts
@@ -2062,6 +2059,8 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
 			{
 			  chosenLeadTopoJetIndex=jet_i;
 			  hasTopoJet=true;
+			  // quit loop
+			  continue;
 			} 
 		    } // end loop over var_pt_vec[jetType::TOPO]
 		  
@@ -2074,6 +2073,7 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
 			  if (chosenLeadTruthJetIndex<0 && DeltaR((*var_eta_vec[jetType::TOPO])[chosenLeadTopoJetIndex],(*var_phi_vec[jetType::TOPO])[chosenLeadTopoJetIndex],(*var_eta_vec[jetType::TRUTH])[jet_i],(*var_phi_vec[jetType::TRUTH])[jet_i])<0.9)
 			    { 
 			      chosenLeadTruthJetIndex=jet_i;
+			      // quit loop
 			      continue;
 			    }	  
 			}	// end loop over var_pt_vec[jetType::TRUTH]
@@ -2081,7 +2081,7 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
 		} // end if(groomAlgoIndex==0)
 	      
 	      // if truth match on topo jets was done, leave as is, otherwise use 0
-	      chosenLeadTruthJetIndex = algorithms.AlgoType[groomAlgoIndex].find("truthmatch") != std::string::npos ? chosenLeadTruthJetIndex : 0;
+	      chosenLeadTruthJetIndex = algorithmType.find("truthmatch") != std::string::npos ? chosenLeadTruthJetIndex : 0;
 
 	      // veto the event if we have no good truth jets.
 	      if (chosenLeadTruthJetIndex < 0)
@@ -2108,12 +2108,12 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
 		}
 	      
 	      // set output values
-	      leadGroomedIndex = chosenLeadGroomedIndex;
-	      leadTruthIndex = chosenLeadTruthJetIndex;
-	      leadTopoIndex = chosenLeadTopoJetIndex;
+	      //leadGroomedIndex = chosenLeadGroomedIndex;
+	      //leadTruthIndex = chosenLeadTruthJetIndex;
+	      //leadTopoIndex = chosenLeadTopoJetIndex;
 
 	      // set the mass to the leading groomed jet
-	      mass = (*var_m_vec[2])[leadGroomedIndex]/1000.0 ;
+	      mass = (*var_m_vec[2])[chosenLeadGroomedIndex]/1000.0 ;
 
 	      // if we are not applying a mass window we do not apply any mass cuts
 	      if (applyMassWindow && (mass > mass_max && mass < mass_min))
@@ -2121,7 +2121,8 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
 		  continue;
 		}
 	      // set the mass of the two leptons and leading groomed jet
-	      setLLJMass(leadGroomedIndex);
+	      if (hvtllqq)
+		setLLJMass(chosenLeadGroomedIndex);
 
 	      // leading subjet index
 	      int lead_subjet = 0;
@@ -2130,7 +2131,7 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
 	      if (subjetscalc)
 		{
 
-		  std::vector<int> subjet_idx = (*subjet_index).at(leadGroomedIndex); // only groomed ones.....
+		  std::vector<int> subjet_idx = (*subjet_index).at(chosenLeadGroomedIndex); // only groomed ones.....
 		  // get the two leading subjets
 		  std::pair<int,int> subjet_leading = getTwoLeadingSubjets(subjet_idx,var_subjets_pt_vec);
 
@@ -2172,22 +2173,22 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
 		}
 
 	      // tau21 for truth, topo and groomed
-	      var_Tau21[0]=(*var_Tau2_vec[0])[leadTruthIndex]/(*var_Tau1_vec[0])[leadTruthIndex];
-	      var_Tau21[1]=(*var_Tau2_vec[1])[leadTopoIndex]/(*var_Tau1_vec[1])[leadTopoIndex];
-	      var_Tau21[2]=(*var_Tau2_vec[2])[leadGroomedIndex]/(*var_Tau1_vec[2])[leadGroomedIndex];
+	      var_Tau21[0]=(*var_Tau2_vec[0])[chosenLeadTruthJetIndex]/(*var_Tau1_vec[0])[chosenLeadTruthJetIndex];
+	      var_Tau21[1]=(*var_Tau2_vec[1])[chosenLeadTopoJetIndex]/(*var_Tau1_vec[1])[chosenLeadTopoJetIndex];
+	      var_Tau21[2]=(*var_Tau2_vec[2])[chosenLeadGroomedIndex]/(*var_Tau1_vec[2])[chosenLeadGroomedIndex];
 	    
 	      // set up tauwta variables and zcut12
 	      if (calcTauWTA21)//useBranch(string("TauWTA2TauWTA1"),true) && useBranch(string("TauWTA2"), true) && useBranch(string("TauWTA1"), true) )
 		{
 		  // tauwta21 for truth, topo and groomed
 		  if (var_TauWTA1_vec[0] != NULL && var_TauWTA2_vec[0] != NULL)
-		    var_TauWTA2TauWTA1[0]=(*var_TauWTA2_vec[0])[leadTruthIndex]/(*var_TauWTA1_vec[0])[leadTruthIndex];
+		    var_TauWTA2TauWTA1[0]=(*var_TauWTA2_vec[0])[chosenLeadTruthJetIndex]/(*var_TauWTA1_vec[0])[chosenLeadTruthJetIndex];
 		  if (var_TauWTA1_vec[2] != NULL && var_TauWTA2_vec[2] != NULL)
-		    var_TauWTA2TauWTA1[2]=(*var_TauWTA2_vec[2])[leadGroomedIndex]/(*var_TauWTA1_vec[2])[leadGroomedIndex];
-		  if (leadTopoIndex == -99)
+		    var_TauWTA2TauWTA1[2]=(*var_TauWTA2_vec[2])[chosenLeadGroomedIndex]/(*var_TauWTA1_vec[2])[chosenLeadGroomedIndex];
+		  if (chosenLeadTopoJetIndex == -99)
 		    var_TauWTA2TauWTA1[1]=-99;
 		  else if (var_TauWTA1_vec[1] != NULL && var_TauWTA2_vec[1] != NULL)
-		    var_TauWTA2TauWTA1[1]=(*var_TauWTA2_vec[1])[leadTopoIndex]/(*var_TauWTA1_vec[1])[leadTopoIndex];
+		    var_TauWTA2TauWTA1[1]=(*var_TauWTA2_vec[1])[chosenLeadTopoJetIndex]/(*var_TauWTA1_vec[1])[chosenLeadTopoJetIndex];
 		}
 		
 	      // the following need clusters
@@ -2195,14 +2196,14 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
 		{
 
 		  std::vector<TLorentzVector> groomedclusters;
-		  bool runGroomedClusters = createClusters(jetType::GROOMED, leadGroomedIndex, groomedclusters);
+		  bool runGroomedClusters = createClusters(jetType::GROOMED, chosenLeadGroomedIndex, groomedclusters);
 
 		  // fill the largest cluster for the groomed, truth matched jet vs truth jet pt
 		  /*if (runGroomedClusters)
 		    {
 		      sort(groomedclusters.begin(), groomedclusters.end(), ComparePt);
-		      cluster_vs_truthpt->Fill((*var_pt_vec[jetType::TRUTH])[leadTruthIndex]/1000., groomedclusters[0].Pt());
-		      clusterfile << (*var_pt_vec[jetType::TRUTH])[leadTruthIndex]/1000. << "," << groomedclusters[0].Pt() << "," << DeltaR((*var_eta_vec[jetType::TRUTH])[leadTruthIndex], (*var_phi_vec[jetType::TRUTH])[leadTruthIndex], groomedclusters[0].Eta(), groomedclusters[0].Phi()) << endl;
+		      cluster_vs_truthpt->Fill((*var_pt_vec[jetType::TRUTH])[chosenLeadTruthJetIndex]/1000., groomedclusters[0].Pt());
+		      clusterfile << (*var_pt_vec[jetType::TRUTH])[chosenLeadTruthJetIndex]/1000. << "," << groomedclusters[0].Pt() << "," << DeltaR((*var_eta_vec[jetType::TRUTH])[chosenLeadTruthJetIndex], (*var_phi_vec[jetType::TRUTH])[chosenLeadTruthJetIndex], groomedclusters[0].Eta(), groomedclusters[0].Phi()) << endl;
 		      }*/
 
 		  if (DEBUG)
@@ -2245,7 +2246,7 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
 		} // calcEEC
 
 	      // make sure all of the other output variables have their values set
-	      setOutputVariables(leadTruthIndex, leadTopoIndex, leadGroomedIndex, lead_subjet, algorithms.AlgoNames[i] , i);
+	      setOutputVariables(chosenLeadTruthJetIndex, chosenLeadTopoJetIndex, chosenLeadGroomedIndex, lead_subjet, algorithmName , prefix);
 	      
 	      // count how many entries have passed selection
 	      passed_counter += 1;
@@ -2535,9 +2536,9 @@ bool useBranch(std::string const& br, bool partialmatch)
  */
 void addInfoBranches(TTree * tree)
 {
-  tree->Branch("leadTruthIndex",&leadTruthIndex, "leadTruthIndex/I");
-  tree->Branch("leadTopoIndex",&leadTopoIndex, "leadTopoIndex/I");
-  tree->Branch("leadGroomedIndex",&leadGroomedIndex, "leadGroomedIndex/I");
+  //tree->Branch("leadTruthIndex",&leadTruthIndex, "leadTruthIndex/I");
+  //tree->Branch("leadTopoIndex",&leadTopoIndex, "leadTopoIndex/I");
+  //tree->Branch("leadGroomedIndex",&leadGroomedIndex, "leadGroomedIndex/I");
 
   tree->Branch("normalisation",&normalisation, "normalisation/F");
   tree->Branch("NEvents",&NEvents,"NEvents/I");
@@ -3295,7 +3296,7 @@ void setLeptonVectors()
  * @param groomalgo The abbreviated name of the algorithm.
  * @param groomIdx The full name of the algorithm.
  */
-void setOutputVariables( int jet_idx_truth, int jet_idx_topo, int jet_idx_groomed, int subjet_idx, std::string & groomalgo, std::string &  groomIdx)
+void setOutputVariables( int jet_idx_truth, int jet_idx_topo, int jet_idx_groomed, int subjet_idx, std::string & groomalgo, std::string &  samplePrefix)
 {
   // set to 0 for now
   int jet_idx = 0;
@@ -3306,9 +3307,8 @@ void setOutputVariables( int jet_idx_truth, int jet_idx_topo, int jet_idx_groome
   nvtxOut = nvtxIn;
   avgIntpXingOut = avgIntpXingIn;
 
-  std::string samplePrefix = ""; // AntiKt10/ CamKt12 for example
   bool addLC = false; // some algorithms have "LC" in their name
-  samplePrefix = algorithms.AlgoPrefix[groomIdx];
+
 
   if (!recluster) // if we're not doing reclustering
     addLC = true; // just add the LC to the name
