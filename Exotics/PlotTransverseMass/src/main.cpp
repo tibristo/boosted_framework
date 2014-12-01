@@ -372,6 +372,8 @@ void Qw(double &minWidth, double &topEdge, TH1F* histo, double frac){
     double tempFrac = 0;
     int imax = i;
     
+    // loop through until the tempFrac is above the frac (68%) criteria,
+    // but making sure not to go out of range.
     while(tempFrac<frac && imax != Nbins){
       //fraction in bin imax=0,1,2,...                                                                                       
       tempFrac+=histo->GetBinContent(imax)/integral;
@@ -382,7 +384,9 @@ void Qw(double &minWidth, double &topEdge, TH1F* histo, double frac){
     
     double top_edge = histo->GetBinCenter(imax);
     
-    if(imax != Nbins and width<minWidth){ 
+    // by applying this we say that the window we have just calculate MUST have
+    // at least 68%.
+    if(tempFrac >= frac && width<minWidth){ 
       minWidth = width;
       topEdge = top_edge;
     }
@@ -1847,17 +1851,19 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
   recluster = algorithms.AlgoType[algorithm].find("recluster") == std::string::npos ? false: true;
 
   
+  // set the algorithm name details so that the lookup is not done in the loop
   std::string groomAlgoIndex = algorithm;
-  std::string prefix = "";
-  prefix = algorithms.AlgoPrefix[algorithm];
+  std::string prefix = algorithms.AlgoPrefix[algorithm];
   std::string algorithmName = algorithms.AlgoNames[algorithm];
   std::string algorithmType = algorithms.AlgoType[groomAlgoIndex];
+
   // set the radius for the jet algorithm
-  setRadius(algorithms.AlgoPrefix[algorithm]);
+  setRadius(prefix);
 
   // get an initial list of branches from one of the input files
   TObjArray * brancharray = inputTChain[0]->GetListOfBranches();
-  // create an unordered map from this
+  // create an unordered map from this to be used for lookups.
+  // tobjarray.findobject() returns a tvirtualobject which is slow
   std::unordered_map<string, bool> brancharray_initial = createBranchMap(brancharray);
   
   // read in the list of branches we want to use
@@ -1900,6 +1906,7 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
 	  std::string bkg = signal ? "sig": "bkg";
 	  // create the output file name
 	  ss_fname << ss.str() << "_" << bkg << ".root";
+
 	  // make sure output directory exists
 	  boost::filesystem::path dir(std::string(algorithm+fileid_global));
 	  boost::filesystem::create_directory(dir);
@@ -1916,6 +1923,7 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
 	  // lookup, because no comparisons are run.
 	  brancharray = 0;
 	  brancharray = inputTChain[tchainIdx]->GetListOfBranches();
+	  // unordered map for the current tree - this changes on iteration over k and j
 	  std::unordered_map<std::string,bool> current_branchmap = createBranchMap(brancharray);
 
 	  // turn off the branches we're not interested in
@@ -2301,7 +2309,7 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
  *
  * @return pair of ints for the indices of the first and second leading subjets.
  */
-std::pair<int,int> getTwoLeadingSubjets(std::vector<int> & jet_idx, std::vector<float> * subjet_pt)
+std::pair<int,int> getTwoLeadingSubjets(std::vector<int> & jet_idx, std::vector<float> *& subjet_pt)
 {
   // jet_idx contains the indices in the subjet vector for the subjets of jet i
   double max_pt = 0;
@@ -2555,7 +2563,7 @@ void addInfoBranches(TTree * tree)
  * @param tree Reference to a TChain pointer.  This is the input TTree.
  * @param list Reference map<string,int> that contains a list of all branches in the tree.
  * @param vec Reference to a vector<TLV> pointer which will be used to read in from the file.
- * @param branch The name of the branch we are setting the address for.
+ * @param branch The name of the branch we are setting the address for.  This is not passed as reference because of how it is set up. Really it could be a const string &.
  * @return bool indicating if the branch was successfully set
  */
 bool setVector(TChain *& tree, std::unordered_map<std::string, bool> & list, vector<TLorentzVector> *& vec, string branch)//const char * branch)
@@ -2579,7 +2587,7 @@ bool setVector(TChain *& tree, std::unordered_map<std::string, bool> & list, vec
  * @param tree Reference to a TChain pointer.  This is the input TTree.
  * @param list Reference to a map<string,int> that contains a list of all branches in the tree.
  * @param vec Reference to a vector<Int_t> pointer which will be used to read in from the file.
- * @param branch The name of the branch we are setting the address for.
+ * @param branch The name of the branch we are setting the address for.  This is not passed as reference because of how it is set up. Really it could be a const string &.
  * @return bool indicating if the branch was successfully set
  */
 bool setVector(TChain *& tree, std::unordered_map<std::string, bool> & list, vector<Int_t> *& vec, string branch)//const char * branch)
@@ -2603,7 +2611,7 @@ bool setVector(TChain *& tree, std::unordered_map<std::string, bool> & list, vec
  * @param tree Reference to a TChain pointer.  This is the input TTree.
  * @param list Reference to a map<string,int> that contains a list of all branches in the tree.
  * @param vec Reference to a vector<Float_t> pointer which will be used to read in from the file.
- * @param branch The name of the branch we are setting the address for.
+ * @param branch The name of the branch we are setting the address for.  This is not passed as reference because of how it is set up. Really it could be a const string &.
  * @return bool indicating if the branch was successfully set
  */
 bool setVector(TChain *& tree, std::unordered_map<std::string,bool> & list, vector<Float_t> *& vec, string branch)//const char * branch)
@@ -2614,7 +2622,6 @@ bool setVector(TChain *& tree, std::unordered_map<std::string,bool> & list, vect
   else
     {
       std::cout << "missing branch " << branch << ", might cause unexpected behaviour, removing from branchmap" << std::endl;
-      //branchmap[branch] = false;
       // erase it to avoid issues
       branchmap.erase(branch);
       return false;
