@@ -183,14 +183,14 @@ vector<TLorentzVector> Recluster(vector<TLorentzVector> small_jets, double PTcut
 
 struct Algorithms
 {
-  std::map<std::string, std::string> AlgoNames; // the jet groomieng alg
-  std::map<std::string, std::string> AlgoPrefix; // the jet reco algorithm
-  std::map<std::string, std::string> AlgoType; // if split/filter, trimmed, etc
-  std::map<std::string, std::string> AlgoList; // the abbreviated name
-  std::map<std::string, std::string> AlgoListN; // the plotting labels
-  std::map<std::string, std::string> subjetMap; // subjet grooming alg for jet grooming alg 
-  std::map<std::string, std::string> subjetIndex;
-  std::map<std::string, std::string> binLabel;
+  std::unordered_map<std::string, std::string> AlgoNames; // the jet groomieng alg
+  std::unordered_map<std::string, std::string> AlgoPrefix; // the jet reco algorithm
+  std::unordered_map<std::string, std::string> AlgoType; // if split/filter, trimmed, etc
+  std::unordered_map<std::string, std::string> AlgoList; // the abbreviated name
+  std::unordered_map<std::string, std::string> AlgoListN; // the plotting labels
+  std::unordered_map<std::string, std::string> subjetMap; // subjet grooming alg for jet grooming alg 
+  std::unordered_map<std::string, std::string> subjetIndex;
+  std::unordered_map<std::string, std::string> binLabel;
   void load(const std::string & filename);
 };
 
