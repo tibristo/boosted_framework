@@ -2243,9 +2243,9 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
 
 		  std::vector<TLorentzVector> groomedclusters;
 		  bool runGroomedClusters = false;
-		  if (chosenLeadGroomedIndex != -99)
-		    runGroomedClusters = createClusters(jetType::GROOMED, chosenLeadGroomedIndex, groomedclusters);
-		  std::vector<TLorentzVector> topoclusters;
+		  //if (chosenLeadGroomedIndex != -99)
+		  runGroomedClusters = createClusters(jetType::GROOMED, chosenLeadGroomedIndex, groomedclusters);
+		  /*std::vector<TLorentzVector> topoclusters;
 		  bool runTopoClusters = false;
 		  if (chosenLeadTopoJetIndex != -99)
 		    runTopoClusters = createClusters(jetType::TOPO, chosenLeadTopoJetIndex, topoclusters);
@@ -2264,7 +2264,7 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
 
 		  if (DEBUG)
 		    printTLV(topoclusters);
-
+		  */
 		  if (calcQJets)
 		    {
 		      // groomed jet if clusters were found
