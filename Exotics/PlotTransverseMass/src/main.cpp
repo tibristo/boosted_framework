@@ -705,6 +705,7 @@ void getMassHistograms(TTree *inputTree, TTree *inputTree1, TString groomAlgo, s
       
       reclus_jets = Recluster(small_jets);
       
+      // here a lambda function is used to do the sorting
       sort(reclus_jets.begin(), reclus_jets.end(), [] (TLorentzVector a, TLorentzVector b){
 	  return a.Pt() > b.Pt();
 	});//ComparePt);
@@ -2239,19 +2240,30 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
 	      if (calcQJets || calcFoxWolfram20 || calcSoftDrop || calcClusters)
 		{
 
+
 		  std::vector<TLorentzVector> groomedclusters;
-		  bool runGroomedClusters = createClusters(jetType::GROOMED, chosenLeadGroomedIndex, groomedclusters);
+		  bool runGroomedClusters = false;
+		  if (chosenLeadGroomedIndex != -99)
+		    runGroomedClusters = createClusters(jetType::GROOMED, chosenLeadGroomedIndex, groomedclusters);
+		  std::vector<TLorentzVector> topoclusters;
+		  bool runTopoClusters = false;
+		  if (chosenLeadTopoJetIndex != -99)
+		    runTopoClusters = createClusters(jetType::TOPO, chosenLeadTopoJetIndex, topoclusters);
+		  else
+		    std::cout << "topo jet index is -99!" << std::endl;
 
 		  // fill the largest cluster for the groomed, truth matched jet vs truth jet pt
-		  /*if (runGroomedClusters)
+		  if (runTopoClusters)
 		    {
-		      sort(groomedclusters.begin(), groomedclusters.end(), ComparePt);
-		      cluster_vs_truthpt->Fill((*var_pt_vec[jetType::TRUTH])[chosenLeadTruthJetIndex]/1000., groomedclusters[0].Pt());
-		      clusterfile << (*var_pt_vec[jetType::TRUTH])[chosenLeadTruthJetIndex]/1000. << "," << groomedclusters[0].Pt() << "," << DeltaR((*var_eta_vec[jetType::TRUTH])[chosenLeadTruthJetIndex], (*var_phi_vec[jetType::TRUTH])[chosenLeadTruthJetIndex], groomedclusters[0].Eta(), groomedclusters[0].Phi()) << endl;
-		      }*/
+		      sort(topoclusters.begin(), topoclusters.end(), [] (TLorentzVector a, TLorentzVector b){
+			  return a.Pt() > b.Pt();
+			});
+		      cluster_vs_truthpt->Fill((*var_pt_vec[jetType::TRUTH])[chosenLeadTruthJetIndex]/1000., topoclusters[0].Pt());
+		      clusterfile << (*var_pt_vec[jetType::TRUTH])[chosenLeadTruthJetIndex]/1000. << "," << topoclusters[0].Pt() << "," << DeltaR((*var_eta_vec[jetType::TRUTH])[chosenLeadTruthJetIndex], (*var_phi_vec[jetType::TRUTH])[chosenLeadTruthJetIndex], topoclusters[0].Eta(), topoclusters[0].Phi()) << endl;
+		    }
 
 		  if (DEBUG)
-		    printTLV(groomedclusters);
+		    printTLV(topoclusters);
 
 		  if (calcQJets)
 		    {
