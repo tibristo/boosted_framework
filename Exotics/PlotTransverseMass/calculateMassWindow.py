@@ -97,8 +97,10 @@ def run(fname, algorithm):
     # calculate the width, top and bottom edges and the indices for the 68% mass window
     wid, topedge, botedge, minidx, maxidx = Qw(hist, 0.68)
 
+    # folder where input file is
+    folder = fname[:fname.rfind('/')+1]
     # write this information out to a text file
-    fout = open(algorithm+"_masswindow.out",'w')
+    fout = open(folder+algorithm+"_masswindow.out",'w')
     fout.write("width: "+ str(wid)+'\n')
     fout.write("top edge: "+ str(topedge)+'\n')
     fout.write("bottom edge: "+ str(botedge)+'\n')
