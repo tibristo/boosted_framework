@@ -4053,7 +4053,7 @@ double calculateFoxWolfram20(vector<TLorentzVector> & clusters)
  *
  * @param cluster A vector<TLV> containing constituents of jet.
  *
- * @return Return the soft drop tag/ highest softdrop level with given eff and fake rate.
+ * @return Return the pt fraction for the highest softdrop with given eff and fake rate.
  */
 int calculateSoftDropTag(vector<TLorentzVector> & cluster)
 {
@@ -4072,6 +4072,7 @@ int calculateSoftDropTag(vector<TLorentzVector> & cluster)
   fastjet::PseudoJet parent1, parent2;
   fastjet::PseudoJet currjet(jetVect[0]);
 
+  float highest_pt_fraction = 0;
   // loop until current jet has no more parents.
   while (cs->has_parents(currjet, parent1, parent2))
     {
@@ -4089,12 +4090,15 @@ int calculateSoftDropTag(vector<TLorentzVector> & cluster)
       if (ptfraction > 0.08*power) softdrop_level = 3; //eff 20%, fake rate 1%
       // new highest softdrop level
       if (softdrop_level > highest_softdrop_level)
-	highest_softdrop_level = softdrop_level;
+	{
+	  highest_softdrop_level = softdrop_level;
+	  highest_pt_fraction = ptfraction;
+	}
       // new current jet
       currjet = parent1;
     }
   
-  return highest_softdrop_level;
+  return highest_pt_fraction;//highest_softdrop_level;
 } //calculateSoftDropTag
 
 
