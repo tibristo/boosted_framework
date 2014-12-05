@@ -1,6 +1,9 @@
 import sys
 import subprocess
 import re
+
+# usage: python makeConfig.py baseconfig_file inputalgorithm_file output_name version_number
+
 basecfg = sys.argv[2]
 inputalgorithms = sys.argv[1]
 name = sys.argv[3]
@@ -10,6 +13,7 @@ algs = open(inputalgorithms)
 algorithms = []
 alg_prefix = {}
 
+# get the prefix of the file, like AntiKtX
 def stripPrefix(a):
     nums = re.findall(r'\d+', a)
     offset = 4 # remove the jet_ at the beginning

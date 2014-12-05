@@ -153,6 +153,7 @@ int main( int argc, char * argv[] ) {
 	  }
       }    
 
+
     if (vm.count("signal-file"))
       {
 	cout << "Signal files are: " 
@@ -2420,6 +2421,7 @@ vector<std::pair<std::string,bool> > getListOfJetBranches(std::string &algorithm
   //add the clusters to the branchmap if we need them
   if (addClusterVariables)
     {
+      std::cout << "Adding cluster variables" << std::endl;
       branchmap["cl_lc_n"] = true;
       branchmap["cl_lc_pt"] = true;
       branchmap["cl_lc_eta"] = true;
@@ -3099,7 +3101,7 @@ void setJetsBranches(TChain * tree, std::string &groomalgo,  std::string & groom
 	    floatvec(var_FoxWolfram2_vec[i]);
 	}
       if (!calcSoftDrop && !setVector(tree, brancharray, var_SoftDropTag_vec.at(i), std::string(jetString+"SoftDropTag") ))
-	floatvec(var_SoftDropTag_vec[i]);
+	intvec(var_SoftDropTag_vec[i]);
 
 
 
@@ -4217,7 +4219,7 @@ int calculateSoftDropTag(vector<TLorentzVector> & cluster)
       currjet = parent1;
     }
   
-  return highest_pt_fraction;//highest_softdrop_level;
+  return highest_softdrop_level; // highest_pt_fraction;
 } //calculateSoftDropTag
 
 

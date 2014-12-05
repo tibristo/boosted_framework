@@ -518,7 +518,7 @@ std::vector<std::vector<float> *> var_ThrustMin_vec;
 =======
 std::vector<std::vector<float> *> var_FoxWolfram0_vec;
 std::vector<std::vector<float> *> var_FoxWolfram2_vec;
-std::vector<std::vector<float> *> var_SoftDropTag_vec;
+std::vector<std::vector<int> *> var_SoftDropTag_vec;
 
 
 >>>>>>> Added FoxWolfram and SoftDropTag from the D3PD as another option instead of calculating them by hand.
@@ -645,7 +645,7 @@ std::vector<Float_t> var_VoronoiArea;
 
 std::vector<Float_t> var_QjetVol;
 std::vector<Float_t> var_FoxWolfram20;
-std::vector<Float_t> var_softdrop;
+std::vector<Int_t> var_softdrop;
 std::vector<Float_t> var_EEC_C1;
 std::vector<Float_t> var_EEC_C2;
 std::vector<Float_t> var_EEC_D1;
