@@ -2236,35 +2236,17 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
 		    var_TauWTA2TauWTA1[1]=(*var_TauWTA2_vec[1])[chosenLeadTopoJetIndex]/(*var_TauWTA1_vec[1])[chosenLeadTopoJetIndex];
 		}
 		
-	      // the following need clusters
+
+	      // calculate cluster based variables
+	      // the following need clusters if they are being calculated
 	      if (calcQJets || calcFoxWolfram20 || calcSoftDrop || calcClusters)
 		{
-
-
+		  // set up a vector<TLV> to store the cluster information
 		  std::vector<TLorentzVector> groomedclusters;
 		  bool runGroomedClusters = false;
-		  //if (chosenLeadGroomedIndex != -99)
+		  // create clusters, the method returns if the cluster creation was successful
 		  runGroomedClusters = createClusters(jetType::GROOMED, chosenLeadGroomedIndex, groomedclusters);
-		  /*std::vector<TLorentzVector> topoclusters;
-		  bool runTopoClusters = false;
-		  if (chosenLeadTopoJetIndex != -99)
-		    runTopoClusters = createClusters(jetType::TOPO, chosenLeadTopoJetIndex, topoclusters);
-		  else
-		    std::cout << "topo jet index is -99!" << std::endl;
 
-		  // fill the largest cluster for the groomed, truth matched jet vs truth jet pt
-		  if (runTopoClusters)
-		    {
-		      sort(topoclusters.begin(), topoclusters.end(), [] (TLorentzVector a, TLorentzVector b){
-			  return a.Pt() > b.Pt();
-			});
-		      cluster_vs_truthpt->Fill((*var_pt_vec[jetType::TRUTH])[chosenLeadTruthJetIndex]/1000., topoclusters[0].Pt());
-		      clusterfile << (*var_pt_vec[jetType::TRUTH])[chosenLeadTruthJetIndex]/1000. << "," << topoclusters[0].Pt() << "," << DeltaR((*var_eta_vec[jetType::TRUTH])[chosenLeadTruthJetIndex], (*var_phi_vec[jetType::TRUTH])[chosenLeadTruthJetIndex], topoclusters[0].Eta(), topoclusters[0].Phi()) << endl;
-		    }
-
-		  if (DEBUG)
-		    printTLV(topoclusters);
-		  */
 		  if (calcQJets)
 		    {
 		      // groomed jet if clusters were found
@@ -2398,13 +2380,15 @@ std::pair<int,int> getTwoLeadingSubjets(std::vector<int> & jet_idx, std::vector<
  */
 vector<std::pair<std::string,bool> > getListOfJetBranches(std::string &algorithm, std::unordered_map<std::string, bool> & brancharray)
 {
-  // Ideally we want this stored in an XML file, but for now it'll have to be a standard text file because I'm short on time!
+  // vector storing which branches to use
   vector<pair<string,bool> > branches;
 
   // some variables require cluster information, list them here:
-  vector<string> clustervariables {"FoxWolfram20","QJetsVol","SoftDrop","EEC_C1","EEC_C2","EEC_D1","EEC_D2"};
+  vector<string> clustervariables {"QJetsVol"};
   // keep track of if cluster variables are being used
   bool addClusterVariables = false;
+  if (calcQJets || calcFoxWolfram20 || calcSoftDrop || calcClusters)
+    addClusterVariables = true;
   
   // reset branchmap
   branchmap.clear();
@@ -2722,13 +2706,13 @@ void eraseJet(int jet)
     var_YFilt_vec->erase(var_YFilt_vec->begin()+jet);
   
 
-  if (var_Aplanarity_vec[i] != NULL && var_Aplanarity_vec[i]->size() >> jet)
+  if (var_Aplanarity_vec[i] != NULL && var_Aplanarity_vec[i]->size() > jet)
     var_Aplanarity_vec[i]->erase(var_Aplanarity_vec[i]->begin()+jet);
-  if (var_Sphericity_vec[i] != NULL && var_Sphericity_vec[i]->size() >> jet)
+  if (var_Sphericity_vec[i] != NULL && var_Sphericity_vec[i]->size() > jet)
     var_Sphericity_vec[i]->erase(var_Sphericity_vec[i]->begin()+jet);
-  if (var_ThrustMaj_vec[i] != NULL && var_ThrustMaj_vec[i]->size() >> jet)
+  if (var_ThrustMaj_vec[i] != NULL && var_ThrustMaj_vec[i]->size() > jet)
     var_ThrustMaj_vec[i]->erase(var_ThrustMaj_vec[i]->begin()+jet);
-  if (var_ThrustMin_vec[i] != NULL && var_ThrustMin_vec[i]->size() >> jet)
+  if (var_ThrustMin_vec[i] != NULL && var_ThrustMin_vec[i]->size() > jet)
     var_ThrustMin_vec[i]->erase(var_ThrustMin_vec[i]->begin()+jet);
 
   if (var_TauWTA1_vec[i] != NULL && var_TauWTA1_vec[i]->size() > jet)
@@ -2737,7 +2721,17 @@ void eraseJet(int jet)
     var_TauWTA2_vec[i]->erase(var_TauWTA2_vec[i]->begin()+jet);
   if (var_ZCUT12_vec[i] != NULL && var_ZCUT12_vec[i]->size() > jet)
     var_ZCUT12_vec[i]->erase(var_ZCUT12_vec[i]->begin()+jet);
-    
+
+  // only erase these variables if we are not calculating them
+  if (!calcFoxWolfram20)
+    {
+      if (var_FoxWolfram0_vec[i] != NULL && var_FoxWolfram0_vec[i]->size() > jet)
+	var_FoxWolfram0_vec[i]->erase(var_FoxWolfram0_vec[i]->begin()+jet);
+      if (var_FoxWolfram2_vec[i] != NULL && var_FoxWolfram2_vec[i]->size() > jet)
+	var_FoxWolfram2_vec[i]->erase(var_FoxWolfram2_vec[i]->begin()+jet);
+    }
+  if (!calcSoftDrop && var_SoftDropTag_vec[i] != NULL && var_SoftDropTag_vec[i]->size() > jet)
+    var_SoftDropTag_vec[i]->erase(var_SoftDropTag_vec[i]->begin()+jet);
   
 } // eraseJet
 
@@ -3027,81 +3021,86 @@ void setJetsBranches(TChain * tree, std::string &groomalgo,  std::string & groom
   // there is only yfilt stored for groomed jets
   if (!setVector(tree, brancharray, var_YFilt_vec, std::string(returnJetType(samplePrefix, groomalgo, addLC,2)+"YFilt") ))
     floatvec(var_YFilt_vec);
-    //var_YFilt_vec = floatvec();
+
   // loop through the truth, toppo and groomed jets and set up the branches for the different variables
   for (int i = 0; i < jetType::MAX; i++) // truth, topo, groomed
     {
       std::string jetString = returnJetType(samplePrefix, groomalgo, addLC,i); //set to truth/ topo/ groomed
       if (!setVector(tree, brancharray, var_E_vec.at(i), std::string(jetString+"E") ))
 	floatvec(var_E_vec[i]);
-      //var_E_vec[i] = floatvec();
+
       if (!setVector(tree, brancharray, var_pt_vec.at(i), std::string(jetString+"pt") ))
 	floatvec(var_pt_vec[i]);
-      //var_pt_vec[i] = floatvec();
+
       if (!setVector(tree, brancharray, var_m_vec.at(i), std::string(jetString+"m") ))
 	floatvec(var_m_vec[i]);
-	//var_m_vec[i] = floatvec();
+
       if (!setVector(tree, brancharray, var_eta_vec.at(i), std::string(jetString+"eta") ))
 	floatvec(var_eta_vec[i]);
-      //var_eta_vec[i] = floatvec();
+
       if (!setVector(tree, brancharray, var_phi_vec.at(i), std::string(jetString+"phi") ))
 	floatvec(var_phi_vec[i]);
-      //var_phi_vec[i] = floatvec();
+
       if (!setVector(tree, brancharray, var_emfrac_vec.at(i), std::string(jetString+"emfrac") ))
 	floatvec(var_emfrac_vec[i]);
-      //var_emfrac_vec[i] = floatvec();
+
       if (!setVector(tree, brancharray, var_Tau1_vec.at(i), std::string(jetString+"Tau1") ))
 	floatvec(var_Tau1_vec[i]);
-      //var_Tau1_vec[i] = floatvec();
+
       if (!setVector(tree, brancharray, var_Tau2_vec.at(i), std::string(jetString+"Tau2") ))
 	floatvec(var_Tau2_vec[i]);
-      //var_Tau2_vec[i] = floatvec();
 
       if (!setVector(tree, brancharray, var_constit_n.at(i), std::string(jetString+"constit_n") ))
 	intvec(var_constit_n[i]);
-	//var_constit_n[i] = intvec();
+
       if (brancharray.find(std::string(jetString+"constit_index")) != brancharray.end() && useBranch(std::string(jetString+"constit_index")))
 	tree->SetBranchAddress(std::string(jetString+"constit_index").c_str(), &var_constit_index.at(i));
       else
 	vecintvec(var_constit_index[i]);
-      //var_constit_index[i] = vecintvec();
 
       if (!setVector(tree, brancharray, var_SPLIT12_vec.at(i), std::string(jetString+"SPLIT12") ))
 	floatvec(var_SPLIT12_vec[i]);
-      //var_SPLIT12_vec[i] = floatvec();
 
       if (!setVector(tree, brancharray, var_Dip12_vec.at(i), std::string(jetString+"Dip12") ))
 	floatvec(var_Dip12_vec[i]);
-      //var_Dip12_vec[i] = floatvec();
+
       if (!setVector(tree, brancharray, var_PlanarFlow_vec.at(i), std::string(jetString+"PlanarFlow") ))
 	floatvec(var_PlanarFlow_vec[i]);
-      //var_PlanarFlow_vec[i] = floatvec();
+
       if (!setVector(tree, brancharray, var_Angularity_vec.at(i), std::string(jetString+"Angularity") ))
 	floatvec(var_Angularity_vec[i]);
-      //var_Angularity_vec[i] = floatvec();
 
       if (!setVector(tree, brancharray, var_Aplanarity_vec.at(i), std::string(jetString+"Aplanarity") ))
 	floatvec(var_Aplanarity_vec[i]);
-      //var_Aplanarity_vec[i] = floatvec();
+
       if (!setVector(tree, brancharray, var_Sphericity_vec.at(i), std::string(jetString+"Sphericity") ))
 	floatvec(var_Sphericity_vec[i]);
-      //var_Sphericity_vec[i] = floatvec();
+
       if (!setVector(tree, brancharray, var_ThrustMaj_vec.at(i), std::string(jetString+"ThrustMaj") ))
 	floatvec(var_ThrustMaj_vec[i]);
-      //var_ThrustMaj_vec[i] = floatvec();
+
       if (!setVector(tree, brancharray, var_ThrustMin_vec.at(i), std::string(jetString+"ThrustMin") ))
 	floatvec(var_ThrustMin_vec[i]);
-      //var_ThrustMin_vec[i] = floatvec();
 
       if (!setVector(tree, brancharray, var_TauWTA1_vec.at(i), std::string(jetString+"TauWTA1") ))
 	floatvec(var_TauWTA1_vec[i]);
-      //var_TauWTA1_vec[i] = floatvec();
+
       if (!setVector(tree, brancharray, var_TauWTA2_vec.at(i), std::string(jetString+"TauWTA2") ))
 	floatvec(var_TauWTA2_vec[i]);
-      //var_TauWTA2_vec[i] = floatvec();
+
       if (!setVector(tree, brancharray, var_ZCUT12_vec.at(i), std::string(jetString+"ZCUT12") ))
 	floatvec(var_ZCUT12_vec[i]);
-      //var_ZCUT12_vec[i] = floatvec();
+
+      if (!calcFoxWolfram20)
+	{
+	  if (!setVector(tree, brancharray, var_FoxWolfram0_vec.at(i), std::string(jetString+"FoxWolfram_0") ))
+	    floatvec(var_FoxWolfram0_vec[i]);
+	  if (!setVector(tree, brancharray, var_FoxWolfram2_vec.at(i), std::string(jetString+"FoxWolfram_2") ))
+	    floatvec(var_FoxWolfram2_vec[i]);
+	}
+      if (!calcSoftDrop && !setVector(tree, brancharray, var_SoftDropTag_vec.at(i), std::string(jetString+"SoftDropTag") ))
+	floatvec(var_SoftDropTag_vec[i]);
+
 
 
     } // end for loop over topo/truth/groom
@@ -3263,6 +3262,13 @@ void initVectors()
       var_TauWTA2_vec.push_back(0);
       
       var_ZCUT12_vec.push_back(0);
+      if (!calcFoxWolfram20)
+	{
+	  var_FoxWolfram0_vec.push_back(0);
+	  var_FoxWolfram2_vec.push_back(0);
+	}
+      if (!calcSoftDrop)
+	var_SoftDropTag_vec.push_back(0);
     }  
   var_YFilt_vec = 0;
   var_massFraction_vec = 0;
@@ -3438,9 +3444,15 @@ void setOutputVariables( int jet_idx_truth, int jet_idx_topo, int jet_idx_groome
       var_TauWTA1[x]=(*var_TauWTA1_vec[x])[jet_idx];
       var_TauWTA2[x]=(*var_TauWTA2_vec[x])[jet_idx];
       var_ZCUT12[x]=(*var_ZCUT12_vec[x])[jet_idx];
-      
+
+      // if the FoxWolfram20 and SoftDropTag variables are not being calculated, but exist in the input file, set them here
+      // foxwolfram20 = foxwolfram2/foxwolfram0      
+      if (!calcFoxWolfram20)
+	var_FoxWolfram20[x] = (*var_FoxWolfram2_vec[x])[jet_idx]/(*var_FoxWolfram0_vec[x])[jet_idx];
+      if (!calcSoftDrop)
+	var_softdrop[x] = (*var_SoftDropTag_vec[x])[jet_idx];
     } // end for loop
-  
+ 
   // only store this for groomed jets
   if (subjetscalc)
     {
@@ -3664,13 +3676,13 @@ void setOutputBranches(TTree * tree, std::string & groomalgo, std::string & groo
       if (useBranch(string(jetString+"VoronoiArea")))
 	tree->Branch(std::string(jetString+"VoronoiArea").c_str(),&var_VoronoiArea,std::string(jetString+"VoronoiArea/F").c_str());
       if (useBranch(string(jetString+"Aplanarity")))
-	tree->Branch(std::string(jetString+"Aplanarity").c_str(),&var_Aplanarity,std::string(jetString+"Aplanarity/F").c_str());
+	tree->Branch(std::string(jetString+"Aplanarity").c_str(),&var_Aplanarity.at(i),std::string(jetString+"Aplanarity/F").c_str());
       if (useBranch(string(jetString+"Sphericity")))
-	tree->Branch(std::string(jetString+"Sphericity").c_str(),&var_Sphericity,std::string(jetString+"Sphericity/F").c_str());
+	tree->Branch(std::string(jetString+"Sphericity").c_str(),&var_Sphericity.at(i),std::string(jetString+"Sphericity/F").c_str());
       if (useBranch(string(jetString+"ThrustMaj")))
-	tree->Branch(std::string(jetString+"ThrustMaj").c_str(),&var_ThrustMaj,std::string(jetString+"ThrustMaj/F").c_str());
+	tree->Branch(std::string(jetString+"ThrustMaj").c_str(),&var_ThrustMaj.at(i),std::string(jetString+"ThrustMaj/F").c_str());
       if (useBranch(string(jetString+"ThrustMin")))
-	tree->Branch(std::string(jetString+"ThrustMin").c_str(),&var_ThrustMin,std::string(jetString+"ThrustMin/F").c_str());
+	tree->Branch(std::string(jetString+"ThrustMin").c_str(),&var_ThrustMin.at(i),std::string(jetString+"ThrustMin/F").c_str());
       
       if (useBranch(string(jetString+"TauWTA1")))
 	tree->Branch(std::string(jetString+"TauWTA1").c_str(),&var_TauWTA1.at(i),std::string(jetString+"TauWTA1/F").c_str());
@@ -3685,6 +3697,7 @@ void setOutputBranches(TTree * tree, std::string & groomalgo, std::string & groo
       if (useBranch(string(jetString+"ZCUT34")))
 	tree->Branch(std::string(jetString+"ZCUT34").c_str(),&var_ZCUT34.at(i),std::string(jetString+"ZCUT34/F").c_str());
       
+<<<<<<< HEAD
       if (useBranch(string(returnJetType(samplePrefix, groomalgo, addLC,0)+"TauWTA2/TauWTA1")))
 	tree->Branch(std::string(returnJetType(samplePrefix, groomalgo, addLC,0)+"TauWTA2/TauWTA1").c_str(),&var_TauWTA2TauWTA1.at(0),std::string(jetString+"TauWTA2TauWTA1/F").c_str());
       if (useBranch(string(returnJetType(samplePrefix, groomalgo, addLC,1)+"TauWTA2/TauWTA1")))
@@ -3703,6 +3716,14 @@ void setOutputBranches(TTree * tree, std::string & groomalgo, std::string & groo
       tree->Branch(std::string(jetString+"ThrustMin").c_str(),&var_ThrustMin,std::string(jetString+"ThrustMin/F").c_str());
       
 =======
+=======
+      if (useBranch(string(returnJetType(samplePrefix, groomalgo, addLC,0)+"TauWTA2TauWTA1")))
+	tree->Branch(std::string(returnJetType(samplePrefix, groomalgo, addLC,0)+"TauWTA2TauWTA1").c_str(),&var_TauWTA2TauWTA1.at(0),std::string(jetString+"TauWTA2TauWTA1/F").c_str());
+      if (useBranch(string(returnJetType(samplePrefix, groomalgo, addLC,1)+"TauWTA2TauWTA1")))
+	tree->Branch(std::string(returnJetType(samplePrefix, groomalgo, addLC,1)+"TauWTA2TauWTA1").c_str(),&var_TauWTA2TauWTA1.at(1),std::string(jetString+"TauWTA2TauWTA1/F").c_str());
+      if (useBranch(string(jetString+"TauWTA2TauWTA1")))
+	tree->Branch(std::string(jetString+"TauWTA2TauWTA1").c_str(),&var_TauWTA2TauWTA1.at(2),std::string(jetString+"TauWTA2TauWTA1/F").c_str());  
+>>>>>>> Added FoxWolfram and SoftDropTag from the D3PD as another option instead of calculating them by hand.
 
 
       if (useBranch(string(jetString+"QJetsVol")))

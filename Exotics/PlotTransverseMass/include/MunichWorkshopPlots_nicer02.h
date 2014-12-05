@@ -513,7 +513,15 @@ std::vector<std::vector<float> *> var_Aplanarity_vec;
 std::vector<std::vector<float> *> var_Sphericity_vec;
 std::vector<std::vector<float> *> var_ThrustMaj_vec;
 std::vector<std::vector<float> *> var_ThrustMin_vec;
+<<<<<<< HEAD
 >>>>>>> changed from map to vector
+=======
+std::vector<std::vector<float> *> var_FoxWolfram0_vec;
+std::vector<std::vector<float> *> var_FoxWolfram2_vec;
+std::vector<std::vector<float> *> var_SoftDropTag_vec;
+
+
+>>>>>>> Added FoxWolfram and SoftDropTag from the D3PD as another option instead of calculating them by hand.
 
 // reading in jet clusters
 Int_t var_cl_n;
