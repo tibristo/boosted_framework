@@ -2206,6 +2206,7 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
 	      // the following need clusters if they are being calculated
 	      if (calcQJets || calcFoxWolfram20 || calcSoftDrop || calcClusters)
 		{
+		  std::cout << "calculating clusters" << std::endl;
 		  // set up a vector<TLV> to store the cluster information
 		  std::vector<TLorentzVector> groomedclusters;
 		  bool runGroomedClusters = false;
