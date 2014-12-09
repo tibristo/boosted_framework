@@ -440,6 +440,7 @@ static inline std::string &rtrim(std::string &s) {
 std::unordered_map<long, float> k_factors;
 std::unordered_map<long, float> filt_eff;
 std::unordered_map<long, float> xs;
+std::unordered_map<long, int> runNumber_map;
 
 <<<<<<< HEAD
 <<<<<<< HEAD

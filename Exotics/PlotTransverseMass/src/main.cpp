@@ -3382,19 +3382,14 @@ void setOutputVariables( int jet_idx_truth, int jet_idx_topo, int jet_idx_groome
   var_filter_eff = 1.0;
   var_xs = 1.0;
   
-  // set up a signal handler in case we try to access elements that are not there
-  SignalHandlerPointer handler;
-  handler = signal(SIGSEGV, SignalHandlerMapAccess);
-  try
+
+  // keep a list of run numbers, check this list instead of checking each of the
+  // k_factors, xs and filter_eff maps
+  if (runNumber_map.find(mc_channel_number)!=runNumber_map.end())
     {
-	  var_k_factor = k_factors[long(mc_channel_number)];
-	  var_filter_eff = filt_eff[long(mc_channel_number)];
-	  var_xs = xs[long(mc_channel_number)];
-    }
-  catch (char *e)
-    {
-      std::cout << "Exception caught trying to set weights for " << mc_channel_number << std::endl;
-      std::cout << "Default weights of 1.0 used" << std::endl;
+      var_k_factor = k_factors[mc_channel_number];
+      var_filter_eff = filt_eff[mc_channel_number];
+      var_xs = xs[mc_channel_number];
     }
 
   // yfilt only exists for groomed jets
@@ -3859,6 +3854,7 @@ void readWeights()
 	      try
 		{
 		  runNumber = std::stol(*it);
+		  runNumber_map[runNumber] = 1;
 		}
 	      catch (exception &e)
 		{
