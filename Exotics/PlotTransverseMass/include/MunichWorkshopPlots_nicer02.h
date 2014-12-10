@@ -121,6 +121,7 @@ vector<double> calculateQJetsVol(vector<TLorentzVector> & EventParticles, float 
 double calculateQJetsVol_v2(vector<TLorentzVector> & clusters);
 bool createClusters(int jettype, int jetidx, vector<TLorentzVector> & cluster);
 double calculateEEC(int jettype, float beta=0.3, float exp=2);
+void setEEC(int jettype, int jetidx);
 void setRadius(std::string & prefix);
 void printTLV(vector<TLorentzVector> & tlv);
 std::unordered_map<std::string,bool> createBranchMap(TObjArray *& arr);
@@ -212,14 +213,17 @@ float MUMASS = 105.7;
 // global variables used per analysis
 std::string fileid_global;
 std::string treeName;
+std::string weightsfile;
 std::string branchesFile;
 std::unordered_map<std::string, bool> branchmap;
 
 // settings for selection
 bool calcQJets = false;
 bool calcFoxWolfram20 = false;
+bool preCalcFoxWolfram20 = false;
 bool calcSoftDrop = false;
 bool calcEEC = false;
+bool preCalcEEC = false;
 bool calcClusters = false;
 bool calcTauWTA21 = false;
 bool recluster = false;
@@ -266,14 +270,15 @@ TH1F * windowsVsPt;
 Float_t normalisation = 1.0;
 Int_t NEvents = 0;
 std::map<long, float> NEvents_weighted;
-Float_t mc_event_weight = 1.0;
+//Float_t mc_event_weight = 1.0;
+std::vector<float> * mc_event_weight = 0;
 Float_t mc_event_weight_out = 1.0;
 UInt_t mc_channel_number  = 0;
 UInt_t mc_channel_number_out  = 0;
 UInt_t runNumberOut = 0;
 UInt_t runNumberIn = 0;
 Float_t avgIntpXingOut = 0;
-Float_t avgIntpXingIn = 0;
+UInt_t avgIntpXingIn = 0;
 // xaod expects UInt_t, but D3PDs Int_t. This is annoying and will cause problems
 UInt_t nvtxIn = 0;
 UInt_t nvtxOut = 0;
@@ -466,9 +471,11 @@ std::vector<std::vector<float> *> var_ThrustMaj_vec;
 std::vector<std::vector<float> *> var_ThrustMin_vec;
 std::vector<std::vector<float> *> var_FoxWolfram0_vec;
 std::vector<std::vector<float> *> var_FoxWolfram2_vec;
+std::vector<std::vector<float> *> var_FoxWolfram20_vec;
 std::vector<std::vector<int> *> var_SoftDropTag_vec;
-
-
+std::vector<std::vector<float> * > var_ECF2_vec;
+std::vector<std::vector<float> * > var_ECF3_vec;
+std::vector< std::vector<float> *> var_Mu12_vec;
 
 // reading in jet clusters
 Int_t var_cl_n;
@@ -481,6 +488,8 @@ std::vector<float> * var_YFilt_vec;
 
 Float_t var_massFraction_vec;
 Float_t var_ktycut2_vec;
+
+
 
 // electrons in
 vector<TLorentzVector> * var_electrons_vec;
@@ -528,6 +537,7 @@ std::vector<float> var_Dip12;
 std::vector<float> var_PlanarFlow;
 std::vector<float> var_Angularity;
 std::vector<float> var_Tau21;
+std::vector<float> var_Mu12;
 Float_t var_YFilt; // only for groomed
 
 
@@ -579,7 +589,11 @@ std::vector<Float_t> var_EEC_D2;
 Float_t var_k_factor;
 Float_t var_filter_eff;
 Float_t var_xs;
-
+// for reading in
+Float_t var_filtereff_in;
+Float_t var_kfactor_in;
+Float_t scale1fb = -1;
+Float_t scale1fbOut;
 // if subjets are being used
 bool subjetscalc;
 bool subjetspre;
