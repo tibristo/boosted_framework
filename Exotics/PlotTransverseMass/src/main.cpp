@@ -96,16 +96,20 @@ int main( int argc, char * argv[] ) {
       ("fileid", po::value<string>(&fileid)->default_value(""),"Add an identifier to the output folder/ file names")
       ("bkg-frac", po::value<bool>(&checkBkgFrac)->default_value(false),"Check the background fraction in the signal")
       ("tree-name", po::value<string>(&treeName)->default_value("physics"),"Name of tree to be read in from input file")
+      ("weights-file", po::value<string>(&weightsfile)->default_value("weightings_input.csv"),"File with weights info - xsec, filter eff, k-factors.")
       ("branches-file", po::value<string>(&branchesFile)->default_value(""),"Name of file containing branches, otherwise Alg_branches.txt is used. Becareful with this, because if the branches are not read in then when any of them are used later on a segfault will occur, so make sure there is one that it will use.")
       ("xAOD-jets", po::value<bool>(&xAODJets)->default_value(false),"Indicate if we are running over xAOD output and there is the word Jets appended to the algorithm name.")
       ("xAOD-emfrac", po::value<bool>(&xAODemfrac)->default_value(false),"Indicate if we are running over xAOD output and emfrac is not available.")
       ("hvtllqq-selection", po::value<bool>(&hvtllqq)->default_value(false),"Indicate if we are running the HVTllqq analysis selection.")
       ("calcQjets", po::value<bool>(&calcQJets)->default_value(false),"Indicate if we are calculating the Qjet volatility.  Note this is potentially quite CPU intensive.")
-      ("calcFoxWolfram", po::value<bool>(&calcFoxWolfram20)->default_value(false),"Indicate if we are calculating FoxWolfram20.  Note this is potentially quite CPU intensive.")
+      ("calcFoxWolfram", po::value<bool>(&calcFoxWolfram20)->default_value(false),"Indicate if we are calculating FoxWolfram20.  preCalcFoxWolfram and calcFoxWolfram cannot both be true. Note this is potentially quite CPU intensive. ")
+      ("preCalcFoxWolfram", po::value<bool>(&preCalcFoxWolfram20)->default_value(false),"Indicate if we are using pre-calculated FoxWolfram20. preCalcFoxWolfram and calcFoxWolfram cannot both be true.")
       ("calcSoftDrop", po::value<bool>(&calcSoftDrop)->default_value(false),"Indicate if we are calculating the soft drop tag.  Note this is potentially quite CPU intensive.")
-      ("calcEEC", po::value<bool>(&calcEEC)->default_value(false),"Indicate if we are calculating EEC.  Note this is potentially quite CPU intensive.")
+      ("calcEEC", po::value<bool>(&calcEEC)->default_value(false),"Indicate if we are calculating EEC.  preCalcEEC and this cannot both be true.  Note this is potentially quite CPU intensive.")
+      ("preCalcEEC", po::value<bool>(&preCalcEEC)->default_value(false),"Indicate if we are using pre-calculated EEC. calcEEC and this cannot both be true.")
       ("calcClusters", po::value<bool>(&calcClusters)->default_value(false),"Reconstruct TLVs of the topo clusters.  This is done automatically if doing qjets, foxwolfram, softdrop or EEC.")
       ("calcTauWTA21", po::value<bool>(&calcTauWTA21)->default_value(true),"Calculate TauWTA2/TauWTA1.")
+      
       ;
         
     po::options_description cmdline_options;
@@ -186,6 +190,29 @@ int main( int argc, char * argv[] ) {
 	cout << "No algorithm specified!" << std::endl;
 	return 0;
       }
+    if (vm.count("preCalcFoxWolfram") && vm.count("calcFoxWolfram"))
+    {
+      // check that pre and calc are not BOTH zero
+      bool pre = vm["preCalcFoxWolfram"].as<bool>();
+      bool calc = vm["calcFoxWolfram"].as<bool>();
+      if (pre && calc)
+	{
+	  cout << "Both pre-calculation and calculated FoxWolfram20 are set to true - change one and re-run." << endl;
+	  return 0;
+	}
+    }
+
+    if (vm.count("preCalcEEC") && vm.count("calcEEC"))
+    {
+      // check that pre and calc are not BOTH zero
+      bool pre = vm["preCalcEEC"].as<bool>();
+      bool calc = vm["calcEEC"].as<bool>();
+      if (pre && calc)
+	{
+	  cout << "Both pre-calculation and calculated EEC are set to true - change one and re-run." << endl;
+	  return 0;
+	}
+    }
 
 
 
@@ -2047,9 +2074,9 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
 
 	      // increment event counter for MC channel
 	      if (NEvents_weighted.find(mc_channel_number) != NEvents_weighted.end())
-		NEvents_weighted[mc_channel_number] += mc_event_weight;
+		NEvents_weighted[mc_channel_number] += mc_event_weight->at(0);
 	      else
-		NEvents_weighted[mc_channel_number] = mc_event_weight;
+		NEvents_weighted[mc_channel_number] = mc_event_weight->at(0);
 
 	      // initial values for the leading jet indices
 	      int chosenLeadTruthJetIndex=-99;
@@ -2214,7 +2241,7 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
 	      // if we have the mass fraction and momentum balance in the input file already
 	      else if (subjetspre)
 		{
-		  var_massdrop = var_massFraction_vec;
+		  var_massdrop = var_massFraction_vec;//(*var_Mu12_vec[jetType::GROOMED])[chosenLeadGroomedIndex];//var_massFraction_vec;
 		  var_yt = var_ktycut2_vec;
 		}
 
@@ -2269,6 +2296,7 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
 		    }
 		} // end if (calcQjets || calcFW || calcSD || calcClusters)
 
+	      // if the EEC values need to be calculated by hand
 	      if (calcEEC)
 		{
 		  //EEC:C1 - exp 2, beta 1 for truth and groomed
@@ -2284,6 +2312,13 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
 		  var_EEC_D2[jetType::TRUTH] = calculateEEC(jetType::TRUTH, 2, 3);
 		  var_EEC_D2[jetType::GROOMED] = calculateEEC(jetType::GROOMED, 2, 3);
 		} // calcEEC
+	      // if we have the ECF variables the calculations for EEC are much simpler
+	      else if (preCalcEEC)
+		{
+		  // set for truth and groomed
+		  setEEC(jetType::TRUTH, chosenLeadTruthJetIndex);
+		  setEEC(jetType::GROOMED, chosenLeadGroomedIndex);
+		}
 
 	      // make sure all of the other output variables have their values set
 	      setOutputVariables(chosenLeadTruthJetIndex, chosenLeadTopoJetIndex, chosenLeadGroomedIndex, lead_subjet, algorithmName , prefix);
@@ -2725,14 +2760,24 @@ void eraseJet(int jet)
   if (var_ZCUT12_vec[i] != NULL && var_ZCUT12_vec[i]->size() > jet)
     var_ZCUT12_vec[i]->erase(var_ZCUT12_vec[i]->begin()+jet);
 
+  if (var_Mu12_vec[i] != NULL && var_Mu12_vec[i]->size() > jet)
+    var_Mu12_vec[i]->erase(var_Mu12_vec[i]->begin()+jet);
+
   // only erase these variables if we are not calculating them
-  if (!calcFoxWolfram20)
+  if (!calcFoxWolfram20 && !preCalcFoxWolfram20)
     {
       if (var_FoxWolfram0_vec[i] != NULL && var_FoxWolfram0_vec[i]->size() > jet)
 	var_FoxWolfram0_vec[i]->erase(var_FoxWolfram0_vec[i]->begin()+jet);
       if (var_FoxWolfram2_vec[i] != NULL && var_FoxWolfram2_vec[i]->size() > jet)
 	var_FoxWolfram2_vec[i]->erase(var_FoxWolfram2_vec[i]->begin()+jet);
     }
+  else if (preCalcFoxWolfram20)
+    {
+      if (var_FoxWolfram20_vec[i] != NULL && var_FoxWolfram20_vec[i]->size() > jet)
+	var_FoxWolfram20_vec[i]->erase(var_FoxWolfram20_vec[i]->begin()+jet);
+    }
+
+
   if (!calcSoftDrop && var_SoftDropTag_vec[i] != NULL && var_SoftDropTag_vec[i]->size() > jet)
     var_SoftDropTag_vec[i]->erase(var_SoftDropTag_vec[i]->begin()+jet);
   
@@ -2968,6 +3013,8 @@ void setJetsBranches(TChain * tree, std::string &groomalgo,  std::string & groom
     tree->SetBranchAddress("nVertices", &nvtxIn);
   if (brancharray.find("averageIntPerXing") != brancharray.end() && branchmap["averageIntPerXing"])
     tree->SetBranchAddress("averageIntPerXing",&avgIntpXingIn);
+  if (brancharray.find("evt_scale1fb") != brancharray.end() && branchmap["evt_scale1fb"])
+    tree->SetBranchAddress("evt_scale1fb",&scale1fb);
 
   
   // set up the branch addresses for the lepton variables if running hvtllqq analysis
@@ -3094,17 +3141,31 @@ void setJetsBranches(TChain * tree, std::string &groomalgo,  std::string & groom
       if (!setVector(tree, brancharray, var_ZCUT12_vec.at(i), std::string(jetString+"ZCUT12") ))
 	floatvec(var_ZCUT12_vec[i]);
 
-      if (!calcFoxWolfram20)
+      if (!setVector(tree, brancharray, var_ECF2_vec.at(i), std::string(jetString+"ECF2") ))
+	floatvec(var_ECF2_vec[i]);
+      if (!setVector(tree, brancharray, var_ECF3_vec.at(i), std::string(jetString+"ECF3") ))
+	floatvec(var_ECF3_vec[i]);
+
+      if (!calcFoxWolfram20 && !preCalcFoxWolfram20)
 	{
 	  if (!setVector(tree, brancharray, var_FoxWolfram0_vec.at(i), std::string(jetString+"FoxWolfram_0") ))
 	    floatvec(var_FoxWolfram0_vec[i]);
 	  if (!setVector(tree, brancharray, var_FoxWolfram2_vec.at(i), std::string(jetString+"FoxWolfram_2") ))
 	    floatvec(var_FoxWolfram2_vec[i]);
 	}
+      else if (preCalcFoxWolfram20)
+	{
+	  if (!setVector(tree, brancharray, var_FoxWolfram20_vec.at(i), std::string(jetString+"FoxWolfram2") ))
+	    floatvec(var_FoxWolfram20_vec[i]);
+	}
+      
       if (!calcSoftDrop && !setVector(tree, brancharray, var_SoftDropTag_vec.at(i), std::string(jetString+"SoftDropTag") ))
 	intvec(var_SoftDropTag_vec[i]);
 
-
+      if (!setVector(tree,brancharray, var_Mu12_vec.at(i), std::string(jetString+"Mu12") ))
+	{
+	  floatvec(var_Mu12_vec[i]);
+	}
 
     } // end for loop over topo/truth/groom
 
@@ -3135,10 +3196,10 @@ void setJetsBranches(TChain * tree, std::string &groomalgo,  std::string & groom
   if (subjetspre) // if the sample has the pre-calculated subjet variables
     {
       if(brancharray.find(std::string(jetString+"config_massFraction"))  != brancharray.end() )
-	tree->SetBranchAddress(std::string(jetString+"config_massFraction").c_str(),&var_massFraction_vec);
+	tree->SetBranchAddress(std::string(jetString+"config_massFraction").c_str(),&var_massFraction_vec);  
       else
 	{
-	  std::cout << "branch not found: " << std::string(jetString+"config_massFraction") << std::endl;
+	  std::cout << "branch not found: " << std::string(jetString+"config_massFraction/Mu12") << std::endl;
 	  var_massFraction_vec = -99;
 	}
       if(brancharray.find(std::string(jetString+"config_ktycut2"))  != brancharray.end())
@@ -3265,11 +3326,18 @@ void initVectors()
       var_TauWTA2_vec.push_back(0);
       
       var_ZCUT12_vec.push_back(0);
-      if (!calcFoxWolfram20)
+      var_ECF2_vec.push_back(0);
+      var_ECF3_vec.push_back(0);
+      var_Mu12_vec.push_back(0);
+
+      if (!calcFoxWolfram20 && !preCalcFoxWolfram20)
 	{
 	  var_FoxWolfram0_vec.push_back(0);
 	  var_FoxWolfram2_vec.push_back(0);
 	}
+      else if (preCalcFoxWolfram20)
+	var_FoxWolfram20_vec.push_back(0);
+      
       if (!calcSoftDrop)
 	var_SoftDropTag_vec.push_back(0);
     }  
@@ -3365,11 +3433,12 @@ void setOutputVariables( int jet_idx_truth, int jet_idx_topo, int jet_idx_groome
   // set to 0 for now
   int jet_idx = 0;
   // set some of the variables that are not collections/ vectors
-  mc_event_weight_out = mc_event_weight;
+  mc_event_weight_out = mc_event_weight->at(0);
   mc_channel_number_out = mc_channel_number;
   runNumberOut = runNumberIn;
   nvtxOut = nvtxIn;
   avgIntpXingOut = avgIntpXingIn;
+  scale1fbOut = scale1fb;
 
   bool addLC = false; // some algorithms have "LC" in their name
 
@@ -3443,10 +3512,15 @@ void setOutputVariables( int jet_idx_truth, int jet_idx_topo, int jet_idx_groome
       var_TauWTA2[x]=(*var_TauWTA2_vec[x])[jet_idx];
       var_ZCUT12[x]=(*var_ZCUT12_vec[x])[jet_idx];
 
+      var_Mu12[x] = (*var_Mu12_vec[x])[jet_idx];
       // if the FoxWolfram20 and SoftDropTag variables are not being calculated, but exist in the input file, set them here
       // foxwolfram20 = foxwolfram2/foxwolfram0      
-      if (!calcFoxWolfram20)
+      if (!calcFoxWolfram20 && !preCalcFoxWolfram20)
 	var_FoxWolfram20[x] = (*var_FoxWolfram2_vec[x])[jet_idx]/(*var_FoxWolfram0_vec[x])[jet_idx];
+      else if (preCalcFoxWolfram20)
+	var_FoxWolfram20[x] = (*var_FoxWolfram20_vec[x])[jet_idx];
+
+
       if (!calcSoftDrop)
 	var_softdrop[x] = (*var_SoftDropTag_vec[x])[jet_idx];
     } // end for loop
@@ -3509,7 +3583,7 @@ void clearOutputVariables()
   var_TauWTA1.clear();
   var_TauWTA2.clear();
   var_ZCUT12.clear();
-
+  var_Mu12.clear();
   var_FoxWolfram20.clear();
   var_QjetVol.clear();
   var_softdrop.clear();
@@ -3565,6 +3639,7 @@ void resetOutputVariables()
       var_TauWTA1.push_back(-999);
       var_TauWTA2.push_back(-999);
       var_ZCUT12.push_back(-999);
+      var_Mu12.push_back(-999);
 
       var_FoxWolfram20.push_back(-999);
       var_QjetVol.push_back(-999);
@@ -3600,6 +3675,7 @@ void setOutputBranches(TTree * tree, std::string & groomalgo, std::string & groo
   tree->Branch("mc_channel_number", &mc_channel_number_out,"mc_channel_number/I");
   tree->Branch("vxp_n", &nvtxOut, "vxp_n/I");
   tree->Branch("averageIntPerXing",&avgIntpXingOut,"averageIntPerXing/F");
+  tree->Branch("scale1fb",&scale1fbOut, "scale1fb/F");
 
   for (int i = 0; i < jetType::MAX; i++) // truth, topo, groomed
     {
@@ -3690,10 +3766,15 @@ void setOutputBranches(TTree * tree, std::string & groomalgo, std::string & groo
 	tree->Branch(std::string(jetString+"TauWTA3").c_str(),&var_TauWTA3.at(i),std::string(jetString+"TauWTA3/F").c_str());
       if (useBranch(string(jetString+"ZCUT12")))
 	tree->Branch(std::string(jetString+"ZCUT12").c_str(),&var_ZCUT12.at(i),std::string(jetString+"ZCUT12/F").c_str());
+<<<<<<< HEAD
       if (useBranch(string(jetString+"ZCUT23")))
 	tree->Branch(std::string(jetString+"ZCUT23").c_str(),&var_ZCUT23.at(i),std::string(jetString+"ZCUT23/F").c_str());
       if (useBranch(string(jetString+"ZCUT34")))
 	tree->Branch(std::string(jetString+"ZCUT34").c_str(),&var_ZCUT34.at(i),std::string(jetString+"ZCUT34/F").c_str());
+=======
+      if (useBranch(string(jetString+"Mu12")))
+	tree->Branch(std::string(jetString+"Mu12").c_str(),&var_Mu12.at(i),std::string(jetString+"Mu12/F").c_str());
+>>>>>>> Added new variables to run ECF on xAOD.  Some things are broken for 8 tev now like mc_event_weight
       
 <<<<<<< HEAD
       if (useBranch(string(returnJetType(samplePrefix, groomalgo, addLC,0)+"TauWTA2/TauWTA1")))
@@ -3728,6 +3809,7 @@ void setOutputBranches(TTree * tree, std::string & groomalgo, std::string & groo
 	tree->Branch(std::string(jetString+"QJetsVol").c_str(), &var_QjetVol.at(i), std::string(jetString+"QJetsVol").c_str());
       if (useBranch(string(jetString+"FoxWolfram20")))
 	tree->Branch(std::string(jetString+"FoxWolfram20").c_str(), &var_FoxWolfram20.at(i), std::string(jetString+"FoxWolfram20").c_str());
+	
       if (useBranch(string(jetString+"SoftDrop")))
 	tree->Branch(std::string(jetString+"SoftDrop").c_str(), &var_softdrop.at(i), std::string(jetString+"SoftDrop").c_str());
       if (useBranch(string(jetString+"EEC_C1")))
@@ -3832,7 +3914,8 @@ void setAddress(TChain * tree, std::string name, std::vector<Float_t> * var_vec)
 void readWeights()
 {
   // open input file
-  ifstream wf ("weightings_input.csv");
+  std::cout << "using weights file: " << weightsfile << std::endl;
+  ifstream wf (weightsfile);
   string line;
   std::cout << "reading weights" << std::endl;
   // read all lines from file
@@ -4055,6 +4138,28 @@ double calculateEEC(int jettype, float beta, float exp)
   return Sum1*Sum2/pow(Sum3, exp);
 
 }//calculateEEC
+
+/*
+ * In some samples the EEC variables are available already.  So little calculation needs to happen, but they do need to be set still.  This is a method that does this.
+ * http://arxiv.org/abs/1411.0665  See equations 2 and 3.
+ *
+ * @params jettype Gives the index of the jet - truth/ topo or groomed
+ * @params jetidx Is the index in the jet collection
+ */
+void setEEC(int jettype, int jetidx)
+{
+  // get ecf2 and 3 from the input ntuple
+  float ecf2 = (*var_ECF2_vec[jettype])[0];
+  float ecf3 = (*var_ECF3_vec[jettype])[0];
+  // calculate the EEC values using the formulae given in the paper linked above
+  var_EEC_C1[jettype] = pow(ecf3,1)/pow(pow(ecf2,1),2);
+  var_EEC_C2[jettype] = pow(ecf3,2)/pow(pow(ecf2,2),2);
+  var_EEC_D1[jettype] = pow(ecf3,1)/pow(pow(ecf2,1),3);
+  var_EEC_D2[jettype] = pow(ecf3,2)/pow(pow(ecf2,2),3);
+
+  
+}//setEEC
+
 
 /*
  * Create TLVs containing the clusters for a given jet.
