@@ -483,7 +483,7 @@ void getMassHistograms(TTree *inputTree, TTree *inputTree1, TString groomAlgo, s
       for (int n=0; n<(*qcd_CA12_topo_pt).size(); n++){
 	TLorentzVector tempJet;
 	float emfractmp = 0.5;
-	if (xAODemfrac)
+	if (!xAODemfrac)
 	  emfractmp = (*qcd_CA12_topo_emfrac)[n];
 	if (emfractmp<0.99 && (*qcd_CA12_topo_pt)[n]/1000>15.0){
 	  tempJet.SetPtEtaPhiE((*qcd_CA12_topo_pt)[n], (*qcd_CA12_topo_eta)[n], (*qcd_CA12_topo_phi)[n], (*qcd_CA12_topo_E)[n]);
@@ -535,7 +535,7 @@ void getMassHistograms(TTree *inputTree, TTree *inputTree1, TString groomAlgo, s
       int chosenTopoJetIndex=-99;
       float emfractmp = 0.5;
       for (int i=0; i<(*qcd_CA12_topo_pt).size(); i++){
-	if (xAODemfrac)
+	if (!xAODemfrac)
 	  emfractmp = (*qcd_CA12_topo_emfrac)[i];
 	if (!hasTopoJet && emfractmp<0.99 && fabs((*qcd_CA12_topo_eta)[i])<1.2) {
 	  chosenTopoJetIndex=i;
@@ -593,7 +593,7 @@ void getMassHistograms(TTree *inputTree, TTree *inputTree1, TString groomAlgo, s
 
     for (int i=0; i<(*qcd_CA12_groomed_pt).size(); i++){
       float emfractmp = 0.5;
-      if (xAODemfrac)
+      if (!xAODemfrac)
 	emfractmp = (*qcd_CA12_groomed_emfrac)[i];
       if (chosenLeadTruthJetIndex>=0 && chosenLeadGroomedIndex<0 && DeltaR((*qcd_CA12_truth_eta)[chosenLeadTruthJetIndex],(*qcd_CA12_truth_phi)[chosenLeadTruthJetIndex],(*qcd_CA12_groomed_eta)[i],(*qcd_CA12_groomed_phi)[i])<0.9 && emfractmp<0.99 && fabs((*qcd_CA12_groomed_eta)[i])<1.2){
 	// && (*qcd_CA12_groomed_pt)[i]/1000>100.0 ){ 
@@ -720,7 +720,7 @@ void getMassHistograms(TTree *inputTree, TTree *inputTree1, TString groomAlgo, s
       vector<TLorentzVector> small_jets;
       for (int n=0; n<(*Wp_CA12_topo_pt).size(); n++){
 	float emfractmp = 0.5;
-	if (xAODemfrac)
+	if (!xAODemfrac)
 	  emfractmp = (*Wp_CA12_topo_emfrac)[n];
 	TLorentzVector tempJet;
 	if (emfractmp<0.99){
@@ -769,7 +769,7 @@ void getMassHistograms(TTree *inputTree, TTree *inputTree1, TString groomAlgo, s
       int chosenTopoJetIndex=-99;
       for (int i=0; i<(*Wp_CA12_topo_pt).size(); i++){
 	float emfractmp = 0.5;
-	if (xAODemfrac)
+	if (!xAODemfrac)
 	  emfractmp = (*Wp_CA12_topo_emfrac)[i];
 	if (!hasTopoJet && emfractmp<0.99 && fabs((*Wp_CA12_topo_eta)[i])<1.2) {
 	  chosenTopoJetIndex=i;
@@ -824,7 +824,7 @@ void getMassHistograms(TTree *inputTree, TTree *inputTree1, TString groomAlgo, s
     int chosenLeadGroomedIndex=-99;
     for (int i=0; i<(*Wp_CA12_groomed_pt).size(); i++){
       float emfractmp = 0.5;
-      if (xAODemfrac)
+      if (!xAODemfrac)
 	emfractmp = (*Wp_CA12_groomed_emfrac)[i]; 
       if (chosenLeadTruthJetIndex>=0 && chosenLeadGroomedIndex<0 && DeltaR((*Wp_CA12_truth_eta)[chosenLeadTruthJetIndex],(*Wp_CA12_truth_phi)[chosenLeadTruthJetIndex],(*Wp_CA12_groomed_eta)[i],(*Wp_CA12_groomed_phi)[i])<0.9 && emfractmp<0.99 && fabs((*Wp_CA12_groomed_eta)[i])<1.2){
 	//  && (*Wp_CA12_groomed_pt)[i]/1000>100.0 ){ 	
@@ -1956,10 +1956,12 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
 	  std::unordered_map<std::string,bool> current_branchmap = createBranchMap(brancharray);
 
 	  // turn off the branches we're not interested in
-	  UInt_t * found = 0;
+
+	  gROOT->ProcessLine("gErrorIgnoreLevel = 5000;");
 	  for (std::vector<std::pair<std::string, bool > >::iterator it = branches.begin(); it != branches.end(); it++)
 	    {
-	      found = 0;
+	      UInt_t * found = new UInt_t(1);// = 0;
+	      //*found = 1;
 	      // if the branch is not in this sample just skip it
 	      if (current_branchmap.find((*it).first) == current_branchmap.end())
 		continue;
@@ -2038,9 +2040,9 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
 
 	      // increment event counter for MC channel
 	      if (NEvents_weighted.find(mc_channel_number) != NEvents_weighted.end())
-		NEvents_weighted[mc_channel_number] += mc_event_weight->at(0);
+		NEvents_weighted[mc_channel_number] += mc_event_weight;//->at(0); // remove ->at(0) when running on D3PD
 	      else
-		NEvents_weighted[mc_channel_number] = mc_event_weight->at(0);
+		NEvents_weighted[mc_channel_number] = mc_event_weight;//->at(0); // remove ->at(0) when running on D3PD
 
 	      // initial values for the leading jet indices
 	      int chosenLeadTruthJetIndex=-99;
@@ -2089,7 +2091,7 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
 		    {
 		      // some samples don't have emfrac info, so this is a safeguard
 		      float emfractmp = 0.5;
-		      if (xAODemfrac)
+		      if (!xAODemfrac)
 			emfractmp = (*var_emfrac_vec[jetType::TOPO])[jet_i];
 		      // check quality
 		      if (!hasTopoJet && emfractmp<0.99 && fabs((*var_eta_vec[jetType::TOPO])[jet_i])<1.2) 
@@ -2119,7 +2121,24 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
 	      
 	      // if truth match on topo jets was done, leave as is, otherwise use 0
 	      chosenLeadTruthJetIndex = algorithmType.find("truthmatch") != std::string::npos ? chosenLeadTruthJetIndex : 0;
-
+	      if (chosenLeadTruthJetIndex == 0)
+		{
+		  float maxpt = 0;
+		  int count = 0;
+		  for (vector<float>::iterator it = (*var_pt_vec[jetType::TRUTH]).begin(); it != (*var_pt_vec[jetType::TRUTH]).end() ; it++)
+		    {
+		      if ((*it)>maxpt)
+			{
+			  maxpt = (*it);
+			  chosenLeadTruthJetIndex = count;
+			}
+		      count+=1;
+		    }
+		}
+	      
+	      if (chosenLeadTruthJetIndex > 0)
+		std::cout << "Found new leading truth jet!!!!" << std::endl;
+	      
 	      // veto the event if we have no good truth jets.
 	      if (chosenLeadTruthJetIndex < 0)
 		continue;
@@ -2129,10 +2148,11 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
 		{
 		  // emfrac is not always available
 		  float emfractmp = 0.5;
-		  if (xAODemfrac)
+		  if (!xAODemfrac)
 		    emfractmp = (*var_emfrac_vec[jetType::GROOMED])[jet_i];
 		  // truth match on dR with some eta and emfrac cuts
-		  if (chosenLeadGroomedIndex<0 && DeltaR((*var_eta_vec[jetType::TRUTH])[chosenLeadTruthJetIndex],(*var_phi_vec[jetType::TRUTH])[chosenLeadTruthJetIndex],(*var_eta_vec[jetType::GROOMED])[jet_i],(*var_phi_vec[jetType::GROOMED])[jet_i])<0.9 && emfractmp<0.99 && fabs((*var_eta_vec[jetType::GROOMED])[jet_i])<1.2)
+		  // is the dR < 0.75 ot 0.9???
+		  if (chosenLeadGroomedIndex<0 && DeltaR((*var_eta_vec[jetType::TRUTH])[chosenLeadTruthJetIndex],(*var_phi_vec[jetType::TRUTH])[chosenLeadTruthJetIndex],(*var_eta_vec[jetType::GROOMED])[jet_i],(*var_phi_vec[jetType::GROOMED])[jet_i])<(0.75*radius) && emfractmp<0.99 && fabs((*var_eta_vec[jetType::GROOMED])[jet_i])<1.2)
 		    {
 		      chosenLeadGroomedIndex=jet_i;
 		      continue;
@@ -2151,7 +2171,8 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
 
 	      // set the mass to the leading groomed jet
 	      mass = (*var_m_vec[2])[chosenLeadGroomedIndex]/1000.0 ;
-
+	      if (mass < 0.0) // not sure why this happens, but it seems to happen
+		continue;
 	      // if we are not applying a mass window we do not apply any mass cuts
 	      if (applyMassWindow && (mass > mass_max && mass < mass_min))
 		{
@@ -2218,14 +2239,21 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
 	      if (calcTauWTA21)//useBranch(string("TauWTA2TauWTA1"),true) && useBranch(string("TauWTA2"), true) && useBranch(string("TauWTA1"), true) )
 		{
 		  // tauwta21 for truth, topo and groomed
-		  if (var_TauWTA1_vec[0] != NULL && var_TauWTA2_vec[0] != NULL)
+		  // veto events which have buggy values
+		  if ((*var_TauWTA1_vec[0])[chosenLeadTruthJetIndex] > 0 && (*var_TauWTA2_vec[0])[chosenLeadTruthJetIndex] > 0)
 		    var_TauWTA2TauWTA1[0]=(*var_TauWTA2_vec[0])[chosenLeadTruthJetIndex]/(*var_TauWTA1_vec[0])[chosenLeadTruthJetIndex];
-		  if (var_TauWTA1_vec[2] != NULL && var_TauWTA2_vec[2] != NULL)
+		  else
+		    var_TauWTA2TauWTA1[0]=-999;
+		  if ((*var_TauWTA1_vec[2])[chosenLeadGroomedIndex] > 0 && (*var_TauWTA2_vec[2])[chosenLeadGroomedIndex] > 0)
 		    var_TauWTA2TauWTA1[2]=(*var_TauWTA2_vec[2])[chosenLeadGroomedIndex]/(*var_TauWTA1_vec[2])[chosenLeadGroomedIndex];
+		  else
+		    var_TauWTA2TauWTA1[2]=-999;
 		  if (chosenLeadTopoJetIndex == -99)
 		    var_TauWTA2TauWTA1[1]=-99;
-		  else if (var_TauWTA1_vec[1] != NULL && var_TauWTA2_vec[1] != NULL)
+		  else if ((*var_TauWTA1_vec[1])[chosenLeadTopoJetIndex] > 0 && (*var_TauWTA2_vec[1])[chosenLeadTopoJetIndex] > 0)
 		    var_TauWTA2TauWTA1[1]=(*var_TauWTA2_vec[1])[chosenLeadTopoJetIndex]/(*var_TauWTA1_vec[1])[chosenLeadTopoJetIndex];
+		  else
+		    var_TauWTA2TauWTA1[1]=-999;
 		}
 		
 
@@ -2233,7 +2261,7 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
 	      // the following need clusters if they are being calculated
 	      if (calcQJets || calcFoxWolfram20 || calcSoftDrop || calcClusters)
 		{
-		  std::cout << "calculating clusters" << std::endl;
+		  //std::cout << "calculating clusters" << std::endl;
 		  // set up a vector<TLV> to store the cluster information
 		  std::vector<TLorentzVector> groomedclusters;
 		  bool runGroomedClusters = false;
@@ -2264,17 +2292,17 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
 	      if (calcEEC)
 		{
 		  //EEC:C1 - exp 2, beta 1 for truth and groomed
-		  var_EEC_C1[jetType::TRUTH] = calculateEEC(jetType::TRUTH, 1, 2);
-		  var_EEC_C1[jetType::GROOMED] = calculateEEC(jetType::TRUTH, 1, 2);
+		  var_EEC_C2_1[jetType::TRUTH] = calculateEEC(jetType::TRUTH, 1, 2);
+		  var_EEC_C2_1[jetType::GROOMED] = calculateEEC(jetType::TRUTH, 1, 2);
 		  //EEC:C2 - exp 2, beta 2 for truth and groomed
-		  var_EEC_C2[jetType::TRUTH] = calculateEEC(jetType::TRUTH, 2, 2);
-		  var_EEC_C2[jetType::GROOMED] = calculateEEC(jetType::GROOMED, 2, 2);
+		  var_EEC_C2_2[jetType::TRUTH] = calculateEEC(jetType::TRUTH, 2, 2);
+		  var_EEC_C2_2[jetType::GROOMED] = calculateEEC(jetType::GROOMED, 2, 2);
 		  //EEC:D1 - exp 3, beta 1 for truth and groomed
-		  var_EEC_D1[jetType::TRUTH] = calculateEEC(jetType::TRUTH, 1, 3);
-		  var_EEC_D1[jetType::GROOMED] = calculateEEC(jetType::GROOMED, 1, 3);
+		  var_EEC_D2_1[jetType::TRUTH] = calculateEEC(jetType::TRUTH, 1, 3);
+		  var_EEC_D2_1[jetType::GROOMED] = calculateEEC(jetType::GROOMED, 1, 3);
 		  //EEC:D2 - exp3, beta 2 for truth and groomed
-		  var_EEC_D2[jetType::TRUTH] = calculateEEC(jetType::TRUTH, 2, 3);
-		  var_EEC_D2[jetType::GROOMED] = calculateEEC(jetType::GROOMED, 2, 3);
+		  var_EEC_D2_2[jetType::TRUTH] = calculateEEC(jetType::TRUTH, 2, 3);
+		  var_EEC_D2_2[jetType::GROOMED] = calculateEEC(jetType::GROOMED, 2, 3);
 		} // calcEEC
 	      // if we have the ECF variables the calculations for EEC are much simpler
 	      else if (preCalcEEC)
@@ -3030,11 +3058,10 @@ void setJetsBranches(TChain * tree, std::string &groomalgo,  std::string & groom
       if (!setVector(tree, brancharray, var_mu_charge_vec, "mu_charge"))
 	floatvec(var_mu_charge_vec);
       //var_mu_charge_vec = floatvec();
+
+
     }
 
-  // there is only yfilt stored for groomed jets
-  if (!setVector(tree, brancharray, var_YFilt_vec, std::string(returnJetType(samplePrefix, groomalgo, addLC,2)+"YFilt") ))
-    floatvec(var_YFilt_vec);
 
   // loop through the truth, toppo and groomed jets and set up the branches for the different variables
   for (int i = 0; i < jetType::MAX; i++) // truth, topo, groomed
@@ -3105,6 +3132,8 @@ void setJetsBranches(TChain * tree, std::string &groomalgo,  std::string & groom
       if (!setVector(tree, brancharray, var_ZCUT12_vec.at(i), std::string(jetString+"ZCUT12") ))
 	floatvec(var_ZCUT12_vec[i]);
 
+      if (!setVector(tree, brancharray, var_ECF1_vec.at(i), std::string(jetString+"ECF1") ))
+	floatvec(var_ECF1_vec[i]);
       if (!setVector(tree, brancharray, var_ECF2_vec.at(i), std::string(jetString+"ECF2") ))
 	floatvec(var_ECF2_vec[i]);
       if (!setVector(tree, brancharray, var_ECF3_vec.at(i), std::string(jetString+"ECF3") ))
@@ -3131,7 +3160,15 @@ void setJetsBranches(TChain * tree, std::string &groomalgo,  std::string & groom
 	  floatvec(var_Mu12_vec[i]);
 	}
 
+
+
     } // end for loop over topo/truth/groom
+
+  
+      // there is only yfilt stored for groomed jets
+  std::string jetstring = returnJetType(samplePrefix, groomalgo, addLC,2); //set to groomed
+  if (!setVector(tree, brancharray, var_YFilt_vec, std::string(jetstring+"YFilt") ))
+    floatvec(var_YFilt_vec);
 
 
 
@@ -3290,9 +3327,11 @@ void initVectors()
       var_TauWTA2_vec.push_back(0);
       
       var_ZCUT12_vec.push_back(0);
+      var_ECF1_vec.push_back(0);
       var_ECF2_vec.push_back(0);
       var_ECF3_vec.push_back(0);
       var_Mu12_vec.push_back(0);
+      
 
       if (!calcFoxWolfram20 && !preCalcFoxWolfram20)
 	{
@@ -3397,7 +3436,7 @@ void setOutputVariables( int jet_idx_truth, int jet_idx_topo, int jet_idx_groome
   // set to 0 for now
   int jet_idx = 0;
   // set some of the variables that are not collections/ vectors
-  mc_event_weight_out = mc_event_weight->at(0);
+  mc_event_weight_out = mc_event_weight;//->at(0);// remove ->at(0) when running on D3PD
   mc_channel_number_out = mc_channel_number;
   runNumberOut = runNumberIn;
   nvtxOut = nvtxIn;
@@ -3425,9 +3464,6 @@ void setOutputVariables( int jet_idx_truth, int jet_idx_topo, int jet_idx_groome
       var_xs = xs[mc_channel_number];
     }
 
-  // yfilt only exists for groomed jets
-  if (var_YFilt_vec != NULL)
-    var_YFilt=(*var_YFilt_vec)[jet_idx];
 
   // loop through the different types of jets and set the output variables
   for (int x = 0; x < jetType::MAX ; x++)
@@ -3456,7 +3492,7 @@ void setOutputVariables( int jet_idx_truth, int jet_idx_topo, int jet_idx_groome
       var_m[x]=(*var_m_vec[x])[jet_idx];
       var_eta[x]=(*var_eta_vec[x])[jet_idx];
       var_phi[x]=(*var_phi_vec[x])[jet_idx];
-      if (x!=0 && xAODemfrac && var_emfrac_vec[x] != NULL)//useBranch(string(jetString +"emfrac")))
+      if (x!=0 && !xAODemfrac && var_emfrac_vec[x] != NULL)//useBranch(string(jetString +"emfrac")))
 	var_emfrac[x]=(*var_emfrac_vec[x])[jet_idx];
       var_Tau1[x]=(*var_Tau1_vec[x])[jet_idx];
       var_Tau2[x]=(*var_Tau2_vec[x])[jet_idx];
@@ -3487,7 +3523,13 @@ void setOutputVariables( int jet_idx_truth, int jet_idx_topo, int jet_idx_groome
 
       if (!calcSoftDrop)
 	var_softdrop[x] = (*var_SoftDropTag_vec[x])[jet_idx];
+
+
     } // end for loop
+
+      // yfilt only exists for groomed jets
+  if (var_YFilt_vec != NULL)
+    var_YFilt=(*var_YFilt_vec)[jet_idx_groomed];
  
   // only store this for groomed jets
   if (subjetscalc)
@@ -3551,10 +3593,10 @@ void clearOutputVariables()
   var_FoxWolfram20.clear();
   var_QjetVol.clear();
   var_softdrop.clear();
-  var_EEC_C1.clear();
-  var_EEC_C2.clear();
-  var_EEC_D1.clear();
-  var_EEC_D2.clear();
+  var_EEC_C2_1.clear();
+  var_EEC_C2_2.clear();
+  var_EEC_D2_1.clear();
+  var_EEC_D2_2.clear();
 
   var_leptons.clear();
   var_ptcone20.clear();
@@ -3608,10 +3650,10 @@ void resetOutputVariables()
       var_FoxWolfram20.push_back(-999);
       var_QjetVol.push_back(-999);
       var_softdrop.push_back(-999);
-      var_EEC_C1.push_back(-999);
-      var_EEC_C2.push_back(-999);
-      var_EEC_D1.push_back(-999);
-      var_EEC_D2.push_back(-999);
+      var_EEC_C2_1.push_back(-999);
+      var_EEC_C2_2.push_back(-999);
+      var_EEC_D2_1.push_back(-999);
+      var_EEC_D2_2.push_back(-999);
 
 
     }
@@ -3675,8 +3717,7 @@ void setOutputBranches(TTree * tree, std::string & groomalgo, std::string & groo
 	tree->Branch(std::string(jetString+"Angularity").c_str(),&var_Angularity.at(i),std::string(jetString+"Angularity/F").c_str());
 	  
 
-      if (useBranch(string(jetString+"YFilt")))
-      tree->Branch(std::string(jetString+"YFilt").c_str(),&var_YFilt,std::string(jetString+"YFilt/F").c_str());
+
 
 
       if (useBranch(string(jetString+"Aplanarity")))
@@ -3698,12 +3739,6 @@ void setOutputBranches(TTree * tree, std::string & groomalgo, std::string & groo
       if (useBranch(string(jetString+"Mu12")))
 	tree->Branch(std::string(jetString+"Mu12").c_str(),&var_Mu12.at(i),std::string(jetString+"Mu12/F").c_str());
       
-      if (useBranch(string(returnJetType(samplePrefix, groomalgo, addLC,0)+"TauWTA2TauWTA1")))
-	tree->Branch(std::string(returnJetType(samplePrefix, groomalgo, addLC,0)+"TauWTA2TauWTA1").c_str(),&var_TauWTA2TauWTA1.at(0),std::string(jetString+"TauWTA2TauWTA1/F").c_str());
-      if (useBranch(string(returnJetType(samplePrefix, groomalgo, addLC,1)+"TauWTA2TauWTA1")))
-	tree->Branch(std::string(returnJetType(samplePrefix, groomalgo, addLC,1)+"TauWTA2TauWTA1").c_str(),&var_TauWTA2TauWTA1.at(1),std::string(jetString+"TauWTA2TauWTA1/F").c_str());
-      if (useBranch(string(jetString+"TauWTA2TauWTA1")))
-	tree->Branch(std::string(jetString+"TauWTA2TauWTA1").c_str(),&var_TauWTA2TauWTA1.at(2),std::string(jetString+"TauWTA2TauWTA1/F").c_str());  
 
 
       if (useBranch(string(jetString+"QJetsVol")))
@@ -3713,24 +3748,43 @@ void setOutputBranches(TTree * tree, std::string & groomalgo, std::string & groo
 	
       if (useBranch(string(jetString+"SoftDrop")))
 	tree->Branch(std::string(jetString+"SoftDrop").c_str(), &var_softdrop.at(i), std::string(jetString+"SoftDrop").c_str());
-      if (useBranch(string(jetString+"EEC_C1")))
-	tree->Branch(std::string(jetString+"EEC_C1").c_str(), &var_EEC_C1.at(i), std::string(jetString+"EEC_C1").c_str());
-      if (useBranch(string(jetString+"EEC_C2")))
-	tree->Branch(std::string(jetString+"EEC_C2").c_str(), &var_EEC_C2.at(i), std::string(jetString+"EEC_C2").c_str());
-      if (useBranch(string(jetString+"EEC_D1")))
-	tree->Branch(std::string(jetString+"EEC_D1").c_str(), &var_EEC_D1.at(i), std::string(jetString+"EEC_D1").c_str());
-      if (useBranch(string(jetString+"EEC_D2")))
-	tree->Branch(std::string(jetString+"EEC_D2").c_str(), &var_EEC_D2.at(i), std::string(jetString+"EEC_D2").c_str());
+      if (useBranch(string(jetString+"EEC_C2_1")))
+	tree->Branch(std::string(jetString+"EEC_C2_1").c_str(), &var_EEC_C2_1.at(i), std::string(jetString+"EEC_C2_1").c_str());
+      if (useBranch(string(jetString+"EEC_C2_2")))
+	tree->Branch(std::string(jetString+"EEC_C2_2").c_str(), &var_EEC_C2_2.at(i), std::string(jetString+"EEC_C2_2").c_str());
+      if (useBranch(string(jetString+"EEC_D2_1")))
+	tree->Branch(std::string(jetString+"EEC_D2_1").c_str(), &var_EEC_D2_1.at(i), std::string(jetString+"EEC_D2_1").c_str());
+      if (useBranch(string(jetString+"EEC_D2_2")))
+	tree->Branch(std::string(jetString+"EEC_D2_2").c_str(), &var_EEC_D2_2.at(i), std::string(jetString+"EEC_D2_2").c_str());
 
-      // add a calculated variable Tau2/Tau1
-      if (useBranch(string(returnJetType(samplePrefix, groomalgo, addLC,0)+"Tau21")))
-	tree->Branch(std::string(returnJetType(samplePrefix, groomalgo, addLC,0)+"Tau21").c_str(),&var_Tau21.at(0),std::string(jetString+"Tau21/F").c_str());
-      if (useBranch(string(returnJetType(samplePrefix, groomalgo, addLC,0)+"Tau21")))
-	tree->Branch(std::string(returnJetType(samplePrefix, groomalgo, addLC,1)+"Tau21").c_str(),&var_Tau21.at(1),std::string(jetString+"Tau21/F").c_str());
-      if (useBranch(string(jetString+"Tau21")))
-	tree->Branch(std::string(jetString+"Tau21").c_str(),&var_Tau21.at(2),std::string(jetString+"Tau21/F").c_str());  
 
     }
+  string jetstring = returnJetType(samplePrefix, groomalgo, addLC,0);
+  if (useBranch(string(jetstring+"TauWTA2TauWTA1")))
+    tree->Branch(std::string(jetstring+"TauWTA2TauWTA1").c_str(),&var_TauWTA2TauWTA1.at(0),std::string(jetstring+"TauWTA2TauWTA1/F").c_str());
+  jetstring = returnJetType(samplePrefix, groomalgo, addLC,1);
+  if (useBranch(string(jetstring+"TauWTA2TauWTA1")))
+    tree->Branch(std::string(jetstring+"TauWTA2TauWTA1").c_str(),&var_TauWTA2TauWTA1.at(1),std::string(jetstring+"TauWTA2TauWTA1/F").c_str());
+  jetstring = returnJetType(samplePrefix, groomalgo, addLC,2);
+  if (useBranch(string(jetstring+"TauWTA2TauWTA1")))
+    tree->Branch(std::string(jetstring+"TauWTA2TauWTA1").c_str(),&var_TauWTA2TauWTA1.at(2),std::string(jetstring+"TauWTA2TauWTA1/F").c_str());  
+
+  // add a calculated variable Tau2/Tau1
+  jetstring = returnJetType(samplePrefix, groomalgo, addLC,0);
+  if (useBranch(string(jetstring+"Tau21")))
+    tree->Branch(std::string(jetstring+"Tau21").c_str(),&var_Tau21.at(0),std::string(jetstring+"Tau21/F").c_str());
+  jetstring = returnJetType(samplePrefix, groomalgo, addLC,1);
+  if (useBranch(string(jetstring+"Tau21")))
+    tree->Branch(std::string(jetstring+"Tau21").c_str(),&var_Tau21.at(1),std::string(jetstring+"Tau21/F").c_str());
+  jetstring = returnJetType(samplePrefix, groomalgo, addLC,2);
+  if (useBranch(string(jetstring+"Tau21")))
+    tree->Branch(std::string(jetstring+"Tau21").c_str(),&var_Tau21.at(2),std::string(jetstring+"Tau21/F").c_str());  
+
+  // this only exists for the groomed jets
+  if (useBranch(string(jetstring+"YFilt")))
+    tree->Branch(std::string(jetstring+"YFilt").c_str(),&var_YFilt,std::string(jetstring+"YFilt/F").c_str());
+  
+
   std::string jetString = returnJetType(samplePrefix, groomalgo, addLC,jetType::GROOMED); 
   // add the lepton branches if running hvtllqq analysis
   if (hvtllqq)
@@ -4039,13 +4093,16 @@ double calculateEEC(int jettype, float beta, float exp)
 void setEEC(int jettype, int jetidx)
 {
   // get ecf2 and 3 from the input ntuple
+  float ecf1 = (*var_ECF1_vec[jettype])[0];
   float ecf2 = (*var_ECF2_vec[jettype])[0];
   float ecf3 = (*var_ECF3_vec[jettype])[0];
+  float e2 = ecf2/(ecf1*ecf1);
+  float e3 = ecf3/(pow(ecf1,3));
   // calculate the EEC values using the formulae given in the paper linked above
-  var_EEC_C1[jettype] = pow(ecf3,1)/pow(pow(ecf2,1),2);
-  var_EEC_C2[jettype] = pow(ecf3,2)/pow(pow(ecf2,2),2);
-  var_EEC_D1[jettype] = pow(ecf3,1)/pow(pow(ecf2,1),3);
-  var_EEC_D2[jettype] = pow(ecf3,2)/pow(pow(ecf2,2),3);
+  var_EEC_C2_1[jettype] = pow(e3,1)/pow(pow(e2,1),2);
+  var_EEC_C2_2[jettype] = pow(e3,2)/pow(pow(e2,2),2);
+  var_EEC_D2_1[jettype] = pow(e3,1)/pow(pow(e2,1),3);
+  var_EEC_D2_2[jettype] = pow(e3,2)/pow(pow(e2,2),3);
 
   
 }//setEEC

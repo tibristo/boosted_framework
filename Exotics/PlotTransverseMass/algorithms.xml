@@ -306,6 +306,43 @@
 </algorithm>
 
 <algorithm>
+  <Algorithm>CamKt10LCTopoPrunedCaRcutFactor50Zcut15</Algorithm>
+  <GroomingAlgorithm>TopoPrunedCaRcutFactor50Zcut15</GroomingAlgorithm>
+  <JetAlgorithm>CamKt10</JetAlgorithm>
+  <Abbreviation>PrunRf50Z15</Abbreviation>
+  <PlotLabel>CA10 Pruned jets, R_{cut}=0.5, Z_{cut}=0.15</PlotLabel>
+  <Type>pruned</Type>
+  <SubjetGroomingAlgorithm></SubjetGroomingAlgorithm>
+  <SubjetIndexBranch></SubjetIndexBranch>
+  <BinLabel>CA10 Pruned (0.5, 0.1)</BinLabel>
+</algorithm>
+
+<algorithm>
+  <Algorithm>CamKt10LCTopoPrunedCaRCutFactor50Zcut15</Algorithm>
+  <GroomingAlgorithm>TopoPrunedCaRCutFactor50Zcut15</GroomingAlgorithm>
+  <JetAlgorithm>CamKt10</JetAlgorithm>
+  <Abbreviation>PrunRf50Z15</Abbreviation>
+  <PlotLabel>CA10 Pruned jets, R_{cut}=0.5, Z_{cut}=0.15</PlotLabel>
+  <Type>pruned</Type>
+  <SubjetGroomingAlgorithm></SubjetGroomingAlgorithm>
+  <SubjetIndexBranch></SubjetIndexBranch>
+  <BinLabel>CA10 Pruned (0.5, 0.1)</BinLabel>
+</algorithm>
+
+
+<algorithm>
+  <Algorithm>CamKt10LCTopoPrunedCaRcutFactor50Zcut15</Algorithm>
+  <GroomingAlgorithm>TopoPrunedCaRcutFactor50Zcut15</GroomingAlgorithm>
+  <JetAlgorithm>CamKt10</JetAlgorithm>
+  <Abbreviation>PrunRf50Z15</Abbreviation>
+  <PlotLabel>CA10 Pruned jets, R_{cut}=0.5, Z_{cut}=0.15</PlotLabel>
+  <Type>pruned</Type>
+  <SubjetGroomingAlgorithm></SubjetGroomingAlgorithm>
+  <SubjetIndexBranch></SubjetIndexBranch>
+  <BinLabel>CA10 Pruned (0.5, 0.1)</BinLabel>
+</algorithm>
+
+<algorithm>
   <Algorithm>CamKt12LCTopoPrunedCaRcutFactor50Zcut10</Algorithm>
   <GroomingAlgorithm>TopoPrunedCaRcutFactor50Zcut10</GroomingAlgorithm>
   <JetAlgorithm>CamKt12</JetAlgorithm>
