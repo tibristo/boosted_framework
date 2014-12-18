@@ -18,6 +18,7 @@
 #include <cmath>
 
 #include "TROOT.h"
+#include "TError.h"
 #include "TInterpreter.h"
 #include "TPostScript.h"
 #include "TCanvas.h"
@@ -270,15 +271,18 @@ TH1F * windowsVsPt;
 Float_t normalisation = 1.0;
 Int_t NEvents = 0;
 std::map<long, float> NEvents_weighted;
-//Float_t mc_event_weight = 1.0;
-std::vector<float> * mc_event_weight = 0;
+// Change this to Float_t for D3PD, vector<float>* for xaod
+Float_t mc_event_weight = 1.0;
+//std::vector<float> * mc_event_weight = 0;
 Float_t mc_event_weight_out = 1.0;
 UInt_t mc_channel_number  = 0;
 UInt_t mc_channel_number_out  = 0;
 UInt_t runNumberOut = 0;
 UInt_t runNumberIn = 0;
 Float_t avgIntpXingOut = 0;
-UInt_t avgIntpXingIn = 0;
+// Change this to Float_t for D3PD, UInt_t for xaod
+//UInt_t avgIntpXingIn = 0;
+Float_t avgIntpXingIn = 0;
 // xaod expects UInt_t, but D3PDs Int_t. This is annoying and will cause problems
 UInt_t nvtxIn = 0;
 UInt_t nvtxOut = 0;
@@ -527,6 +531,7 @@ std::vector<std::vector<float> *> var_FoxWolfram2_vec;
 std::vector<std::vector<float> *> var_FoxWolfram20_vec;
 std::vector<std::vector<int> *> var_SoftDropTag_vec;
 <<<<<<< HEAD
+<<<<<<< HEAD
 
 
 >>>>>>> Added FoxWolfram and SoftDropTag from the D3PD as another option instead of calculating them by hand.
@@ -535,6 +540,14 @@ std::vector<std::vector<float> * > var_ECF2_vec;
 std::vector<std::vector<float> * > var_ECF3_vec;
 std::vector< std::vector<float> *> var_Mu12_vec;
 >>>>>>> Added new variables to run ECF on xAOD.  Some things are broken for 8 tev now like mc_event_weight
+=======
+std::vector<std::vector<float> *> var_ECF1_vec;
+std::vector<std::vector<float> *> var_ECF2_vec;
+std::vector<std::vector<float> *> var_ECF3_vec;
+std::vector<std::vector<float> *> var_Mu12_vec;
+std::vector<float> * var_YFilt_vec;
+
+>>>>>>> Fixed the emfrac bug for llqq samples
 
 // reading in jet clusters
 Int_t var_cl_n;
@@ -543,7 +556,7 @@ std::vector<float> * var_cl_eta_vec;
 std::vector<float> * var_cl_phi_vec;
 
 // extra variables to read in
-std::vector<float> * var_YFilt_vec;
+
 
 Float_t var_massFraction_vec;
 Float_t var_ktycut2_vec;
@@ -662,10 +675,10 @@ std::vector<Float_t> var_VoronoiArea;
 std::vector<Float_t> var_QjetVol;
 std::vector<Float_t> var_FoxWolfram20;
 std::vector<Int_t> var_softdrop;
-std::vector<Float_t> var_EEC_C1;
-std::vector<Float_t> var_EEC_C2;
-std::vector<Float_t> var_EEC_D1;
-std::vector<Float_t> var_EEC_D2;
+std::vector<Float_t> var_EEC_C2_1;
+std::vector<Float_t> var_EEC_C2_2;
+std::vector<Float_t> var_EEC_D2_1;
+std::vector<Float_t> var_EEC_D2_2;
 
 // store the weights for the samples
 Float_t var_k_factor;
