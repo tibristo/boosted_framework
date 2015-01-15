@@ -122,6 +122,7 @@ vector<double> calculateQJetsVol(vector<TLorentzVector> & EventParticles, float 
 double calculateQJetsVol_v2(vector<TLorentzVector> & clusters);
 bool createClusters(int jettype, int jetidx, vector<TLorentzVector> & cluster);
 double calculateEEC(int jettype, float beta=0.3, float exp=2);
+void calculateECF(vector<TLorentzVector> & clusters, int jettype, float beta=0.3);
 void setEEC(int jettype, int jetidx);
 void setRadius(std::string & prefix);
 void printTLV(vector<TLorentzVector> & tlv);
@@ -233,7 +234,7 @@ bool recluster = false;
 bool xAODJets = false;
 bool xAODemfrac = false;
 bool hvtllqq = false;
-
+bool xAOD = false;
 
 float radius = 1.0;
 int nqjets = 25;
@@ -272,8 +273,8 @@ Float_t normalisation = 1.0;
 Int_t NEvents = 0;
 std::map<long, float> NEvents_weighted;
 // Change this to Float_t for D3PD, vector<float>* for xaod
-Float_t mc_event_weight = 1.0;
-//std::vector<float> * mc_event_weight = 0;
+Float_t mc_event_weight_d3pd = 1.0;
+std::vector<float> * mc_event_weight_xaod = 0;
 Float_t mc_event_weight_out = 1.0;
 UInt_t mc_channel_number  = 0;
 UInt_t mc_channel_number_out  = 0;
@@ -281,8 +282,8 @@ UInt_t runNumberOut = 0;
 UInt_t runNumberIn = 0;
 Float_t avgIntpXingOut = 0;
 // Change this to Float_t for D3PD, UInt_t for xaod
-//UInt_t avgIntpXingIn = 0;
-Float_t avgIntpXingIn = 0;
+UInt_t avgIntpXingIn_xaod = 0;
+Float_t avgIntpXingIn_d3pd = 0;
 // xaod expects UInt_t, but D3PDs Int_t. This is annoying and will cause problems
 UInt_t nvtxIn = 0;
 UInt_t nvtxOut = 0;

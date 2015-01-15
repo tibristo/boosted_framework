@@ -109,6 +109,7 @@ int main( int argc, char * argv[] ) {
       ("preCalcEEC", po::value<bool>(&preCalcEEC)->default_value(false),"Indicate if we are using pre-calculated EEC. calcEEC and this cannot both be true.")
       ("calcClusters", po::value<bool>(&calcClusters)->default_value(false),"Reconstruct TLVs of the topo clusters.  This is done automatically if doing qjets, foxwolfram, softdrop or EEC.")
       ("calcTauWTA21", po::value<bool>(&calcTauWTA21)->default_value(true),"Calculate TauWTA2/TauWTA1.")
+      ("xAOD", po::value<bool>(&xAOD)->default_value(false),"Set if running on xAOD, otherwise D3PD is assumed.  This affects the way the mc_event_weight and avgIntPerXing variables are read, and if set incorrectly segfaults will occur.")
       
       ;
         
@@ -2075,10 +2076,21 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
 		std::cout << "Entry: "<< n << " / " << entries <<  std::endl;
 
 	      // increment event counter for MC channel
+	      // Note that mc_event_weight is stored differently in xaod and d3pd
 	      if (NEvents_weighted.find(mc_channel_number) != NEvents_weighted.end())
-		NEvents_weighted[mc_channel_number] += mc_event_weight;//->at(0); // remove ->at(0) when running on D3PD
+		{
+		  if (xAOD)
+		    NEvents_weighted[mc_channel_number] += mc_event_weight_xaod->at(0); // remove ->at(0) when running on D3PD
+		  else
+		    NEvents_weighted[mc_channel_number] += mc_event_weight_d3pd;// remove ->at(0) when running on D3PD
+		}
 	      else
-		NEvents_weighted[mc_channel_number] = mc_event_weight;//->at(0); // remove ->at(0) when running on D3PD
+		{
+		  if (xAOD)
+		    NEvents_weighted[mc_channel_number] = mc_event_weight_xaod->at(0); // remove ->at(0) when running on D3PD
+		  else
+		    NEvents_weighted[mc_channel_number] = mc_event_weight_d3pd; // remove ->at(0) when running on D3PD
+		}
 
 	      // initial values for the leading jet indices
 	      int chosenLeadTruthJetIndex=-99;
@@ -2294,16 +2306,16 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
 		
 
 	      // calculate cluster based variables
+	      // set up a vector<TLV> to store the cluster information
+	      std::vector<TLorentzVector> groomedclusters;
 	      // the following need clusters if they are being calculated
+	      //std::cout << "about to create some clusters!" << std::endl;		  
 	      if (calcQJets || calcFoxWolfram20 || calcSoftDrop || calcClusters)
 		{
-		  //std::cout << "calculating clusters" << std::endl;
-		  // set up a vector<TLV> to store the cluster information
-		  std::vector<TLorentzVector> groomedclusters;
 		  bool runGroomedClusters = false;
 		  // create clusters, the method returns if the cluster creation was successful
 		  runGroomedClusters = createClusters(jetType::GROOMED, chosenLeadGroomedIndex, groomedclusters);
-
+		  //std::cout << "created clusters in cluster if statement" << std::endl;
 		  if (calcQJets)
 		    {
 		      // groomed jet if clusters were found
@@ -2324,12 +2336,19 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
 		    }
 		} // end if (calcQjets || calcFW || calcSD || calcClusters)
 
-	      // if the EEC values need to be calculated by hand
+	      // if the EEC values need to be calculated by hand, unfortunately, we can
+	      // no longer do this for truth jets
 	      if (calcEEC)
 		{
+		  // first calculate the ECF variables
+		  if (groomedclusters.size() < 1)
+		    createClusters(jetType::GROOMED, chosenLeadGroomedIndex, groomedclusters);
+		  //std::cout << "created clusters in calcEEC if statement" << std::endl;		  
+		  calculateECF(groomedclusters, jetType::GROOMED);
+
 		  //EEC:C1 - exp 2, beta 1 for truth and groomed
-		  var_EEC_C2_1[jetType::TRUTH] = calculateEEC(jetType::TRUTH, 1, 2);
-		  var_EEC_C2_1[jetType::GROOMED] = calculateEEC(jetType::TRUTH, 1, 2);
+		  /*var_EEC_C2_1[jetType::TRUTH] = calculateEEC(jetType::TRUTH, 1, 2);
+		  var_EEC_C2_1[jetType::GROOMED] = calculateEEC(jetType::GROOMED, 1, 2);
 		  //EEC:C2 - exp 2, beta 2 for truth and groomed
 		  var_EEC_C2_2[jetType::TRUTH] = calculateEEC(jetType::TRUTH, 2, 2);
 		  var_EEC_C2_2[jetType::GROOMED] = calculateEEC(jetType::GROOMED, 2, 2);
@@ -2338,15 +2357,17 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
 		  var_EEC_D2_1[jetType::GROOMED] = calculateEEC(jetType::GROOMED, 1, 3);
 		  //EEC:D2 - exp3, beta 2 for truth and groomed
 		  var_EEC_D2_2[jetType::TRUTH] = calculateEEC(jetType::TRUTH, 2, 3);
-		  var_EEC_D2_2[jetType::GROOMED] = calculateEEC(jetType::GROOMED, 2, 3);
+		  var_EEC_D2_2[jetType::GROOMED] = calculateEEC(jetType::GROOMED, 2, 3);*/
 		} // calcEEC
 	      // if we have the ECF variables the calculations for EEC are much simpler
 	      else if (preCalcEEC)
 		{
 		  // set for truth and groomed
 		  setEEC(jetType::TRUTH, chosenLeadTruthJetIndex);
-		  setEEC(jetType::GROOMED, chosenLeadGroomedIndex);
+		  //setEEC(jetType::GROOMED, chosenLeadGroomedIndex);
 		}
+	      
+	      setEEC(jetType::GROOMED, chosenLeadGroomedIndex);
 
 	      // make sure all of the other output variables have their values set
 	      setOutputVariables(chosenLeadTruthJetIndex, chosenLeadTopoJetIndex, chosenLeadGroomedIndex, lead_subjet, algorithmName , prefix);
@@ -3031,7 +3052,10 @@ void setJetsBranches(TChain * tree, std::string &groomalgo,  std::string & groom
     addLC = true; // just add the LC to the name
 
   // these branches should always exist
-  tree->SetBranchAddress("mc_event_weight",&mc_event_weight);
+  if (xAOD)
+    tree->SetBranchAddress("mc_event_weight",&mc_event_weight_xaod);
+  else
+    tree->SetBranchAddress("mc_event_weight",&mc_event_weight_d3pd);
   tree->SetBranchAddress("mc_channel_number", &mc_channel_number);
 
   // as should these, but double check to make sure the branch exists in the tree
@@ -3040,7 +3064,12 @@ void setJetsBranches(TChain * tree, std::string &groomalgo,  std::string & groom
   if (brancharray.find("nVertices")  != brancharray.end() && branchmap["nVertices"])
     tree->SetBranchAddress("nVertices", &nvtxIn);
   if (brancharray.find("averageIntPerXing") != brancharray.end() && branchmap["averageIntPerXing"])
-    tree->SetBranchAddress("averageIntPerXing",&avgIntpXingIn);
+    {
+      if (xAOD)
+	tree->SetBranchAddress("averageIntPerXing",&avgIntpXingIn_xaod);
+      else
+	tree->SetBranchAddress("averageIntPerXing",&avgIntpXingIn_d3pd);
+    }
   if (brancharray.find("evt_scale1fb") != brancharray.end() && branchmap["evt_scale1fb"])
     tree->SetBranchAddress("evt_scale1fb",&scale1fb);
 
@@ -3465,18 +3494,28 @@ void setLeptonVectors()
  * @param jet_idx_groomed The index of the groomed jet being used.
  * @param subjet_idx The index of the groomed jet within the subjet collection.
  * @param groomalgo The abbreviated name of the algorithm.
- * @param groomIdx The full name of the algorithm.
+ * @param samplePrefix If it has "LC" in the name of the algorithm
  */
 void setOutputVariables( int jet_idx_truth, int jet_idx_topo, int jet_idx_groomed, int subjet_idx, std::string & groomalgo, std::string &  samplePrefix)
 {
   // set to 0 for now
   int jet_idx = 0;
   // set some of the variables that are not collections/ vectors
-  mc_event_weight_out = mc_event_weight;//->at(0);// remove ->at(0) when running on D3PD
+  // mc_event_weight and avgIntPerXing are stored differently in xaod and d3pd
+  if (xAOD)
+    {
+      mc_event_weight_out = mc_event_weight_xaod->at(0);// remove ->at(0) when running on D3PD
+      avgIntpXingOut = avgIntpXingIn_xaod;
+    }
+  else
+    {
+      mc_event_weight_out = mc_event_weight_d3pd;// remove ->at(0) when running on D3PD
+      avgIntpXingOut = avgIntpXingIn_d3pd;
+    }
   mc_channel_number_out = mc_channel_number;
   runNumberOut = runNumberIn;
   nvtxOut = nvtxIn;
-  avgIntpXingOut = avgIntpXingIn;
+
   scale1fbOut = scale1fb;
 
   bool addLC = false; // some algorithms have "LC" in their name
@@ -3520,7 +3559,7 @@ void setOutputVariables( int jet_idx_truth, int jet_idx_topo, int jet_idx_groome
       if (jet_idx == -99) // mostly just topo jets
 	continue;
       
-      string jetString = returnJetType( samplePrefix, groomalgo, addLC, x); //set to truth/ topo/ groomed;
+      //string jetString = returnJetType( samplePrefix, groomalgo, addLC, x); //set to truth/ topo/ groomed;
 
       // all of the _vec variables have a default value that is not null.
       var_E[x]=(*var_E_vec[x])[jet_idx];
@@ -3532,7 +3571,7 @@ void setOutputVariables( int jet_idx_truth, int jet_idx_topo, int jet_idx_groome
 	var_emfrac[x]=(*var_emfrac_vec[x])[jet_idx];
       var_Tau1[x]=(*var_Tau1_vec[x])[jet_idx];
       var_Tau2[x]=(*var_Tau2_vec[x])[jet_idx];
-      var_SPLIT12[x]=(*var_SPLIT12_vec[x])[jet_idx];
+      var_SPLIT12[x]=sqrt((*var_SPLIT12_vec[x])[jet_idx]);
       var_Dip12[x]=(*var_Dip12_vec[x])[jet_idx];
       var_PlanarFlow[x]=(*var_PlanarFlow_vec[x])[jet_idx];
       var_Angularity[x]=(*var_Angularity_vec[x])[jet_idx];
@@ -3565,7 +3604,15 @@ void setOutputVariables( int jet_idx_truth, int jet_idx_topo, int jet_idx_groome
 
       // yfilt only exists for groomed jets
   if (var_YFilt_vec != NULL)
-    var_YFilt=(*var_YFilt_vec)[jet_idx_groomed];
+    {
+      var_YFilt=sqrt((*var_YFilt_vec)[jet_idx_groomed]);
+      // yfilt doesn't exist in the split/filtered samples, so it needs to be derived
+      if (groomalgo.find("SplitFiltered") != std::string::npos)
+	{
+	  float calcyfilt = (*var_SPLIT12_vec[jetType::GROOMED])[jet_idx_groomed]/(*var_m_vec[jetType::GROOMED])[jet_idx_groomed];
+	  var_YFilt=sqrt(calcyfilt);
+	}
+    }
  
   // only store this for groomed jets
   if (subjetscalc)
@@ -4225,6 +4272,57 @@ double calculateEEC(int jettype, float beta, float exp)
   return Sum1*Sum2/pow(Sum3, exp);
 
 }//calculateEEC
+
+
+/*
+ * Calculate the Energy correction factors
+ * ECF1 = Sum(i) : pt(i)
+ * ECF2 = Sum(ij) : pt(i)*pt(j)* [dR(ij)]^beta
+ * ECF3 = Sum(ijk) : pt(i)*pt(j)*pt(k) * [dR(ij)dR(ik)dR(jk) ]^beta
+ *
+ * @param cons A vector<TLV> of the clusters for each jet
+ * @param jettype The jet type - truth, topo or groomed
+ * @param beta The beta value which is the power that dR is raised to in Sum1.
+ * @param exp The power that Sum3 is raised to.
+ * @return double containing eec
+ */
+void calculateECF(vector<TLorentzVector> & cons, int jettype, float beta)
+{
+  //double beta=0.3;
+  double ECF3=0;
+  for(int i=0; i<(int)cons.size(); i++){
+        for(int j=i+1; j<(int)cons.size(); j++){
+            for(int k=j+1; k<(int)cons.size(); k++){
+                ECF3 += cons.at(i).Pt()*cons.at(j).Pt()*cons.at(k).Pt() * pow( cons.at(i).DeltaR(cons.at(j)) * cons.at(i).DeltaR(cons.at(k)) * cons.at(j).DeltaR(cons.at(k)), beta );
+            }
+        }
+    }
+
+    double ECF1=0;
+    for(int i=0; i<(int)cons.size(); i++){
+        ECF1 += cons.at(i).Pt();
+    }
+
+    double ECF2=0;
+    for(int i=0; i<(int)cons.size(); i++){
+        for(int j=i+1; j<(int)cons.size(); j++){
+            ECF2 += cons.at(i).Pt()*cons.at(j).Pt() * pow( cons.at(i).DeltaR(cons.at(j)), beta );
+        }
+    }
+
+    if( ECF3==0 || ECF2==0 || ECF1==0 ){
+         cout<<"Error in eecorr calculation: something is 0"<<endl;
+
+        return;
+    }
+    else{
+	(*var_ECF1_vec[jettype])[0] = ECF1;
+	(*var_ECF2_vec[jettype])[0] = ECF2;
+	(*var_ECF3_vec[jettype])[0] = ECF3;
+        return;
+    }
+
+}//calculateECF
 
 /*
  * In some samples the EEC variables are available already.  So little calculation needs to happen, but they do need to be set still.  This is a method that does this.
