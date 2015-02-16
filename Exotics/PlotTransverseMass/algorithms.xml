@@ -159,6 +159,56 @@
   <BinLabel>CA12 Split-Filt (1.0, 0.15, 0.3)</BinLabel>
 </algorithm>
 
+
+<algorithm>
+  <Algorithm>AntiKt4LCTopoTrimmedPtFrac5SmallR20</Algorithm>
+  <GroomingAlgorithm>TopoTrimmedPtFrac5SmallR20</GroomingAlgorithm>
+  <JetAlgorithm>AntiKt4</JetAlgorithm>
+  <Abbreviation>TrimPt5r20</Abbreviation>
+  <PlotLabel>AK4 Trimmed jets, f_{cut}=0.05, R_{subjet}=0.2</PlotLabel>
+  <Type>trimmed</Type>
+  <SubjetGroomingAlgorithm>TopoTrimmedSubjetsPtFrac5SmallR20</SubjetGroomingAlgorithm>
+  <SubjetIndexBranch>jet_AntiKt4LCTopoTrimmedPtFrac5SmallR20_TrimmedSubjetsPtFrac5SmallR20_index</SubjetIndexBranch>
+  <BinLabel>AK4 Trimmed (0.05, 0.2)</BinLabel>
+</algorithm>
+
+<algorithm>
+  <Algorithm>AntiKt6LCTopoTrimmedPtFrac5SmallR20</Algorithm>
+  <GroomingAlgorithm>TopoTrimmedPtFrac5SmallR20</GroomingAlgorithm>
+  <JetAlgorithm>AntiKt6</JetAlgorithm>
+  <Abbreviation>TrimPt5r20</Abbreviation>
+  <PlotLabel>AK6 Trimmed jets, f_{cut}=0.05, R_{subjet}=0.2</PlotLabel>
+  <Type>trimmed</Type>
+  <SubjetGroomingAlgorithm>TopoTrimmedSubjetsPtFrac5SmallR20</SubjetGroomingAlgorithm>
+  <SubjetIndexBranch>jet_AntiKt6LCTopoTrimmedPtFrac5SmallR20_TrimmedSubjetsPtFrac5SmallR20_index</SubjetIndexBranch>
+  <BinLabel>AK6 Trimmed (0.05, 0.2)</BinLabel>
+</algorithm>
+
+<algorithm>
+  <Algorithm>AntiKt4LCTopoTrimmedPtFrac5SmallR30</Algorithm>
+  <GroomingAlgorithm>TopoTrimmedPtFrac5SmallR30</GroomingAlgorithm>
+  <JetAlgorithm>AntiKt4</JetAlgorithm>
+  <Abbreviation>TrimPt5r30</Abbreviation>
+  <PlotLabel>AK4 Trimmed jets, f_{cut}=0.05, R_{subjet}=0.3</PlotLabel>
+  <Type>trimmed</Type>
+  <SubjetGroomingAlgorithm>TopoTrimmedSubjetsPtFrac5SmallR30</SubjetGroomingAlgorithm>
+  <SubjetIndexBranch>jet_AntiKt4LCTopoTrimmedPtFrac5SmallR30_TrimmedSubjetsPtFrac5SmallR30_index</SubjetIndexBranch>
+  <BinLabel>AK4 Trimmed (0.05, 0.3)</BinLabel>
+</algorithm>
+
+<algorithm>
+  <Algorithm>AntiKt6LCTopoTrimmedPtFrac5SmallR30</Algorithm>
+  <GroomingAlgorithm>TopoTrimmedPtFrac5SmallR30</GroomingAlgorithm>
+  <JetAlgorithm>AntiKt6</JetAlgorithm>
+  <Abbreviation>TrimPt5r30</Abbreviation>
+  <PlotLabel>AK6 Trimmed jets, f_{cut}=0.05, R_{subjet}=0.3</PlotLabel>
+  <Type>trimmed</Type>
+  <SubjetGroomingAlgorithm>TopoTrimmedSubjetsPtFrac5SmallR30</SubjetGroomingAlgorithm>
+  <SubjetIndexBranch>jet_AntiKt6LCTopoTrimmedPtFrac5SmallR30_TrimmedSubjetsPtFrac5SmallR30_index</SubjetIndexBranch>
+  <BinLabel>AK6 Trimmed (0.05, 0.3)</BinLabel>
+</algorithm>
+
+
 <algorithm>
   <Algorithm>AntiKt10LCTopoTrimmedPtFrac5SmallR30</Algorithm>
   <GroomingAlgorithm>TopoTrimmedPtFrac5SmallR30</GroomingAlgorithm>

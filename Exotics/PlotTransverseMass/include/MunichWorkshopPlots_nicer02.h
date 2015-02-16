@@ -229,10 +229,12 @@ bool preCalcEEC = false;
 bool calcClusters = false;
 bool calcTauWTA21 = false;
 bool recluster = false;
-
+bool calcYFilt = false;
+bool truthBosonMatching = false;
+bool beta2available = false;
 
 bool xAODJets = false;
-bool xAODemfrac = false;
+//bool xAODemfrac = false;
 bool hvtllqq = false;
 bool xAOD = false;
 
@@ -545,10 +547,20 @@ std::vector< std::vector<float> *> var_Mu12_vec;
 std::vector<std::vector<float> *> var_ECF1_vec;
 std::vector<std::vector<float> *> var_ECF2_vec;
 std::vector<std::vector<float> *> var_ECF3_vec;
+std::vector<std::vector<float> *> var_ECF1_2_vec;
+std::vector<std::vector<float> *> var_ECF2_2_vec;
+std::vector<std::vector<float> *> var_ECF3_2_vec;
 std::vector<std::vector<float> *> var_Mu12_vec;
 std::vector<float> * var_YFilt_vec;
 
+<<<<<<< HEAD
 >>>>>>> Fixed the emfrac bug for llqq samples
+=======
+// reading in truth boson info when running on xAOD
+std::vector<float> * var_truthboson_eta_vec;
+std::vector<float> * var_truthboson_phi_vec;
+std::vector<int> * var_truthboson_ID_vec;
+>>>>>>> Added beta2 variables
 
 // reading in jet clusters
 Int_t var_cl_n;

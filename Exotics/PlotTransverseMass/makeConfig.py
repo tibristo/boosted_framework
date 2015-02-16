@@ -8,6 +8,7 @@ basecfg = sys.argv[2]
 inputalgorithms = sys.argv[1]
 name = sys.argv[3]
 version = sys.argv[4]
+branches_prefix = sys.argv[5]
 
 algs = open(inputalgorithms)
 algorithms = []
@@ -26,11 +27,13 @@ def stripPrefix(a):
 
 for a in algs:
     #algostrip, prefix = stripPrefix(a)
-    # remove teh jet_ at the beginning
-    a = a[4:].strip()
+    # remove the jet_ at the beginning
+    a = a.strip()
+    if a.find('jet_') != -1:
+        a = a.replace('jet_','')
     algorithms.append(a)
     #alg_prefix[algostrip.strip()] = prefix
-    outname = 'config/'+name+'_'+a+'.cfg'
+    outname = 'config/'+name+'_'+version+'_'+a+'.cfg'
     #print 'cp ' + basecfg + ' ' + outname
     subprocess.call('cp ' + basecfg + ' ' + outname,shell=True)
     repstr = 's/algorithm\ =/algorithm\ =\ '+str(a)+'/g'
@@ -41,7 +44,10 @@ for a in algs:
     #print 'grep -rl fileid ' + outname+' | xargs sed -i \''+ repfileid+'\''
     subprocess.call('grep -rl fileid ' + outname+' | xargs sed -i \''+ repfileid+'\'', shell=True)
     # add branches.txt and config file names to cfg
-    br = a+'_branches.txt'
+    if branches_prefix == '':
+        br = name+'_'+a+'_branches.txt'
+    else:
+        br = branches_prefix+'_'+a+'_branches.txt'
     conf = name+'_'+a+'.config'
     #print 'echo \'branches-file = '+br+ '\' >> '+outname
     subprocess.call('echo \'branches-file = branches/'+br+ '\' >> '+outname,shell = True)

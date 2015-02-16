@@ -99,17 +99,20 @@ int main( int argc, char * argv[] ) {
       ("weights-file", po::value<string>(&weightsfile)->default_value("weightings_input.csv"),"File with weights info - xsec, filter eff, k-factors.")
       ("branches-file", po::value<string>(&branchesFile)->default_value(""),"Name of file containing branches, otherwise Alg_branches.txt is used. Becareful with this, because if the branches are not read in then when any of them are used later on a segfault will occur, so make sure there is one that it will use.")
       ("xAOD-jets", po::value<bool>(&xAODJets)->default_value(false),"Indicate if we are running over xAOD output and there is the word Jets appended to the algorithm name.")
-      ("xAOD-emfrac", po::value<bool>(&xAODemfrac)->default_value(false),"Indicate if we are running over xAOD output and emfrac is not available.")
+      //("xAOD-emfrac", po::value<bool>(&xAODemfrac)->default_value(false),"Indicate if we are running over xAOD output and emfrac is not available.")
       ("hvtllqq-selection", po::value<bool>(&hvtllqq)->default_value(false),"Indicate if we are running the HVTllqq analysis selection.")
       ("calcQjets", po::value<bool>(&calcQJets)->default_value(false),"Indicate if we are calculating the Qjet volatility.  Note this is potentially quite CPU intensive.")
       ("calcFoxWolfram", po::value<bool>(&calcFoxWolfram20)->default_value(false),"Indicate if we are calculating FoxWolfram20.  preCalcFoxWolfram and calcFoxWolfram cannot both be true. Note this is potentially quite CPU intensive. ")
       ("preCalcFoxWolfram", po::value<bool>(&preCalcFoxWolfram20)->default_value(false),"Indicate if we are using pre-calculated FoxWolfram20. preCalcFoxWolfram and calcFoxWolfram cannot both be true.")
       ("calcSoftDrop", po::value<bool>(&calcSoftDrop)->default_value(false),"Indicate if we are calculating the soft drop tag.  Note this is potentially quite CPU intensive.")
       ("calcEEC", po::value<bool>(&calcEEC)->default_value(false),"Indicate if we are calculating EEC.  preCalcEEC and this cannot both be true.  Note this is potentially quite CPU intensive.")
+      ("calcYFilt", po::value<bool>(&calcYFilt)->default_value(false),"Indicate if we are calculating YFilt.  This is done for split filtered samples already.  If YFilt is not in the samples already set this to true.")
       ("preCalcEEC", po::value<bool>(&preCalcEEC)->default_value(false),"Indicate if we are using pre-calculated EEC. calcEEC and this cannot both be true.")
       ("calcClusters", po::value<bool>(&calcClusters)->default_value(false),"Reconstruct TLVs of the topo clusters.  This is done automatically if doing qjets, foxwolfram, softdrop or EEC.")
       ("calcTauWTA21", po::value<bool>(&calcTauWTA21)->default_value(true),"Calculate TauWTA2/TauWTA1.")
       ("xAOD", po::value<bool>(&xAOD)->default_value(false),"Set if running on xAOD, otherwise D3PD is assumed.  This affects the way the mc_event_weight and avgIntPerXing variables are read, and if set incorrectly segfaults will occur.")
+      ("truthBosonMatching", po::value<bool>(&truthBosonMatching)->default_value(false),"Set if running on xAOD.  This matches jets to their parent particles - W or Z.  This is needed since no emfrac variable exists in the xAODs.")
+      ("ecf-beta2", po::value<bool>(&beta2available)->default_value(false),"Set if running on xAOD and the ECF (beta2) values are available. Not all xAODs have this variable.")
       
       ;
         
@@ -484,7 +487,7 @@ void getMassHistograms(TTree *inputTree, TTree *inputTree1, TString groomAlgo, s
       for (int n=0; n<(*qcd_CA12_topo_pt).size(); n++){
 	TLorentzVector tempJet;
 	float emfractmp = 0.5;
-	if (!xAODemfrac)
+	if (!xAOD)//!xAODemfrac)
 	  emfractmp = (*qcd_CA12_topo_emfrac)[n];
 	if (emfractmp<0.99 && (*qcd_CA12_topo_pt)[n]/1000>15.0){
 	  tempJet.SetPtEtaPhiE((*qcd_CA12_topo_pt)[n], (*qcd_CA12_topo_eta)[n], (*qcd_CA12_topo_phi)[n], (*qcd_CA12_topo_E)[n]);
@@ -536,7 +539,7 @@ void getMassHistograms(TTree *inputTree, TTree *inputTree1, TString groomAlgo, s
       int chosenTopoJetIndex=-99;
       float emfractmp = 0.5;
       for (int i=0; i<(*qcd_CA12_topo_pt).size(); i++){
-	if (!xAODemfrac)
+	if (!xAOD)//!xAODemfrac)
 	  emfractmp = (*qcd_CA12_topo_emfrac)[i];
 	if (!hasTopoJet && emfractmp<0.99 && fabs((*qcd_CA12_topo_eta)[i])<1.2) {
 	  chosenTopoJetIndex=i;
@@ -594,7 +597,7 @@ void getMassHistograms(TTree *inputTree, TTree *inputTree1, TString groomAlgo, s
 
     for (int i=0; i<(*qcd_CA12_groomed_pt).size(); i++){
       float emfractmp = 0.5;
-      if (!xAODemfrac)
+      if (!xAOD)//xAODemfrac)
 	emfractmp = (*qcd_CA12_groomed_emfrac)[i];
       if (chosenLeadTruthJetIndex>=0 && chosenLeadGroomedIndex<0 && DeltaR((*qcd_CA12_truth_eta)[chosenLeadTruthJetIndex],(*qcd_CA12_truth_phi)[chosenLeadTruthJetIndex],(*qcd_CA12_groomed_eta)[i],(*qcd_CA12_groomed_phi)[i])<0.9 && emfractmp<0.99 && fabs((*qcd_CA12_groomed_eta)[i])<1.2){
 	// && (*qcd_CA12_groomed_pt)[i]/1000>100.0 ){ 
@@ -721,7 +724,7 @@ void getMassHistograms(TTree *inputTree, TTree *inputTree1, TString groomAlgo, s
       vector<TLorentzVector> small_jets;
       for (int n=0; n<(*Wp_CA12_topo_pt).size(); n++){
 	float emfractmp = 0.5;
-	if (!xAODemfrac)
+	if (!xAOD)//xAODemfrac)
 	  emfractmp = (*Wp_CA12_topo_emfrac)[n];
 	TLorentzVector tempJet;
 	if (emfractmp<0.99){
@@ -770,7 +773,7 @@ void getMassHistograms(TTree *inputTree, TTree *inputTree1, TString groomAlgo, s
       int chosenTopoJetIndex=-99;
       for (int i=0; i<(*Wp_CA12_topo_pt).size(); i++){
 	float emfractmp = 0.5;
-	if (!xAODemfrac)
+	if (!xAOD)//emfrac)
 	  emfractmp = (*Wp_CA12_topo_emfrac)[i];
 	if (!hasTopoJet && emfractmp<0.99 && fabs((*Wp_CA12_topo_eta)[i])<1.2) {
 	  chosenTopoJetIndex=i;
@@ -825,7 +828,7 @@ void getMassHistograms(TTree *inputTree, TTree *inputTree1, TString groomAlgo, s
     int chosenLeadGroomedIndex=-99;
     for (int i=0; i<(*Wp_CA12_groomed_pt).size(); i++){
       float emfractmp = 0.5;
-      if (!xAODemfrac)
+      if (!xAOD)//emfrac)
 	emfractmp = (*Wp_CA12_groomed_emfrac)[i]; 
       if (chosenLeadTruthJetIndex>=0 && chosenLeadGroomedIndex<0 && DeltaR((*Wp_CA12_truth_eta)[chosenLeadTruthJetIndex],(*Wp_CA12_truth_phi)[chosenLeadTruthJetIndex],(*Wp_CA12_groomed_eta)[i],(*Wp_CA12_groomed_phi)[i])<0.9 && emfractmp<0.99 && fabs((*Wp_CA12_groomed_eta)[i])<1.2){
 	//  && (*Wp_CA12_groomed_pt)[i]/1000>100.0 ){ 	
@@ -2139,7 +2142,7 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
 		    {
 		      // some samples don't have emfrac info, so this is a safeguard
 		      float emfractmp = 0.5;
-		      if (!xAODemfrac)
+		      if (!xAOD)//emfrac)
 			emfractmp = (*var_emfrac_vec[jetType::TOPO])[jet_i];
 		      // check quality
 		      if (!hasTopoJet && emfractmp<0.99 && fabs((*var_eta_vec[jetType::TOPO])[jet_i])<1.2) 
@@ -2183,20 +2186,51 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
 		      count+=1;
 		    }
 		}
-	      
+
 	      if (chosenLeadTruthJetIndex > 0)
 		std::cout << "Found new leading truth jet!!!!" << std::endl;
 	      
 	      // veto the event if we have no good truth jets.
 	      if (chosenLeadTruthJetIndex < 0)
 		continue;
+
+	      // truth boson matching done on the leading truth jet (signal only) to check if it is a Z or W boson.
+	      int truthBosonIndex = -1;
+	      if (truthBosonMatching && signal)
+		{
+		  int count = 0;
+		  for (int jet_i = 0; jet_i < (*var_truthboson_eta_vec).size(); jet_i++)
+		    {
+		      // delta R matching of truth jet with truth boson
+		      if (truthBosonIndex<0 && DeltaR((*var_eta_vec[jetType::TRUTH])[chosenLeadTruthJetIndex],(*var_phi_vec[jetType::TRUTH])[chosenLeadTruthJetIndex],(*var_truthboson_eta_vec)[jet_i],(*var_truthboson_phi_vec)[jet_i])<0.75*radius)
+			{
+			  truthBosonIndex = count;
+			}
+		      count++;
+		    }
+		  // check that a parent was found, if not, veto event
+		  if (truthBosonIndex < 0)
+		    {
+		      std::cout << "No truth boson parent found, vetoing event." << std::endl;
+		      continue;
+		    }
+		  // check that the parent is a W
+		  if (abs((*var_truthboson_ID_vec)[truthBosonIndex]) != 24)
+		    {
+		      std::cout << "Truth boson parent is not a W, vetoing event." << std::endl;
+		      continue;
+		    }
+		}
+
+	      
+
 	      // find groomed jets
 	      int chosenLeadGroomedIndex=-99;
 	      for (int jet_i=0; jet_i<(*var_pt_vec[jetType::GROOMED]).size(); jet_i++)
 		{
 		  // emfrac is not always available
 		  float emfractmp = 0.5;
-		  if (!xAODemfrac)
+		  if (!xAOD)//emfrac)
 		    emfractmp = (*var_emfrac_vec[jetType::GROOMED])[jet_i];
 		  // truth match on dR with some eta and emfrac cuts
 		  // is the dR < 0.75 ot 0.9???
@@ -2339,12 +2373,13 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
 	      // if the EEC values need to be calculated by hand, unfortunately, we can
 	      // no longer do this for truth jets
 	      if (calcEEC)
-		{
+	      {
 		  // first calculate the ECF variables
 		  if (groomedclusters.size() < 1)
 		    createClusters(jetType::GROOMED, chosenLeadGroomedIndex, groomedclusters);
 		  //std::cout << "created clusters in calcEEC if statement" << std::endl;		  
-		  calculateECF(groomedclusters, jetType::GROOMED);
+		  calculateECF(groomedclusters, jetType::GROOMED, 1);
+		  calculateECF(groomedclusters, jetType::GROOMED, 2);
 
 		  //EEC:C1 - exp 2, beta 1 for truth and groomed
 		  /*var_EEC_C2_1[jetType::TRUTH] = calculateEEC(jetType::TRUTH, 1, 2);
@@ -2358,13 +2393,12 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
 		  //EEC:D2 - exp3, beta 2 for truth and groomed
 		  var_EEC_D2_2[jetType::TRUTH] = calculateEEC(jetType::TRUTH, 2, 3);
 		  var_EEC_D2_2[jetType::GROOMED] = calculateEEC(jetType::GROOMED, 2, 3);*/
-		} // calcEEC
+		  } // calcEEC
 	      // if we have the ECF variables the calculations for EEC are much simpler
 	      else if (preCalcEEC)
 		{
 		  // set for truth and groomed
 		  setEEC(jetType::TRUTH, chosenLeadTruthJetIndex);
-		  //setEEC(jetType::GROOMED, chosenLeadGroomedIndex);
 		}
 	      
 	      setEEC(jetType::GROOMED, chosenLeadGroomedIndex);
@@ -2411,8 +2445,8 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
 	} // end loop of datatype
 
       // create the reweighting file
-      std::string fname = algorithm+fileid_global+"/" + ss.str() + ".ptweights";
-      createPtReweightFile(pt_reweight_arr[sampleType::BACKGROUND], pt_reweight_arr[sampleType::SIGNAL], fname);
+      //std::string fname = algorithm+fileid_global+"/" + ss.str() + ".ptweights";
+      //createPtReweightFile(pt_reweight_arr[sampleType::BACKGROUND], pt_reweight_arr[sampleType::SIGNAL], fname);
     } // end loop over pt bins
 
 } // makeMassWindowFile()
@@ -2511,6 +2545,13 @@ vector<std::pair<std::string,bool> > getListOfJetBranches(std::string &algorithm
       branchmap["cl_lc_pt"] = true;
       branchmap["cl_lc_eta"] = true;
       branchmap["cl_lc_phi"] = true;
+    }
+  if (truthBosonMatching)
+    {
+      std::cout << "Adding truth boson variables" << std::endl;
+      branchmap["truthBoson_eta"] = true;
+      branchmap["truthBoson_phi"] = true;
+      branchmap["truthBoson_ID"] = true;
     }
 
   // need to add some essential ones in case they get forgotten in that config file :)
@@ -3204,6 +3245,13 @@ void setJetsBranches(TChain * tree, std::string &groomalgo,  std::string & groom
       if (!setVector(tree, brancharray, var_ECF3_vec.at(i), std::string(jetString+"ECF3") ))
 	floatvec(var_ECF3_vec[i]);
 
+      if (!setVector(tree, brancharray, var_ECF1_2_vec.at(i), std::string(jetString+"ECF1_beta2") ))
+	floatvec(var_ECF1_vec[i]);
+      if (!setVector(tree, brancharray, var_ECF2_2_vec.at(i), std::string(jetString+"ECF2_beta2") ))
+	floatvec(var_ECF2_vec[i]);
+      if (!setVector(tree, brancharray, var_ECF3_2_vec.at(i), std::string(jetString+"ECF3_beta2") ))
+	floatvec(var_ECF3_vec[i]);
+
       if (!calcFoxWolfram20 && !preCalcFoxWolfram20)
 	{
 	  if (!setVector(tree, brancharray, var_FoxWolfram0_vec.at(i), std::string(jetString+"FoxWolfram_0") ))
@@ -3228,6 +3276,17 @@ void setJetsBranches(TChain * tree, std::string &groomalgo,  std::string & groom
 
 
     } // end for loop over topo/truth/groom
+
+  // setup the truth boson branches - note this is only done on the xAODs
+  //if (truthBosonMatching)
+  //{
+      if (!setVector(tree,brancharray, var_truthboson_eta_vec, std::string("truthBoson_eta")))
+	floatvec(var_truthboson_eta_vec);
+      if (!setVector(tree,brancharray, var_truthboson_phi_vec, std::string("truthBoson_phi")))
+	floatvec(var_truthboson_phi_vec);
+      if (!setVector(tree,brancharray, var_truthboson_ID_vec, std::string("truthBoson_ID")))
+	intvec(var_truthboson_ID_vec);
+      //}
 
   
       // there is only yfilt stored for groomed jets
@@ -3395,6 +3454,9 @@ void initVectors()
       var_ECF1_vec.push_back(0);
       var_ECF2_vec.push_back(0);
       var_ECF3_vec.push_back(0);
+      var_ECF1_2_vec.push_back(0);
+      var_ECF2_2_vec.push_back(0);
+      var_ECF3_2_vec.push_back(0);
       var_Mu12_vec.push_back(0);
       
 
@@ -3409,6 +3471,12 @@ void initVectors()
       if (!calcSoftDrop)
 	var_SoftDropTag_vec.push_back(0);
     }  
+
+  // truth bosons
+  var_truthboson_eta_vec = 0;
+  var_truthboson_phi_vec = 0;
+  var_truthboson_ID_vec = 0;
+
   var_YFilt_vec = 0;
   var_massFraction_vec = 0;
   var_ktycut2_vec = 0;
@@ -3512,6 +3580,7 @@ void setOutputVariables( int jet_idx_truth, int jet_idx_topo, int jet_idx_groome
       mc_event_weight_out = mc_event_weight_d3pd;// remove ->at(0) when running on D3PD
       avgIntpXingOut = avgIntpXingIn_d3pd;
     }
+
   mc_channel_number_out = mc_channel_number;
   runNumberOut = runNumberIn;
   nvtxOut = nvtxIn;
@@ -3559,19 +3628,20 @@ void setOutputVariables( int jet_idx_truth, int jet_idx_topo, int jet_idx_groome
       if (jet_idx == -99) // mostly just topo jets
 	continue;
       
-      //string jetString = returnJetType( samplePrefix, groomalgo, addLC, x); //set to truth/ topo/ groomed;
-
       // all of the _vec variables have a default value that is not null.
       var_E[x]=(*var_E_vec[x])[jet_idx];
       var_pt[x]=(*var_pt_vec[x])[jet_idx];
       var_m[x]=(*var_m_vec[x])[jet_idx];
       var_eta[x]=(*var_eta_vec[x])[jet_idx];
       var_phi[x]=(*var_phi_vec[x])[jet_idx];
-      if (x!=0 && !xAODemfrac && var_emfrac_vec[x] != NULL)//useBranch(string(jetString +"emfrac")))
+      if (x!=0 && !xAOD && var_emfrac_vec[x] != NULL)//useBranch(string(jetString +"emfrac")))
 	var_emfrac[x]=(*var_emfrac_vec[x])[jet_idx];
       var_Tau1[x]=(*var_Tau1_vec[x])[jet_idx];
       var_Tau2[x]=(*var_Tau2_vec[x])[jet_idx];
+
+ 
       var_SPLIT12[x]=sqrt((*var_SPLIT12_vec[x])[jet_idx]);
+
       var_Dip12[x]=(*var_Dip12_vec[x])[jet_idx];
       var_PlanarFlow[x]=(*var_PlanarFlow_vec[x])[jet_idx];
       var_Angularity[x]=(*var_Angularity_vec[x])[jet_idx];
@@ -3605,13 +3675,19 @@ void setOutputVariables( int jet_idx_truth, int jet_idx_topo, int jet_idx_groome
       // yfilt only exists for groomed jets
   if (var_YFilt_vec != NULL)
     {
-      var_YFilt=sqrt((*var_YFilt_vec)[jet_idx_groomed]);
+
       // yfilt doesn't exist in the split/filtered samples, so it needs to be derived
-      if (groomalgo.find("SplitFiltered") != std::string::npos)
-	{
+      //if (groomalgo.find("SplitFiltered") != std::string::npos || calcYFilt)
+      //{
 	  float calcyfilt = (*var_SPLIT12_vec[jetType::GROOMED])[jet_idx_groomed]/(*var_m_vec[jetType::GROOMED])[jet_idx_groomed];
 	  var_YFilt=sqrt(calcyfilt);
-	}
+	  //}
+      /*else
+	{
+	  std::cout << "calc yfilt sqrt" << std::endl;
+	  var_YFilt=sqrt((*var_YFilt_vec)[jet_idx_groomed]);
+	  std::cout << "calculated yfilt sqrt" << std::endl;
+	  }*/
     }
  
   // only store this for groomed jets
@@ -4289,6 +4365,9 @@ double calculateEEC(int jettype, float beta, float exp)
 void calculateECF(vector<TLorentzVector> & cons, int jettype, float beta)
 {
   //double beta=0.3;
+  // we store two beta values, so just getting the idx right to store it in the vector
+  int beta_idx = beta <= 1 ? 0 : 1;
+
   double ECF3=0;
   for(int i=0; i<(int)cons.size(); i++){
         for(int j=i+1; j<(int)cons.size(); j++){
@@ -4316,9 +4395,19 @@ void calculateECF(vector<TLorentzVector> & cons, int jettype, float beta)
         return;
     }
     else{
-	(*var_ECF1_vec[jettype])[0] = ECF1;
-	(*var_ECF2_vec[jettype])[0] = ECF2;
-	(*var_ECF3_vec[jettype])[0] = ECF3;
+      // TODO: dirty, should have the vector size sorted earlier
+      if ((*var_ECF1_vec[jettype]).size() == 1)
+	{
+	  (*var_ECF1_vec[jettype])[beta_idx] = ECF1;
+	  (*var_ECF2_vec[jettype])[beta_idx] = ECF2;
+	  (*var_ECF3_vec[jettype])[beta_idx] = ECF3;
+	}
+      else
+	{
+	  (*var_ECF1_vec[jettype]).push_back(ECF1);
+	  (*var_ECF2_vec[jettype]).push_back(ECF2);
+	  (*var_ECF3_vec[jettype]).push_back(ECF3);
+	}
         return;
     }
 
@@ -4333,17 +4422,45 @@ void calculateECF(vector<TLorentzVector> & cons, int jettype, float beta)
  */
 void setEEC(int jettype, int jetidx)
 {
-  // get ecf2 and 3 from the input ntuple
-  float ecf1 = (*var_ECF1_vec[jettype])[0];
-  float ecf2 = (*var_ECF2_vec[jettype])[0];
-  float ecf3 = (*var_ECF3_vec[jettype])[0];
-  float e2 = ecf2/(ecf1*ecf1);
-  float e3 = ecf3/(pow(ecf1,3));
+  int beta_1_idx = 0;
+  int beta_2_idx = 1;
+  // get ecf2 and 3 from the input ntuple/ calculated variables
+  float ecf1_1 = (*var_ECF1_vec[jettype])[beta_1_idx];
+  float ecf2_1 = (*var_ECF2_vec[jettype])[beta_1_idx];
+  float ecf3_1 = (*var_ECF3_vec[jettype])[beta_1_idx];
+  float e2_1 = ecf2_1/(ecf1_1*ecf1_1);
+  float e3_1 = ecf3_1/(pow(ecf1_1,3));
   // calculate the EEC values using the formulae given in the paper linked above
-  var_EEC_C2_1[jettype] = pow(e3,1)/pow(pow(e2,1),2);
-  var_EEC_C2_2[jettype] = pow(e3,2)/pow(pow(e2,2),2);
-  var_EEC_D2_1[jettype] = pow(e3,1)/pow(pow(e2,1),3);
-  var_EEC_D2_2[jettype] = pow(e3,2)/pow(pow(e2,2),3);
+  var_EEC_C2_1[jettype] = e3_1/pow(e2_1,2);
+  var_EEC_D2_1[jettype] = e3_1/pow(e2_1,3);
+
+
+  // get ecf2 and 3 from the input ntuple
+  if (!xAOD) // the beta=2 ones do not exist in the xaods and there is no cluster info
+    {
+      float ecf1_2 = (*var_ECF1_vec[jettype])[beta_2_idx];
+      float ecf2_2 = (*var_ECF2_vec[jettype])[beta_2_idx];
+      float ecf3_2 = (*var_ECF3_vec[jettype])[beta_2_idx];
+      float e2_2 = ecf2_2/(ecf1_2*ecf1_2);
+      float e3_2 = ecf3_2/(pow(ecf1_2,3));
+      var_EEC_C2_2[jettype] = e3_2/pow(e2_2,2);
+      var_EEC_D2_2[jettype] = e3_2/pow(e2_2,3);
+    }
+  else if (beta2available) // some xAODs now have the beta 2 info
+    {
+      float ecf1_2 = (*var_ECF1_2_vec[jettype])[beta_2_idx];
+      float ecf2_2 = (*var_ECF2_2_vec[jettype])[beta_2_idx];
+      float ecf3_2 = (*var_ECF3_2_vec[jettype])[beta_2_idx];
+      float e2_2 = ecf2_2/(ecf1_2*ecf1_2);
+      float e3_2 = ecf3_2/(pow(ecf1_2,3));
+      var_EEC_C2_2[jettype] = e3_2/pow(e2_2,2);
+      var_EEC_D2_2[jettype] = e3_2/pow(e2_2,3);
+    }
+  else
+    {
+      var_EEC_C2_2[jettype] = -999;
+      var_EEC_D2_2[jettype] = -999;
+    }
 
   
 }//setEEC
