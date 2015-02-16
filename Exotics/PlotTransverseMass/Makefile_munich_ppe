@@ -25,18 +25,18 @@ SRCS    	:= src/main.cpp #$(shell find $(SRCDIR) -name '*.$(SRCEXT)')
 OBJS    	:= build/main.o #$(patsubst $(SRCDIR)/%.$(SRCEXT),$(OBJDIR)/%.o,$(SRCS))
 OBJS+=build/Qjets.o build/QjetsPlugin.o
 
-SRCS+=/Disk/speyside8/lhcb/atlas/tibristo/boosted_framework/Exotics/Qjets/Qjets.C
-SRCS+=/Disk/speyside8/lhcb/atlas/tibristo/boosted_framework/Exotics/Qjets/QjetsPlugin.C
-SRCDIRQJ = /Disk/speyside8/lhcb/atlas/tibristo/boosted_framework/Exotics/Qjets
+SRCS+=/Disk/ecdf-nfs-ppe/atlas/users/tibristo/boosted_framework/Exotics/Qjets/Qjets.C
+SRCS+=/Disk/ecdf-nfs-ppe/atlas/users/tibristo/boosted_framework/Exotics/Qjets/QjetsPlugin.C
+SRCDIRQJ = /Disk/ecdf-nfs-ppe/atlas/users/tibristo/boosted_framework/Exotics/Qjets
 
 
 GARBAGE  = $(OBJDIR)/*.o $(EXEDIR)/$(EXENAME)
-INCDIR+=-I/Disk/speyside8/lhcb/atlas/tibristo/fastjet-install/include
+INCDIR+=-I/Disk/ecdf-nfs-ppe/atlas/users/tibristo/fastjet-install/include
 INCDIR+=-I/usr/local/include
 INCDIR+=-I/Home/s1214155/usr/local/include
 
 #add qjetsplugin
-INCDIR+=-I/Disk/speyside8/lhcb/atlas/tibristo/boosted_framework/Exotics/Qjets/
+INCDIR+=-I/Disk/ecdf-nfs-ppe/atlas/users/tibristo/boosted_framework/Exotics/Qjets/
 #################
 ##Dependencies
 # Linux
@@ -49,14 +49,14 @@ endif
 # OS X
 ifeq "$(UNAME)" "Darwin"
 RANLIB       = ranlib
-CXXFLAGS    += -I$(INCDIR) $(ROOTCFLAGS) `/Disk/speyside8/lhcb/atlas/tibristo/fastjet-install/bin/fastjet-config --cxxflags` 
+CXXFLAGS    += -I$(INCDIR) $(ROOTCFLAGS) `/Disk/ecdf-nfs-ppe/atlas/users/tibristo/fastjet-install/bin/fastjet-config --cxxflags` 
 #
 #-I$(GSLINC)
 LINKFLAGS    =
 endif
 
 ##Libraries
-LIBS       += $(ROOTLIBS) -lTreePlayer -lThread `/Disk/speyside8/lhcb/atlas/tibristo/fastjet-install/bin/fastjet-config --libs` -L/usr/local/lib -L/Home/s1214155/usr/local/lib -lQjets -lboost_filesystem -lboost_system -lboost_program_options -lboost_regex -L/Disk/speyside8/lhcb/atlas/tibristo/fastjet-install/lib -L./lib
+LIBS       += $(ROOTLIBS) -lTreePlayer -lThread `/Disk/ecdf-nfs-ppe/atlas/users/tibristo/fastjet-install/bin/fastjet-config --libs` -L/usr/local/lib -L/Home/s1214155/usr/local/lib -lQjets -lboost_filesystem -lboost_system -lboost_program_options -lboost_regex -L/Disk/ecdf-nfs-ppe/atlas/users/tibristo/fastjet-install/lib -L./lib
 
 ##Targets
 
