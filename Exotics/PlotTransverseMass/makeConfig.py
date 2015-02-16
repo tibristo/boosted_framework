@@ -2,10 +2,10 @@ import sys
 import subprocess
 import re
 
-# usage: python makeConfig.py baseconfig_file inputalgorithm_file output_name version_number
+# usage: python makeConfig.py list_of_algorithms baseconfig_file output_name version_number_in_output prefix_of_branches_file
 
-basecfg = sys.argv[2]
 inputalgorithms = sys.argv[1]
+basecfg = sys.argv[2]
 name = sys.argv[3]
 version = sys.argv[4]
 branches_prefix = sys.argv[5]
