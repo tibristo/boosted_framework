@@ -71,23 +71,12 @@ float DeltaR(float eta1,float phi1,float eta2,float phi2);
 double mpv(TH1F* histo);
 void Qw(double &minWidth, double &topEdge, TH1F* histo, double frac);
 
-void createHistos(std::string & algo);
-void getMassHistograms(TTree *inputTree, TTree *inputTree1, TString groomAlgo, std::string & groomAlgoIndex);
-void initializeVariables();
-void getBranches(TTree *inputTree, TTree *inputTree1, TString groomAlgo, std::string & groomAlgoIndex);
-void deleteVectors();
-void getNormSherpaW(TString inputTree, unsigned long & evnum, double & weight);
 void makeROC(int type, TH1F *&S,TH1F *&B,TGraph &curve, TString name="", bool draw=false);
-void makePlots(std::string & algorithm);
-void makePtPlots(std::string & algorithm);
-void setMassBranch(TTree * tree, std::string &algorithm, std::string & groomAlgoIndex);
-void plotVariables(TTree * tree, vector<std::string> & branches);
 std::vector<std::string> getListOfBranches(std::string &algorithm);
 void makeMassWindowFile(bool applyMassWindow, std::string & algorithm);
 void setJetsBranches(TChain * tree, std::string & algorithm, std::string & groomIdx, std::unordered_map<std::string,bool> & current_branchmap);
 void addInfoBranches(TTree * tree);
 void addSubJets(TTree * tree, std::string & algorithm, std::string & groomIdx);
-void runAlgorithm(TChain *inputTree, TChain *inputTree1, TString groomAlgo, std::string & groomAlgoIndex, bool massHistos);
 vector<std::pair<std::string,bool> > getListOfJetBranches(std::string & algorithm, std::unordered_map<std::string, bool> & brancharray);
 void initVectors();
 std::pair<int,int> getTwoLeadingSubjets(std::vector<int> & indices, std::vector<float> *& subjets);
@@ -98,8 +87,6 @@ void clearOutputVariables();
 void setOutputVariables(int idx1, int idx2, int idx3, int subidx, std::string & groomalgo, std::string & groomIdx);
 void setOutputBranches(TTree* tree, std::string & algorithm, std::string & groomIdx);
 void resetOutputVariables();
-void getMPV();
-void scaleHists();
 void setAddress(TChain * tree, std::string  name, std::vector<Float_t> * var_vec);
 void readWeights();
 void createPtReweightFile(TH1F * bkg, TH1F * sig, std::string & fname);
@@ -249,27 +236,6 @@ TH1F * pt_reweight = 0;
 TH1F * pt_reweight_arr[2];
 TH2F * cluster_vs_truthpt = 0;
 
-TH1F *qcd_finePtBin_mass[3][nFineBins];
-TH1F *Wprime_finePtBin_mass[3][nFineBins];
-
-TH1F *qcd_Lead_CA12_mass[3][nPtBins]; 
-TH1F *Wprime_Lead_CA12_mass[3][nPtBins];
-TH1F *qcd_Lead_CA12_pt[3];
-TH1F *Wprime_Lead_CA12_pt[3];
-TH1F *Wprime_Lead_CA12_scaled_pt;
-TH1F *pTweights;
-TH1F *qcd_PtReweight;
-TH1F *Wp_PtReweight;
-
-TH1F * hMassLow[nPtBins];
-TH1F * hMassHigh[nPtBins];
-TH1F * hMPV[nPtBins];
-TH1F * hWmass[nPtBins];
-TH1F * hQCDeff[nPtBins];
-TH1F * hQCDeff_finePt;
-TH1F * windowsVsPt;
-
-
 // variables in every tree
 Float_t normalisation = 1.0;
 Int_t NEvents = 0;
@@ -290,54 +256,6 @@ Float_t avgIntpXingIn_d3pd = 0;
 UInt_t nvtxIn = 0;
 UInt_t nvtxOut = 0;
 
-// variables for reading from trees
-//QCD split filtering with Y cut 9
-vector<float> * qcd_CA12_truth_pt = 0;
-vector<float> * qcd_CA12_truth_eta = 0;
-vector<float> * qcd_CA12_truth_phi = 0;
-vector<float> * qcd_CA12_truth_mass = 0;
-vector<float> * qcd_CA12_truth_E = 0;
-
-vector<float> * qcd_CA12_topo_pt = 0;
-vector<float> * qcd_CA12_topo_eta = 0;
-vector<float> * qcd_CA12_topo_phi = 0;
-vector<float> * qcd_CA12_topo_mass = 0;
-vector<float> * qcd_CA12_topo_E = 0;
-vector<float> * qcd_CA12_topo_emfrac = 0;
-
-vector<float> * qcd_CA12_groomed_pt = 0;
-vector<float> * qcd_CA12_groomed_eta = 0;
-vector<float> * qcd_CA12_groomed_phi = 0;
-vector<float> * qcd_CA12_groomed_mass = 0;
-vector<float> * qcd_CA12_groomed_E = 0;
-vector<float> * qcd_CA12_groomed_emfrac = 0;
-
-UInt_t qcd_mc_channel_number = 0; 
-Float_t qcd_mc_event_weight = 0; 
-
-//Wprime split filtering both cuts
-
-vector<float> * Wp_CA12_truth_pt = 0;
-vector<float> * Wp_CA12_truth_eta = 0;
-vector<float> * Wp_CA12_truth_phi = 0;
-vector<float> * Wp_CA12_truth_mass = 0;
-vector<float> * Wp_CA12_truth_E = 0;
-UInt_t Wp_mc_channel_number = 0; 
-Float_t Wp_mc_event_weight = 0; 
-
-vector<float> * Wp_CA12_topo_pt = 0;
-vector<float> * Wp_CA12_topo_eta = 0;
-vector<float> * Wp_CA12_topo_phi = 0;
-vector<float> * Wp_CA12_topo_mass = 0;
-vector<float> * Wp_CA12_topo_E = 0;
-vector<float> * Wp_CA12_topo_emfrac = 0;
-
-vector<float> * Wp_CA12_groomed_pt = 0;
-vector<float> * Wp_CA12_groomed_eta = 0;
-vector<float> * Wp_CA12_groomed_phi = 0;
-vector<float> * Wp_CA12_groomed_mass = 0;
-vector<float> * Wp_CA12_groomed_E = 0;
-vector<float> * Wp_CA12_groomed_emfrac = 0;
 
 
 
@@ -362,19 +280,6 @@ int nEvt1_4=0;
 TString AlgoListN;
 TString pTbinsN[nPtBins];
 TString pTFinebinsN[nFineBins];
-
-double myMPV[nPtBins];
-double WidthMassWindow[nPtBins];
-double TopEdgeMassWindow[nPtBins];
-double BottomEdgeMassWindow[nPtBins];
-double QCDfrac[nPtBins];
-
-double myMPV_finePt[nFineBins];
-double WidthMassWindow_finePt[nFineBins];
-double TopEdgeMassWindow_finePt[nFineBins];
-double BottomEdgeMassWindow_finePt[nFineBins];
-double QCDfrac_finePt[nFineBins];
-
 
 // ROC
 TGraph *finePtBin_mass_curve[3][nFineBins];
