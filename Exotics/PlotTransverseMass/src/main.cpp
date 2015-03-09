@@ -4279,8 +4279,11 @@ void calculateECF(vector<TLorentzVector> & cons, int jettype, float beta)
  */
 void setEEC(int jettype, int jetidx)
 {
-  int beta_1_idx = 0;
-  int beta_2_idx = 1;
+  // this is not obvious.  If we calculate EEC then we set the ecf variables explicitly, with index 0 for
+  // beta 1 and index 1 for beta 2.
+  // However, if we read ECF from the ntuple then the index should relate to the jet's index in the collection.
+  int beta_1_idx = calcEEC ? 0 : jetidx;
+  int beta_2_idx = calcEEC ? 1 : jetidx;
   // get ecf2 and 3 from the input ntuple/ calculated variables
   float ecf1_1 = (*var_ECF1_vec[jettype])[beta_1_idx];
   float ecf2_1 = (*var_ECF2_vec[jettype])[beta_1_idx];
