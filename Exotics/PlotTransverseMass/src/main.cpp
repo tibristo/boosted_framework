@@ -1012,6 +1012,7 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
 	      var_Tau21[0]=(*var_Tau2_vec[0])[chosenLeadTruthJetIndex]/(*var_Tau1_vec[0])[chosenLeadTruthJetIndex];
 	      var_Tau21[1]=(*var_Tau2_vec[1])[chosenLeadTopoJetIndex]/(*var_Tau1_vec[1])[chosenLeadTopoJetIndex];
 	      var_Tau21[2]=(*var_Tau2_vec[2])[chosenLeadGroomedIndex]/(*var_Tau1_vec[2])[chosenLeadGroomedIndex];
+	      
 	    
 	      // set up tauwta variables and zcut12
 	      if (calcTauWTA21)//useBranch(string("TauWTA2TauWTA1"),true) && useBranch(string("TauWTA2"), true) && useBranch(string("TauWTA1"), true) )
@@ -1032,6 +1033,7 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
 		    var_TauWTA2TauWTA1[1]=(*var_TauWTA2_vec[1])[chosenLeadTopoJetIndex]/(*var_TauWTA1_vec[1])[chosenLeadTopoJetIndex];
 		  else
 		    var_TauWTA2TauWTA1[1]=-999;
+		  response_TauWTA2TauWTA1 = var_TauWTA2TauWTA1[2]/var_TauWTA2TauWTA1[2];
 		}
 		
 
@@ -1098,6 +1100,14 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
 		}
 	      
 	      setEEC(jetType::GROOMED, chosenLeadGroomedIndex);
+	      // if we have the truth eec values we can calculate the response
+	      if (preCalcEEC)
+		{
+		  response_EEC_C2_1 = var_EEC_C2_1[jetType::GROOMED]/var_EEC_C2_1[jetType::TRUTH];
+		  response_EEC_C2_2 = var_EEC_C2_2[jetType::GROOMED]/var_EEC_C2_2[jetType::TRUTH];
+		  response_EEC_D2_1 = var_EEC_D2_1[jetType::GROOMED]/var_EEC_D2_1[jetType::TRUTH];
+		  response_EEC_D2_2 = var_EEC_D2_2[jetType::GROOMED]/var_EEC_D2_2[jetType::TRUTH];
+		}
 
 	      // make sure all of the other output variables have their values set
 	      setOutputVariables(chosenLeadTruthJetIndex, chosenLeadTopoJetIndex, chosenLeadGroomedIndex, lead_subjet, algorithmName , prefix);
@@ -1800,15 +1810,34 @@ void setJetsBranches(TChain * tree, std::string &groomalgo,  std::string & groom
     tree->SetBranchAddress("RunNumber", &runNumberIn);
   if (brancharray.find("nVertices")  != brancharray.end() && branchmap["nVertices"])
     tree->SetBranchAddress("nVertices", &nvtxIn);
+  if (brancharray.find("vxp_n")  != brancharray.end() && branchmap["vxp_n"])
+    tree->SetBranchAddress("vxp_n", &nvtxIn);
   if (brancharray.find("averageIntPerXing") != brancharray.end() && branchmap["averageIntPerXing"])
     {
       if (xAOD)
-	tree->SetBranchAddress("averageIntPerXing",&avgIntpXingIn_xaod);
+	{
+	  tree->SetBranchAddress("averageIntPerXing",&avgIntpXingIn_xaod);
+	  tree->SetBranchAddress("actualIntPerXing",&actualIntPerXingIn);
+	}
       else
 	tree->SetBranchAddress("averageIntPerXing",&avgIntpXingIn_d3pd);
     }
   if (brancharray.find("evt_scale1fb") != brancharray.end() && branchmap["evt_scale1fb"])
     tree->SetBranchAddress("evt_scale1fb",&scale1fb);
+  if (xAOD)
+    {
+      if (brancharray.find("evt_kfactor") != brancharray.end() && branchmap["evt_kfactor"])
+	tree->SetBranchAddress("evt_kfactor",&evt_kfactor);
+      if (brancharray.find("evt_filtereff") != brancharray.end() && branchmap["evt_filtereff"])
+	tree->SetBranchAddress("evt_filtereff",&evt_filtereff);
+      if (brancharray.find("evt_nEvts") != brancharray.end() && branchmap["evt_nEvts"])
+	tree->SetBranchAddress("evt_nEvts",&evt_nEvts);
+      if (brancharray.find("evt_sumWeights") != brancharray.end() && branchmap["evt_sumWeights"])
+	tree->SetBranchAddress("evt_sumWeights",&evt_sumWeights);
+      if (brancharray.find("evt_xsec") != brancharray.end() && branchmap["evt_xsec"])
+      	tree->SetBranchAddress("evt_xsec",&evt_xsec);
+    }
+
 
   
   // set up the branch addresses for the lepton variables if running hvtllqq analysis
@@ -2270,6 +2299,13 @@ void setOutputVariables( int jet_idx_truth, int jet_idx_topo, int jet_idx_groome
     {
       mc_event_weight_out = mc_event_weight_xaod->at(0);// remove ->at(0) when running on D3PD
       avgIntpXingOut = avgIntpXingIn_xaod;
+      actualIntPerXingOut = actualIntPerXingIn;
+      evt_kfactor_out = evt_kfactor;
+      evt_filtereff_out = evt_filtereff;
+      evt_sumWeights_out = evt_sumWeights;
+      evt_nEvts_out = evt_nEvts;
+      evt_xsec_out = evt_xsec;
+      
     }
   else
     {
@@ -2373,17 +2409,9 @@ void setOutputVariables( int jet_idx_truth, int jet_idx_topo, int jet_idx_groome
     {
 
       // yfilt doesn't exist in the split/filtered samples, so it needs to be derived
-      //if (groomalgo.find("SplitFiltered") != std::string::npos || calcYFilt)
-      //{
-	  float calcyfilt = (*var_SPLIT12_vec[jetType::GROOMED])[jet_idx_groomed]/(*var_m_vec[jetType::GROOMED])[jet_idx_groomed];
-	  var_YFilt=sqrt(calcyfilt);
-	  //}
-      /*else
-	{
-	  std::cout << "calc yfilt sqrt" << std::endl;
-	  var_YFilt=sqrt((*var_YFilt_vec)[jet_idx_groomed]);
-	  std::cout << "calculated yfilt sqrt" << std::endl;
-	  }*/
+      float calcyfilt = (*var_SPLIT12_vec[jetType::GROOMED])[jet_idx_groomed]/(*var_m_vec[jetType::GROOMED])[jet_idx_groomed];
+      var_YFilt=sqrt(calcyfilt);
+
     }
  
   // only store this for groomed jets
@@ -2397,6 +2425,41 @@ void setOutputVariables( int jet_idx_truth, int jet_idx_topo, int jet_idx_groome
     }
 
 } //setOutputVariables
+
+
+/*
+ * Calculate the response values for the different variables.
+ */
+void calculateResponseValues()
+{
+  // all of the _vec variables have a default value that is not null.
+  int g_idx = jetType::GROOMED;
+  int t_idx = jetType::TRUTH;
+
+  response_E = var_E[g_idx]/var_E[t_idx];
+  response_pt = var_pt[g_idx]/var_pt[t_idx];
+  response_m = var_m[g_idx]/var_m[t_idx];
+  response_eta = var_eta[g_idx]/var_eta[t_idx];
+  response_phi = var_phi[g_idx]/var_phi[t_idx];
+  response_Tau1 = var_Tau1[g_idx]/var_Tau1[t_idx];
+  response_Tau2 = var_Tau2[g_idx]/var_Tau2[t_idx];
+  response_SPLIT12 = var_SPLIT12[g_idx]/var_SPLIT12[t_idx];
+  response_Dip12 = var_Dip12[g_idx]/var_Dip12[t_idx];
+  response_PlanarFlow = var_PlanarFlow[g_idx]/var_PlanarFlow[t_idx];
+  response_Angularity = var_Angularity[g_idx]/var_Angularity[t_idx];
+  response_Aplanarity = var_Aplanarity[g_idx]/var_Aplanarity[t_idx];
+  response_Sphericity = var_Sphericity[g_idx]/var_Sphericity[t_idx];
+  response_ThrustMaj = var_ThrustMaj[g_idx]/var_ThrustMaj[t_idx];
+  response_ThrustMin = var_ThrustMin[g_idx]/var_ThrustMin[t_idx];
+  // tau21 and tauwta21 are set in the main loop, because they are calculated there
+  response_TauWTA1 = var_TauWTA1[g_idx]/var_TauWTA1[t_idx];
+  response_TauWTA2 = var_TauWTA2[g_idx]/var_TauWTA2[t_idx];
+  response_ZCUT12 = var_ZCUT12[g_idx]/var_ZCUT12[t_idx];
+  response_Mu12 = var_Mu12[g_idx]/var_Mu12[t_idx];
+  response_FoxWolfram20 = var_FoxWolfram20[g_idx]/var_FoxWolfram20[t_idx];
+  response_softdrop = var_softdrop[g_idx]/var_softdrop[t_idx];
+
+} // calculateResponseValues
 
 
 
@@ -2416,6 +2479,40 @@ void clearOutputVariables()
   var_leadingJetPt = 0;
   var_YFilt = 0;
 
+  // response values
+  response_E = 0;
+  response_pt = 0;
+  response_m = 0;
+  response_eta = 0;
+  response_phi = 0;
+  response_Tau1 = 0;
+  response_Tau2 = 0;
+  response_SPLIT12 = 0;
+  response_Dip12 = 0;
+  response_PlanarFlow = 0;
+  response_Angularity = 0;
+  response_Tau21 = 0;
+  response_Mu12 = 0;
+  
+  // extra output responseiables
+  response_TauWTA1 = 0; 
+  response_TauWTA2 = 0; 
+  response_TauWTA2TauWTA1 = 0; 
+  response_ZCUT12 = 0;
+  
+  response_Aplanarity = 0;
+  response_Sphericity = 0;
+  response_ThrustMaj = 0;
+  response_ThrustMin = 0;
+  
+  response_QjetVol = 0;
+  response_FoxWolfram20 = 0;
+  response_softdrop = 0;
+  response_EEC_C2_1 = 0;
+  response_EEC_C2_2 = 0;
+  response_EEC_D2_1 = 0;
+  response_EEC_D2_2 = 0;
+  
   electrons.clear();
   muons.clear();
   var_E.clear();
@@ -2538,27 +2635,86 @@ void setOutputBranches(TTree * tree, std::string & groomalgo, std::string & groo
   tree->Branch("averageIntPerXing",&avgIntpXingOut,"averageIntPerXing/F");
   tree->Branch("scale1fb",&scale1fbOut, "scale1fb/F");
 
+  if (xAOD)
+    {
+      tree->Branch("evt_kfactor",&evt_kfactor_out,"evt_kfactor/F");
+      tree->Branch("evt_nEvts",&evt_nEvts_out,"evt_nEvts/F");
+      tree->Branch("evt_filtereff",&evt_filtereff_out,"evt_filtereff/F");
+      tree->Branch("evt_sumWeights",&evt_sumWeights_out,"evt_sumWeights/F");
+      tree->Branch("evt_xsec",&evt_xsec_out,"evt_xsec/F");
+      tree->Branch("actualIntPerXing",&actualIntPerXingOut,"actualIntPerXing/F");
+    }
+
+  bool addResponse = true;
+
   for (int i = 0; i < jetType::MAX; i++) // truth, topo, groomed
     {
+      if (i!=0)
+	addResponse = false;
      
       std::string jetString = returnJetType(samplePrefix, groomalgo, addLC,i); //set to truth/ topo/ groomed
 
       // check that we actually want to use this branch/ output this branch
       if (useBranch(string(jetString+"E")))
-	tree->Branch(std::string(jetString+"E").c_str(),&var_E.at(i),std::string(jetString+"E/F").c_str());
+	{
+	  tree->Branch(std::string(jetString+"E").c_str(),&var_E.at(i),std::string(jetString+"E/F").c_str());
+	  // add the response branch, but only need one
+	  if (addResponse)
+	    {
+	      tree->Branch("response_E",&response_E,"response_E/F");
+	    }
+	}
       if (useBranch(string(jetString+"pt")))
-      tree->Branch(std::string(jetString+"pt").c_str(),&var_pt.at(i),std::string(jetString+"pt/F").c_str());
+	{
+	  tree->Branch(std::string(jetString+"pt").c_str(),&var_pt.at(i),std::string(jetString+"pt/F").c_str());
+	  // add the response branch, but only need one
+	  if (addResponse)
+	    {
+	      tree->Branch("response_pt",&response_pt,"response_pt/F");
+	    }
+	}
       if (useBranch(string(jetString+"m")))
-      tree->Branch(std::string(jetString+"m").c_str(),&var_m.at(i),std::string(jetString+"m/F").c_str());
+	{
+	  tree->Branch(std::string(jetString+"m").c_str(),&var_m.at(i),std::string(jetString+"m/F").c_str());
+	  // add the response branch, but only need one
+	  if (addResponse)
+	    {
+	      tree->Branch("response_m",&response_m,"response_m/F");
+	    }
+	}
       if (useBranch(string(jetString+"eta")))
-      tree->Branch(std::string(jetString+"eta").c_str(),&var_eta.at(i),std::string(jetString+"eta/F").c_str());
+	{
+	  tree->Branch(std::string(jetString+"eta").c_str(),&var_eta.at(i),std::string(jetString+"eta/F").c_str());
+	  // add the response branch, but only need one
+	  if (addResponse)
+	    {
+	      tree->Branch("response_eta",&response_eta,"response_eta/F");
+	    }
+	}
       if (useBranch(string(jetString+"phi")))
-      tree->Branch(std::string(jetString+"phi").c_str(),&var_phi.at(i),std::string(jetString+"phi/F").c_str());
+	{
+	  tree->Branch(std::string(jetString+"phi").c_str(),&var_phi.at(i),std::string(jetString+"phi/F").c_str());
+	  // add the response branch, but only need one
+	  if (addResponse)
+	    {
+	      tree->Branch("response_phi",&response_phi,"response_phi/F");
+	    }
+	}
       if (i != jetType::TRUTH && useBranch(string(jetString+"emfrac"))) // emfrac doesn't exist for truth jets
-	tree->Branch(std::string(jetString+"emfrac").c_str(),&var_emfrac.at(i),std::string(jetString+"emfrac"+"/F").c_str());
+	{
+	  tree->Branch(std::string(jetString+"emfrac").c_str(),&var_emfrac.at(i),std::string(jetString+"emfrac"+"/F").c_str());
+	}
       if (useBranch(string(jetString+"Tau1")))
-      tree->Branch(std::string(jetString+"Tau1").c_str(),&var_Tau1.at(i),std::string(jetString+"Tau1/F").c_str());
+	{
+	  tree->Branch(std::string(jetString+"Tau1").c_str(),&var_Tau1.at(i),std::string(jetString+"Tau1/F").c_str());
+	  // add the response branch, but only need one
+	  if (addResponse)
+	    {
+	      tree->Branch("response_Tau1",&response_Tau1,"response_Tau1/F");
+	    }
+	}
       if (useBranch(string(jetString+"Tau2")))
+<<<<<<< HEAD
       tree->Branch(std::string(jetString+"Tau2").c_str(),&var_Tau2.at(i),std::string(jetString+"Tau2/F").c_str());
 <<<<<<< HEAD
       if (useBranch(string(jetString+"Tau3")))
@@ -2614,18 +2770,103 @@ void setOutputBranches(TTree * tree, std::string & groomalgo, std::string & groo
 	tree->Branch(std::string(jetString+"ActiveArea").c_str(),&var_ActiveArea,std::string(jetString+"ActiveArea/F").c_str());
       if (useBranch(string(jetString+"VoronoiArea")))
 	tree->Branch(std::string(jetString+"VoronoiArea").c_str(),&var_VoronoiArea,std::string(jetString+"VoronoiArea/F").c_str());
+=======
+	{
+	  tree->Branch(std::string(jetString+"Tau2").c_str(),&var_Tau2.at(i),std::string(jetString+"Tau2/F").c_str());
+	  // add the response branch, but only need one
+	  if (addResponse)
+	    {
+	      tree->Branch("response_Tau2",&response_Tau2,"response_Tau2/F");
+	    }
+	}
+
+      if (useBranch(string(jetString+"SPLIT12")))
+	{
+	  tree->Branch(std::string(jetString+"SPLIT12").c_str(),&var_SPLIT12.at(i),std::string(jetString+"SPLIT12/F").c_str());
+	  // add the response branch, but only need one
+	  if (addResponse)
+	    {
+	      tree->Branch("response_SPLIT12",&response_SPLIT12,"response_SPLIT12/F");
+	    }
+	}
+      if (useBranch(string(jetString+"Dip12")))
+	{
+	  tree->Branch(std::string(jetString+"Dip12").c_str(),&var_Dip12.at(i),std::string(jetString+"Dip12/F").c_str());
+	  // add the response branch, but only need one
+	  if (addResponse)
+	    {
+	      tree->Branch("response_Dip12",&response_Dip12,"response_Dip12/F");
+	    }
+	}
+
+      if (useBranch(string(jetString+"PlanarFlow")))
+	{
+	  tree->Branch(std::string(jetString+"PlanarFlow").c_str(),&var_PlanarFlow.at(i),std::string(jetString+"PlanarFlow/F").c_str());
+	  // add the response branch, but only need one
+	  if (addResponse)
+	    {
+	      tree->Branch("response_PlanarFlow",&response_PlanarFlow,"response_PlanarFlow/F");
+	    }
+	}
+      if (useBranch(string(jetString+"Angularity")))
+	{
+	  tree->Branch(std::string(jetString+"Angularity").c_str(),&var_Angularity.at(i),std::string(jetString+"Angularity/F").c_str());
+	  // add the response branch, but only need one
+	  if (addResponse)
+	    {
+	      tree->Branch("response_Angularity",&response_Angularity,"response_Angularity/F");
+	    }
+	}
+	  
+>>>>>>> Added the scale factors that are calculated in the post processing of the xAODs.
       if (useBranch(string(jetString+"Aplanarity")))
-	tree->Branch(std::string(jetString+"Aplanarity").c_str(),&var_Aplanarity.at(i),std::string(jetString+"Aplanarity/F").c_str());
+	{
+	  tree->Branch(std::string(jetString+"Aplanarity").c_str(),&var_Aplanarity.at(i),std::string(jetString+"Aplanarity/F").c_str());
+	  // add the response branch, but only need one
+	  if (addResponse)
+	    {
+	      tree->Branch("response_Aplanarity",&response_Aplanarity,"response_Aplanarity/F");
+	    }
+	}
       if (useBranch(string(jetString+"Sphericity")))
-	tree->Branch(std::string(jetString+"Sphericity").c_str(),&var_Sphericity.at(i),std::string(jetString+"Sphericity/F").c_str());
+	{
+	  tree->Branch(std::string(jetString+"Sphericity").c_str(),&var_Sphericity.at(i),std::string(jetString+"Sphericity/F").c_str());
+		  // add the response branch, but only need one
+	  if (addResponse)
+	    {
+	      tree->Branch("response_Sphericity",&response_Sphericity,"response_Sphericity/F");
+	    }
+	}
       if (useBranch(string(jetString+"ThrustMaj")))
-	tree->Branch(std::string(jetString+"ThrustMaj").c_str(),&var_ThrustMaj.at(i),std::string(jetString+"ThrustMaj/F").c_str());
+	{
+	  tree->Branch(std::string(jetString+"ThrustMaj").c_str(),&var_ThrustMaj.at(i),std::string(jetString+"ThrustMaj/F").c_str());
+	  // add the response branch, but only need one
+	  if (addResponse)
+	    {
+	      tree->Branch("response_ThrustMaj",&response_ThrustMaj,"response_ThrustMaj/F");
+	    }
+	}
       if (useBranch(string(jetString+"ThrustMin")))
-	tree->Branch(std::string(jetString+"ThrustMin").c_str(),&var_ThrustMin.at(i),std::string(jetString+"ThrustMin/F").c_str());
+	{
+	  tree->Branch(std::string(jetString+"ThrustMin").c_str(),&var_ThrustMin.at(i),std::string(jetString+"ThrustMin/F").c_str());
+	  // add the response branch, but only need one
+	  if (addResponse)
+	    {
+	      tree->Branch("response_ThrustMin",&response_ThrustMin,"response_ThrustMin/F");
+	    }
+	}
       
       if (useBranch(string(jetString+"TauWTA1")))
-	tree->Branch(std::string(jetString+"TauWTA1").c_str(),&var_TauWTA1.at(i),std::string(jetString+"TauWTA1/F").c_str());
+	{
+	  tree->Branch(std::string(jetString+"TauWTA1").c_str(),&var_TauWTA1.at(i),std::string(jetString+"TauWTA1/F").c_str());
+	  // add the response branch, but only need one
+	  if (addResponse)
+	    {
+	      tree->Branch("response_TauWTA1",&response_TauWTA1,"response_TauWTA1/F");
+	    }
+	}
       if (useBranch(string(jetString+"TauWTA2")))
+<<<<<<< HEAD
 	tree->Branch(std::string(jetString+"TauWTA2").c_str(),&var_TauWTA2.at(i),std::string(jetString+"TauWTA2/F").c_str());
       if (useBranch(string(jetString+"TauWTA3")))
 	tree->Branch(std::string(jetString+"TauWTA3").c_str(),&var_TauWTA3.at(i),std::string(jetString+"TauWTA3/F").c_str());
@@ -2671,14 +2912,58 @@ void setOutputBranches(TTree * tree, std::string & groomalgo, std::string & groo
 >>>>>>> Added FoxWolfram and SoftDropTag from the D3PD as another option instead of calculating them by hand.
 =======
 >>>>>>> Fixed the emfrac bug for llqq samples
+=======
+	{
+	  tree->Branch(std::string(jetString+"TauWTA2").c_str(),&var_TauWTA2.at(i),std::string(jetString+"TauWTA2/F").c_str());
+	  // add the response branch, but only need one
+	  if (addResponse)
+	    {
+	      tree->Branch("response_TauWTA2",&response_TauWTA2,"response_TauWTA2/F");
+	    }
+	}
+
+      if (useBranch(string(jetString+"ZCUT12")))
+	{
+	  tree->Branch(std::string(jetString+"ZCUT12").c_str(),&var_ZCUT12.at(i),std::string(jetString+"ZCUT12/F").c_str());
+	  // add the response branch, but only need one
+	  if (addResponse)
+	    {
+	      tree->Branch("response_ZCUT12",&response_ZCUT12,"response_ZCUT12/F");
+	    }
+	}
+      if (useBranch(string(jetString+"Mu12")))
+	{
+	  tree->Branch(std::string(jetString+"Mu12").c_str(),&var_Mu12.at(i),std::string(jetString+"Mu12/F").c_str());
+      	  // add the response branch, but only need one
+	  if (addResponse)
+	    {
+	      tree->Branch("response_Mu12",&response_Mu12,"response_Mu12/F");
+	    }
+	}
+>>>>>>> Added the scale factors that are calculated in the post processing of the xAODs.
 
 
       if (useBranch(string(jetString+"QJetsVol")))
-	tree->Branch(std::string(jetString+"QJetsVol").c_str(), &var_QjetVol.at(i), std::string(jetString+"QJetsVol").c_str());
+	{
+	  tree->Branch(std::string(jetString+"QJetsVol").c_str(), &var_QjetVol.at(i), std::string(jetString+"QJetsVol").c_str());
+	  // add the response branch, but only need one
+	  if (addResponse)
+	    {
+	      tree->Branch("response_QJetsVol",&response_QJetsVol,"response_QJetsVol/F");
+	    }
+	}
       if (useBranch(string(jetString+"FoxWolfram20")))
-	tree->Branch(std::string(jetString+"FoxWolfram20").c_str(), &var_FoxWolfram20.at(i), std::string(jetString+"FoxWolfram20").c_str());
+	{
+	  tree->Branch(std::string(jetString+"FoxWolfram20").c_str(), &var_FoxWolfram20.at(i), std::string(jetString+"FoxWolfram20").c_str());
+	  // add the response branch, but only need one
+	  if (addResponse)
+	    {
+	      tree->Branch("response_FoxWolfram20",&response_FoxWolfram20,"response_FoxWolfram20/F");
+	    }
+	}
 	
       if (useBranch(string(jetString+"SoftDrop")))
+<<<<<<< HEAD
 	tree->Branch(std::string(jetString+"SoftDrop").c_str(), &var_softdrop.at(i), std::string(jetString+"SoftDrop").c_str());
 <<<<<<< HEAD
       if (useBranch(string(jetString+"EEC_C1")))
@@ -2709,39 +2994,88 @@ void setOutputBranches(TTree * tree, std::string & groomalgo, std::string & groo
       if (useBranch(string(jetString+"Tau21")))
 	tree->Branch(std::string(jetString+"Tau21").c_str(),&var_Tau21.at(2),std::string(jetString+"Tau21/F").c_str());  
 =======
+=======
+	{
+	  tree->Branch(std::string(jetString+"SoftDrop").c_str(), &var_softdrop.at(i), std::string(jetString+"SoftDrop").c_str());
+	  // add the response branch, but only need one
+	  if (addResponse)
+	    {
+	      tree->Branch("response_SoftDrop",&response_SoftDrop,"response_SoftDrop/F");
+	    }
+	}
+>>>>>>> Added the scale factors that are calculated in the post processing of the xAODs.
       if (useBranch(string(jetString+"EEC_C2_1")))
-	tree->Branch(std::string(jetString+"EEC_C2_1").c_str(), &var_EEC_C2_1.at(i), std::string(jetString+"EEC_C2_1").c_str());
+	{
+	  tree->Branch(std::string(jetString+"EEC_C2_1").c_str(), &var_EEC_C2_1.at(i), std::string(jetString+"EEC_C2_1").c_str());
+	  // add the response branch, but only need one
+	  if (addResponse)
+	    {
+	      tree->Branch("response_EEC_C2_1",&response_EEC_C2_1,"response_EEC_C2_1/F");
+	    }
+	}
       if (useBranch(string(jetString+"EEC_C2_2")))
-	tree->Branch(std::string(jetString+"EEC_C2_2").c_str(), &var_EEC_C2_2.at(i), std::string(jetString+"EEC_C2_2").c_str());
+	{
+	  tree->Branch(std::string(jetString+"EEC_C2_2").c_str(), &var_EEC_C2_2.at(i), std::string(jetString+"EEC_C2_2").c_str());
+	  // add the response branch, but only need one
+	  if (addResponse)
+	    {
+	      tree->Branch("response_EEC_C2_2",&response_EEC_C2_2,"response_EEC_C2_2/F");
+	    }
+	}
       if (useBranch(string(jetString+"EEC_D2_1")))
-	tree->Branch(std::string(jetString+"EEC_D2_1").c_str(), &var_EEC_D2_1.at(i), std::string(jetString+"EEC_D2_1").c_str());
+	{
+	  tree->Branch(std::string(jetString+"EEC_D2_1").c_str(), &var_EEC_D2_1.at(i), std::string(jetString+"EEC_D2_1").c_str());
+	  // add the response branch, but only need one
+	  if (addResponse)
+	    {
+	      tree->Branch("response_EEC_D2_1",&response_EEC_D2_1,"response_EEC_D2_1/F");
+	    }
+	}
       if (useBranch(string(jetString+"EEC_D2_2")))
-	tree->Branch(std::string(jetString+"EEC_D2_2").c_str(), &var_EEC_D2_2.at(i), std::string(jetString+"EEC_D2_2").c_str());
+	{
+	  tree->Branch(std::string(jetString+"EEC_D2_2").c_str(), &var_EEC_D2_2.at(i), std::string(jetString+"EEC_D2_2").c_str());
+	  // add the response branch, but only need one
+	  if (addResponse)
+	    {
+	      tree->Branch("response_EEC_D2_2",&response_EEC_D2_2,"response_EEC_D2_2/F");
+	    }
+	}
 
 >>>>>>> Fixed the emfrac bug for llqq samples
 
     }
-  string jetstring = returnJetType(samplePrefix, groomalgo, addLC,0);
-  if (useBranch(string(jetstring+"TauWTA2TauWTA1")))
-    tree->Branch(std::string(jetstring+"TauWTA2TauWTA1").c_str(),&var_TauWTA2TauWTA1.at(0),std::string(jetstring+"TauWTA2TauWTA1/F").c_str());
-  jetstring = returnJetType(samplePrefix, groomalgo, addLC,1);
-  if (useBranch(string(jetstring+"TauWTA2TauWTA1")))
-    tree->Branch(std::string(jetstring+"TauWTA2TauWTA1").c_str(),&var_TauWTA2TauWTA1.at(1),std::string(jetstring+"TauWTA2TauWTA1/F").c_str());
-  jetstring = returnJetType(samplePrefix, groomalgo, addLC,2);
-  if (useBranch(string(jetstring+"TauWTA2TauWTA1")))
-    tree->Branch(std::string(jetstring+"TauWTA2TauWTA1").c_str(),&var_TauWTA2TauWTA1.at(2),std::string(jetstring+"TauWTA2TauWTA1/F").c_str());  
+  for (int wta_idx = 0; wta_idx < jetType::MAX; wta_idx++)
+    {
+      string jetstring = returnJetType(samplePrefix, groomalgo, addLC, wta_idx);
+      bool addResponse = wta_idx == 0 ? true : false;
+      if (useBranch(string(jetstring+"TauWTA2TauWTA1")))
+	{
+	  tree->Branch(std::string(jetstring+"TauWTA2TauWTA1").c_str(),&var_TauWTA2TauWTA1.at(wta_idx),std::string(jetstring+"TauWTA2TauWTA1/F").c_str());
+	  // add the response branch, but only need one
+	  if (addResponse)
+	    {
+	      tree->Branch("response_TauWTA2TauWTA1",&response_TauWTA2TauWTA1,"response_TauWTA2TauWTA1/F");
+	    }
+	}
+    }
 
   // add a calculated variable Tau2/Tau1
-  jetstring = returnJetType(samplePrefix, groomalgo, addLC,0);
-  if (useBranch(string(jetstring+"Tau21")))
-    tree->Branch(std::string(jetstring+"Tau21").c_str(),&var_Tau21.at(0),std::string(jetstring+"Tau21/F").c_str());
-  jetstring = returnJetType(samplePrefix, groomalgo, addLC,1);
-  if (useBranch(string(jetstring+"Tau21")))
-    tree->Branch(std::string(jetstring+"Tau21").c_str(),&var_Tau21.at(1),std::string(jetstring+"Tau21/F").c_str());
-  jetstring = returnJetType(samplePrefix, groomalgo, addLC,2);
-  if (useBranch(string(jetstring+"Tau21")))
-    tree->Branch(std::string(jetstring+"Tau21").c_str(),&var_Tau21.at(2),std::string(jetstring+"Tau21/F").c_str());  
+  for (int tau_idx = 0 ; tau_idx < jetType::MAX; tau_idx++)
+    {
+      string jetstring = returnJetType(samplePrefix, groomalgo, addLC,tau_idx);
+      bool addResponse = wta_idx == 0 ? true : false;
+      if (useBranch(string(jetstring+"Tau21")))
+	{
+	  tree->Branch(std::string(jetstring+"Tau21").c_str(),&var_Tau21.at(tau_idx),std::string(jetstring+"Tau21/F").c_str());
+	  if (addResponse)
+	    {
+	      tree->Branch("response_Tau21",&response_Tau21,"response_Tau21/F");
+	    }
+	}
 
+    }
+
+  string jetstring = returnJetType(samplePrefix, groomalgo, addLC, jetType::GROOMED);
   // this only exists for the groomed jets
   if (useBranch(string(jetstring+"YFilt")))
     tree->Branch(std::string(jetstring+"YFilt").c_str(),&var_YFilt,std::string(jetstring+"YFilt/F").c_str());
