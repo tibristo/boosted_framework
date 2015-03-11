@@ -249,15 +249,16 @@ UInt_t mc_channel_number_out  = 0;
 UInt_t runNumberOut = 0;
 UInt_t runNumberIn = 0;
 Float_t avgIntpXingOut = 0;
+
 // Change this to Float_t for D3PD, UInt_t for xaod
-UInt_t avgIntpXingIn_xaod = 0;
+UInt_t avgIntpXingIn_xaod = 0; // new xaods might need this to be float
 Float_t avgIntpXingIn_d3pd = 0;
+
+Float_t actualIntPerXingIn = 0;
+Float_t actualIntPerXingOut = 0;
 // xaod expects UInt_t, but D3PDs Int_t. This is annoying and will cause problems
 UInt_t nvtxIn = 0;
 UInt_t nvtxOut = 0;
-
-
-
 
 //counters for efficiency issues
 int nEvt_0=0; //total events
@@ -462,7 +463,6 @@ std::vector<float> var_Tau21;
 std::vector<float> var_Mu12;
 Float_t var_YFilt; // only for groomed
 
-
 // leptons out
 std::vector<TLorentzVector> var_leptons;
 std::vector<Float_t> var_ptcone20;
@@ -511,6 +511,18 @@ std::vector<Float_t> var_EEC_D2_2;
 Float_t var_k_factor;
 Float_t var_filter_eff;
 Float_t var_xs;
+// some have the weights pre-calculated
+Float_t evt_kfactor;
+Float_t evt_nEvts;
+Float_t evt_filtereff;
+Float_t evt_sumWeights;
+Float_t evt_xsec;
+
+Float_t evt_kfactor_out;
+Float_t evt_nEvts_out;
+Float_t evt_filtereff_out;
+Float_t evt_sumWeights_out;
+Float_t evt_xsec_out;
 // for reading in
 Float_t var_filtereff_in;
 Float_t var_kfactor_in;
@@ -520,4 +532,37 @@ Float_t scale1fbOut;
 bool subjetscalc;
 bool subjetspre;
 
+// response values
+Float_t response_E;
+Float_t response_pt;
+Float_t response_m;
+Float_t response_eta;
+Float_t response_phi;
+Float_t response_Tau1;
+Float_t response_Tau2;
+Float_t response_SPLIT12;
+Float_t response_Dip12;
+Float_t response_PlanarFlow;
+Float_t response_Angularity;
+Float_t response_Tau21;
+Float_t response_Mu12;
+
+// extra output responseiables
+Float_t response_TauWTA1; 
+Float_t response_TauWTA2; 
+Float_t response_TauWTA2TauWTA1;
+Float_t response_ZCUT12;
+
+Float_t response_Aplanarity;
+Float_t response_Sphericity;
+Float_t response_ThrustMaj;
+Float_t response_ThrustMin;
+
+Float_t response_QjetVol; //
+Float_t response_FoxWolfram20;
+Int_t response_softdrop;
+Float_t response_EEC_C2_1; 
+Float_t response_EEC_C2_2; 
+Float_t response_EEC_D2_1; 
+Float_t response_EEC_D2_2; 
 
