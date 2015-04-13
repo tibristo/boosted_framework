@@ -92,13 +92,18 @@ void makeROC(int type, TH1F *&S,TH1F *&B,TGraph &curve, TString name="", bool dr
 void makePlots();
 void makePtPlots();
 void setMassBranch(TTree * tree, std::string &algorithm);
-void plotVariables(TTree * tree, vector<std:string> & branches);
+void plotVariables(TTree * tree, vector<std::string> & branches);
 std::vector<std::string> getListOfBranches(std::string &algorithm);
-void make68Plots(int algidx, TTree * bkg, TTree * sig);
-void addJets(TTree * tree, std::string & algorithm);
-void getBranchesSelection(TTree * tree, std::string & algorithm);
+//void make68Plots(int algidx, TTree * bkg, TTree * sig);
+void make68Plots();
+void addJets(TTree * tree, std::string & algorithm, bool signal);
+//void getBranchesSelection(TTree * tree, std::string & algorithm);
+void setSelectionVectors(bool signal, std::string & algorithm);
+void runAlgorithm(TTree *inputTree, TTree *inputTree1, TString groomAlgo, int groomAlgoIndex);
+vector<std::string> getListOfJetBranches(std::string & algorithm);
+void initVectors();
 
-enum class groomAlgo{groomZero, TopoSplitFilteredMu67SmallR0YCut9, TopoSplitFilteredMu100SmallR30YCut4, TopoTrimmedPtFrac5SmallR30, TopoTrimmedPtFrac5SmallR20, TopoPrunedCaRcutFactor50Zcut10, TopoPrunedCaRcutFactor50Zcut20, AntiKt2LCTopo, AntiKt3LCTopo, AntiKt4LCTopo};
+enum class groomAlgoEnum{groomZero, TopoSplitFilteredMu67SmallR0YCut9, TopoSplitFilteredMu100SmallR30YCut4, TopoTrimmedPtFrac5SmallR30, TopoTrimmedPtFrac5SmallR20, TopoPrunedCaRcutFactor50Zcut10, TopoPrunedCaRcutFactor50Zcut20, AntiKt2LCTopo, AntiKt3LCTopo, AntiKt4LCTopo};
 //groomAlgo options:
 //TopoSplitFilteredMu67SmallR0YCut9   - 1
 //TopoSplitFilteredMu100SmallR30YCut4  - 2
@@ -112,7 +117,7 @@ enum class groomAlgo{groomZero, TopoSplitFilteredMu67SmallR0YCut9, TopoSplitFilt
 //AntiKt4LCTopo - 9
 
 vector<int> algoMap; // stores the algorithm used for inputTree[x] in the case that we are not using all the input types - split/filter, trim, prune and recluster
-vector<int> fileMap; // stores the index of the input file for each grooming algorithm
+std::map<int, int> fileMap; // stores the index of the input file for each grooming algorithm
 
 //DECLARATIONS FOR RECLUSTERING FUNCTIONS
 
@@ -158,7 +163,7 @@ vector<float> * qcd_CA12_groomed_emfrac = 0;
 
 vector<float> * jet_eta_truth = 0;
 vector<float> * jet_phi_truth = 0;
-vector<float> * jet_emfrac_truth = 0;
+//vector<float> * jet_emfrac_truth = 0;
 vector<float> * jet_pt_truth = 0;
 
 vector<float> * jet_eta_topo = 0;
@@ -223,6 +228,7 @@ int nEvt1_4=0;
 const int nAlgosMax=12;
 int nAlgos=0;
 TString AlgoList[nAlgosMax];
+std::string AlgoNames[nAlgosMax];
 TString binLabel[nAlgosMax-2];
 const int nPtBins=6;
 TString pTbins[nPtBins];
@@ -288,22 +294,32 @@ TPad *pad2[nPtBins];
 void defineStrings(TString *AlgoList, TString *binLabel, TString *pTbins, TString *finePtBins){
   
   AlgoList[0]="TruthJet_RecoMatch";
+  AlgoNames[0] = "";
   //SplitFilteredMu67SmallR0YCut9
   AlgoList[1]="SF67r0Y9";
+  AlgoNames[1]="TopoSplitFilteredMu67SmallR0YCut9";
   //SplitFilteredMu100SmallR30YCut4
   AlgoList[2]="SF100r30Y4";
+  AlgoNames[2] = "TopoSplitFilteredMu100SmallR30YCut4";
   //TrimmedPtFrac5SmallR30
   AlgoList[3]="TrimPt5r30";
+  AlgoNames[3] = "TopoTrimmedPtFrac5SmallR30";
   //TrimmedPtFrac5SmallR20
   AlgoList[4]="TrimPt5r20";
+  AlgoNames[4] = "TopoTrimmedPtFrac5SmallR20";
   //PrunedCaRcutFactor50Zcut10
   AlgoList[5]="PrunRf50Z10";
+  AlgoNames[5] = "TopoPrunedCaRcutFactor50Zcut10";
   //PrunedCaRcutFactor50Zcut20
   AlgoList[6]="PrunRf50Z20";
+  AlgoNames[6] = "TopoPrunedCaRcutFactor50Zcut20";
   //reclustering
   AlgoList[7]="ReclusAK2";
+  AlgoNames[7] = "AntiKt2LCTopo";
   AlgoList[8]="ReclusAK3";
+  AlgoNames[8] = "AntiKt3LCTopo";
   AlgoList[9]="ReclusAK4";
+  AlgoNames[9] = "AntiKt4LCTopo";
   //
   AlgoList[10]="LeadTruthJet"; //for pt reweighting
   AlgoList[11]="LeadTruthJet_finebin"; //to show off
@@ -394,3 +410,64 @@ static inline std::string &rtrim(std::string &s) {
   s.erase(std::find_if(s.rbegin(), s.rend(), std::not1(std::ptr_fun<int, int>(std::isspace))).base(), s.end());
   return s;
 }
+
+
+
+
+
+std::map<int, std::vector<float> *> signal_E_vec;
+std::map<int, std::vector<float> *> signal_pt_vec;
+std::map<int, std::vector<float> *> signal_m_vec;
+std::map<int, std::vector<float> *> signal_eta_vec;
+std::map<int, std::vector<float> *> signal_phi_vec;
+std::map<int, std::vector<float> *> signal_emfrac_vec;
+std::map<int, std::vector<float> *> signal_Tau1_vec;
+std::map<int, std::vector<float> *> signal_Tau2_vec;
+std::map<int, std::vector<float> *> signal_Tau3_vec;
+std::map<int, std::vector<float> *> signal_WIDTH_vec;
+std::map<int, std::vector<float> *> signal_SPLIT12_vec;
+std::map<int, std::vector<float> *> signal_SPLIT23_vec;
+std::map<int, std::vector<float> *> signal_SPLIT34_vec;
+std::map<int, std::vector<float> *> signal_Dip12_vec;
+std::map<int, std::vector<float> *> signal_Dip13_vec;
+std::map<int, std::vector<float> *> signal_Dip23_vec;
+std::map<int, std::vector<float> *> signal_DipExcl12_vec;
+std::map<int, std::vector<float> *> signal_PlanarFlow_vec;
+std::map<int, std::vector<float> *> signal_Angularity_vec;
+std::map<int, std::vector<float> *> signal_QW_vec;
+std::map<int, std::vector<float> *> signal_PullMag_vec;
+std::map<int, std::vector<float> *> signal_PullPhi_vec;
+std::map<int, std::vector<float> *> signal_Pull_C00_vec;
+std::map<int, std::vector<float> *> signal_Pull_C01_vec;
+std::map<int, std::vector<float> *> signal_Pull_C10_vec;
+std::map<int, std::vector<float> *> signal_Pull_C11_vec;
+
+
+
+std::map<int, std::vector<float> *> bkg_E_vec;
+std::map<int, std::vector<float> *> bkg_pt_vec;
+std::map<int, std::vector<float> *> bkg_m_vec;
+std::map<int, std::vector<float> *> bkg_eta_vec;
+std::map<int, std::vector<float> *> bkg_phi_vec;
+std::map<int, std::vector<float> *> bkg_emfrac_vec;
+std::map<int, std::vector<float> *> bkg_Tau1_vec;
+std::map<int, std::vector<float> *> bkg_Tau2_vec;
+std::map<int, std::vector<float> *> bkg_Tau3_vec;
+std::map<int, std::vector<float> *> bkg_WIDTH_vec;
+std::map<int, std::vector<float> *> bkg_SPLIT12_vec;
+std::map<int, std::vector<float> *> bkg_SPLIT23_vec;
+std::map<int, std::vector<float> *> bkg_SPLIT34_vec;
+std::map<int, std::vector<float> *> bkg_Dip12_vec;
+std::map<int, std::vector<float> *> bkg_Dip13_vec;
+std::map<int, std::vector<float> *> bkg_Dip23_vec;
+std::map<int, std::vector<float> *> bkg_DipExcl12_vec;
+std::map<int, std::vector<float> *> bkg_PlanarFlow_vec;
+std::map<int, std::vector<float> *> bkg_Angularity_vec;
+std::map<int, std::vector<float> *> bkg_QW_vec;
+std::map<int, std::vector<float> *> bkg_PullMag_vec;
+std::map<int, std::vector<float> *> bkg_PullPhi_vec;
+std::map<int, std::vector<float> *> bkg_Pull_C00_vec;
+std::map<int, std::vector<float> *> bkg_Pull_C01_vec;
+std::map<int, std::vector<float> *> bkg_Pull_C10_vec;
+std::map<int, std::vector<float> *> bkg_Pull_C11_vec;
+

@@ -14,12 +14,14 @@ for alg in algorithms:
         prefix+='LC'
     for t in var_type:
         #changes numbins[tcount] to 20 for now....
-        f.write(t+','+'jet_CamKt12Truth_'+t+','+str(20) + ',' + str(axisvalues[tcount][0]) + ','+str(axisvalues[tcount][1])+'\n')
+        if t != 'emfrac':
+            f.write(t+','+'jet_CamKt12Truth_'+t+','+str(20) + ',' + str(axisvalues[tcount][0]) + ','+str(axisvalues[tcount][1])+'\n')
+            f2.write('jet_CamKt12Truth_'+t+'\n')
         f.write(t+','+'jet_CamKt12LCTopo_'+t+','+str(20) + ',' + str(axisvalues[tcount][0]) + ','+str(axisvalues[tcount][1])+'\n')        
         f.write(t+','+prefix+alg+'_'+t+','+str(20) + ',' + str(axisvalues[tcount][0]) + ','+str(axisvalues[tcount][1])+'\n')
 
-        f2.write('jet_CamKt12Truth_'+t+'\n')
-        f2.write('jet_CamKt12Topo_'+t+'\n')
+
+        f2.write('jet_CamKt12LCTopo_'+t+'\n')
         f2.write(prefix+alg+'_'+t+'\n')
         tcount+=1
     f.close()
