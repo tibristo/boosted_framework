@@ -1,0 +1,10 @@
+
+
+algorithms = []
+
+
+for alg in algorithms:
+    f = open(alg+'.config','rw')
+    
+    
+    f.close()
