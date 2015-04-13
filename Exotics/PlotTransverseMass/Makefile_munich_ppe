@@ -23,7 +23,7 @@ OBJDIR   	= build
 EXEDIR  	= bin
 SRCS    	:= src/main.cpp #$(shell find $(SRCDIR) -name '*.$(SRCEXT)')
 OBJS    	:= build/main.o #$(patsubst $(SRCDIR)/%.$(SRCEXT),$(OBJDIR)/%.o,$(SRCS))
-<<<<<<< HEAD
+
 OBJS+=build/Qjets.o build/QjetsPlugin.o
 
 SRCS+=/Disk/ecdf-nfs-ppe/atlas/users/tibristo/boosted_framework/Exotics/Qjets/Qjets.C
@@ -38,13 +38,7 @@ INCDIR+=-I/Home/s1214155/usr/local/include
 
 #add qjetsplugin
 INCDIR+=-I/Disk/ecdf-nfs-ppe/atlas/users/tibristo/boosted_framework/Exotics/Qjets/
-=======
 
-GARBAGE  = $(OBJDIR)/main.o $(EXEDIR)/$(EXENAME)
-INCDIR+=-I/Disk/speyside8/lhcb/atlas/tibristo/fastjet-install/include
-INCDIR+=-I/usr/local/include
-INCDIR+=-I/Home/s1214155/usr/local/include
->>>>>>> master
 #################
 ##Dependencies
 # Linux
@@ -57,18 +51,16 @@ endif
 # OS X
 ifeq "$(UNAME)" "Darwin"
 RANLIB       = ranlib
-<<<<<<< HEAD
+
 CXXFLAGS    += -I$(INCDIR) $(ROOTCFLAGS) `/Disk/ecdf-nfs-ppe/atlas/users/tibristo/fastjet-install/bin/fastjet-config --cxxflags` 
-=======
-CXXFLAGS    += -I$(INCDIR) $(ROOTCFLAGS) `/Disk/speyside8/lhcb/atlas/tibristo/fastjet-install/bin/fastjet-config --cxxflags` 
->>>>>>> master
+
 #
 #-I$(GSLINC)
 LINKFLAGS    =
 endif
 
 ##Libraries
-<<<<<<< HEAD
+
 LIBS       += $(ROOTLIBS) -lTreePlayer -lThread `/Disk/ecdf-nfs-ppe/atlas/users/tibristo/fastjet-install/bin/fastjet-config --libs` -L/usr/local/lib -L/Home/s1214155/usr/local/lib -lQjets -lboost_filesystem -lboost_system -lboost_program_options -lboost_regex -L/Disk/ecdf-nfs-ppe/atlas/users/tibristo/fastjet-install/lib -L./lib
 
 ##Targets
@@ -77,12 +69,6 @@ FILES = build/Qjets.o build/QjetsPlugin.o
 
 all : lib/libQjets.a $(EXEDIR)/$(EXENAME)
 
-=======
-LIBS       += $(ROOTLIBS) -lThread `/Disk/speyside8/lhcb/atlas/tibristo/fastjet-install/bin/fastjet-config --libs` -L/usr/local/lib -L/Home/s1214155/usr/local/lib -lboost_filesystem -lboost_system -lboost_program_options -L/Disk/speyside8/lhcb/atlas/tibristo/fastjet-install/lib
-
-##Targets
-all : $(EXEDIR)/$(EXENAME)
->>>>>>> master
 
 $(EXEDIR)/$(EXENAME) : $(OBJS)
 	$(CXX) -o $@ $(OBJS) $(LINKFLAGS) $(LIBS)
@@ -90,7 +76,7 @@ $(EXEDIR)/$(EXENAME) : $(OBJS)
 $(OBJDIR)/main.o : $(SRCDIR)/main.$(SRCEXT)
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-<<<<<<< HEAD
+
 $(OBJDIR)/Qjets.o : $(SRCDIRQJ)/Qjets.C
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
@@ -107,8 +93,7 @@ lib/libQjets.so: $(FILES) $(FILES:.cc=.o)
 
 
 
-=======
->>>>>>> master
+
 clean   :
 	$(RM) $(GARBAGE)
 
