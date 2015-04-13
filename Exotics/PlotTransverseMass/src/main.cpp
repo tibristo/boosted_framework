@@ -1681,9 +1681,11 @@ void make68Plots(int algidx, TTree * bkg, TTree * sig)
   double mass_min = 0.0;
   TTree * currTree;
   bool runbkg = false;
+  // need branches for specific algorithms because otherwise we end up with a million branches that we don't need
   vector<std::string> branches;
   for (int ii=0; ii<nAlgos-1; ii++){
     int i = algoMap[ii];
+    int groomAlgoIndex = i;
     branches = getListOfBranches(groomAlgo[i]);
     for (int j=0; j<nPtBins; j++){
       runbkg = false;
@@ -1692,22 +1694,25 @@ void make68Plots(int algidx, TTree * bkg, TTree * sig)
 	  runbkg = k == 0 ? false : true;
       currTree = runbkg ?  sig : bkg;
       //setBranches(currTree, branches); // need to do this for signal and bkg!!!  Do we want to plot on the same thing?  Separately?  Can we not just do this once if all_samples = true?
+      // Need to be able to read the variables for the selection... If we do SetBranchAddress() will the CloneTree(0) + Fill() still work?
       currTree->SetBranches("*",0);
       setMassBranch(currTree, groomAlgo[i]);
       for (std::vector<string>::iterator it = branches.begin(); it != branches.end(); it++)
-	{
-	  currTree->SetBranchStatus(*it,1);
-	}
+      {
+        currTree->SetBranchStatus(*it,1);
+      }
+      getBranchesSelection(currTree, groomAlgo[i]);
       std::stringstream ss; // store the name of the output file and include the i and j indices!
       std::string bkg = runbkg ? "sig": "bkg";
       ss << groomAlgo[i] << "_" << i << "_" << j << "_" << bkg << ".root";
       TFile * outfile = new TFile(ss.str(),"RECREATE");
       TTree * outTree;
       outTree = currTree->CloneTree();
-
+      bool addJetIndices = true;
+      addJets(outTree, groomAlgo[i], addJetIndices); //set all of the branches for the output tree for the jets
+      
       mass_max = TopEdgeMassWindow[i][j];
       mass_min = BottomEdgeMassWindow[i][j];
-
 
       int entries = (int)currTree->GetEntries();
       double mass = 0;
@@ -1715,6 +1720,57 @@ void make68Plots(int algidx, TTree * bkg, TTree * sig)
 	{
 	  currTree->GetEntry(n);
 	  mass = currTree_mass;
+	  pt_reweight = runbkg ? qcd_PtReweight[i] : Wp_PtReweight[i];
+	  // check pt bins? check if it should be passing, find leading jets, truth index, set weight
+	  // what about reclustered jets?! argggg
+	  if (groomAlgoIndex != 0) // check the pt is in the correct bin
+	    {
+	      if ((*jet_pt_truth)[0]/1000.0 > ptrange[j][0] || (*jet_pt_truth)[0]/1000.0 < ptrange[j][1])
+		continue;
+	    }
+	  if (groomAlgoIndex == 0){
+	    //check which is my CA12 ungroomed reco jet with EMfrac<0.99 and |eta|<1.2
+	    //loop over all topo jets and get the leading with cuts
+	    bool hasTopoJet=false;
+	    int chosenTopoJetIndex=-99;
+	    for (int jet_i=0; jet_i<(*jet_pt_topo).size(); jet_i++){
+	      if (!hasTopoJet && (*jet_emfrac_topo)[jet_i]<0.99 && fabs((*jet_eta_topo)[jet_i])<1.2) {
+		chosenTopoJetIndex=jet_i;
+		hasTopoJet=true;
+	      } 
+	    } // end loop over jet_pt_topo
+	    
+	    //now match my truth jet with the chosen topo jet
+	    int chosenLeadTruthJetIndex=-99;
+	    if (hasTopoJet){
+	      for (int jet_i=0; jet_i<(*jet_pt_truth).size(); jet_i++){
+		if (chosenLeadTruthJetIndex<0 && DeltaR((*jet_eta_topo)[chosenTopoJetIndex],(*jet_phi_topo)[chosenTopoJetIndex],(*jet_eta_truth)[jet_i],(*jet_phi_truth)[jet_i])<0.9){ 
+		  chosenLeadTruthJetIndex=jet_i;
+		}	  
+	      }	// end loop over jet_pt_truth
+	    } // end if(hasTopoJet)
+	    if ((*jet_pt_truth)[chosenLeadTruthJetIndex]/1000.0 > ptrange[j][0] || (*jet_pt_truth)[chosenLeadTruthJetIndex]/1000.0 < ptrange[j][1])
+	      continue;
+	  } // end if(groomAlgoIndex==0)
+	  
+	  chosenLeadTruthJetIndex = groomAlgoIndex == 0 ? chosenLeadTruthJetIndex : 0;
+    
+	  //Now I have which events to make my pt reweight with, and to match to, etc
+	  int chosenLeadGroomedIndex=-99;
+	  for (int jet_i=0; jet_i<(*jet_pt_groomed).size(); jet_i++){
+	    
+	    if (chosenLeadTruthJetIndex>=0 && chosenLeadGroomedIndex<0 && DeltaR((*jet_eta_truth)[chosenLeadTruthJetIndex],(*jet_phi_truth)[chosenLeadTruthJetIndex],(*jet_eta_groomed)[jet_i],(*jet_phi_groomed)[jet_i])<0.9 && (*jet_emfrac_groomed)[jet_i]<0.99 && fabs((*jet_eta_groomed)[jet_i])<1.2){
+	      chosenLeadGroomedIndex=jet_i;
+	    }     
+	  } // end loop over jet_pt_groomed
+
+	  if (chosenLeadTruthJetIndex < 0 && chosenLeadGroomedIndex == -99) // failed selection
+	    continue;
+
+	  leadGroomedIndex = chosenLeadGroomedIndex;
+	  leadTruthIndex = chosenLeadTruthIndex;
+	  leadTopoIndex = chosenLeadTopoIndex;
+ 
 	  if (mass < mass_max && mass > mass_min)
 	    {
 	      outTree->Fill();
@@ -1726,10 +1782,11 @@ void make68Plots(int algidx, TTree * bkg, TTree * sig)
       outTree->GetCurrentFile().Close();
     }
     }
-    for (int j=0; j<nFineBins; j++){
+    // not doing this yet.... TODO
+    /*for (int j=0; j<nFineBins; j++){
       mass_max = TopEdgeMassWindow_finePt[i][j];
       mass_min = BottomEdgeMassWindow_finePt[i][j];
-    }
+      }*/
    
   }
 
@@ -1741,7 +1798,7 @@ vector<std::string> getListOfBranches(std::string &algorithm)
 {
   // Ideally we want this stored in an XML file, but for now it'll have to be a standard text file because I'm short on time!
   vector<string> branches;
-  ifstream in("branches.txt");
+  ifstream in(algorithm+"branches.txt");
   string line;
   // what to do about branches that have * in them?
   while (getline(in, line))
@@ -1764,3 +1821,119 @@ void setMassBranch(TTree * tree, std::string &algorithm)
 {
   tree->SetBranchAddress("jet_"+algorithm+"_mass", &currTree_mass);
 } // setMassBranch()
+
+void addJets(TTree * tree, std::string &groomalgo, bool addJetIndex)
+{
+  if (addJetIndex)
+    {
+      tree->Branch("leadTruthIndex",&leadTruthIndex, "leadTruthIndex/I");
+      tree->Branch("leadTopoIndex",&leadTopoIndex, "leadTopoIndex/I");
+      tree->Branch("leadGroomedIndex",&leadGroomedIndex, "leadGroomedIndex/I");
+      tree->Branch("pt_reweight",&pt_reweight, "pt_reweight/F");
+      tree->Branch("normalisation",&normalisation, "normalisation/F");
+    }
+  for (int i = 0; i < 3; i++) // truth, topo, groomed
+    {
+      
+     std::string jetType = ""; //set to truth/ topo/ groomed
+     switch (i)
+       {
+       case 0: // truth
+	 jetType="jet_CamKt12Truth_";
+       case 1: // topo
+	 jetType="jet_CamKt12LCTopo_";
+       case 2: // groomed
+	 jetType="jet_"+groomalgo+"_";
+       }
+tree->SetBranchAddress(jetType+"E",&signal_E_vec->at(i));
+tree->SetBranchAddress(jetType+"pt",&signal_pt_vec->at(i));
+tree->SetBranchAddress(jetType+"m",&signal_m_vec->at(i));
+tree->SetBranchAddress(jetType+"eta",&signal_eta_vec->at(i));
+tree->SetBranchAddress(jetType+"phi",&signal_phi_vec->at(i));
+tree->SetBranchAddress(jetType+"emfrac",&signal_emfrac_vec->at(i));
+tree->SetBranchAddress(jetType+"Tau1",&signal_Tau1_vec->at(i));
+tree->SetBranchAddress(jetType+"Tau2",&signal_Tau2_vec->at(i));
+tree->SetBranchAddress(jetType+"Tau3",&signal_Tau3_vec->at(i));
+tree->SetBranchAddress(jetType+"WIDTH",&signal_WIDTH_vec->at(i));
+tree->SetBranchAddress(jetType+"SPLIT12",&signal_SPLIT12_vec->at(i));
+tree->SetBranchAddress(jetType+"SPLIT23",&signal_SPLIT23_vec->at(i));
+tree->SetBranchAddress(jetType+"SPLIT34",&signal_SPLIT34_vec->at(i));
+tree->SetBranchAddress(jetType+"Dip12",&signal_Dip12_vec->at(i));
+tree->SetBranchAddress(jetType+"Dip13",&signal_Dip13_vec->at(i));
+tree->SetBranchAddress(jetType+"Dip23",&signal_Dip23_vec->at(i));
+tree->SetBranchAddress(jetType+"DipExcl12",&signal_DipExcl12_vec->at(i));
+tree->SetBranchAddress(jetType+"PlanarFlow",&signal_PlanarFlow_vec->at(i));
+tree->SetBranchAddress(jetType+"Angularity",&signal_Angularity_vec->at(i));
+tree->SetBranchAddress(jetType+"QW",&signal_QW_vec->at(i));
+tree->SetBranchAddress(jetType+"PullMag",&signal_PullMag_vec->at(i));
+tree->SetBranchAddress(jetType+"PullPhi",&signal_PullPhi_vec->at(i));
+tree->SetBranchAddress(jetType+"Pull_C00",&signal_Pull_C00_vec->at(i));
+tree->SetBranchAddress(jetType+"Pull_C01",&signal_Pull_C01_vec->at(i));
+tree->SetBranchAddress(jetType+"Pull_C10",&signal_Pull_C10_vec->at(i));
+tree->SetBranchAddress(jetType+"Pull_C11",&signal_Pull_C11_vec->at(i));
+
+tree->SetBranchAddress(jetType+"E",&bkg_E_vec->at(i));
+tree->SetBranchAddress(jetType+"pt",&bkg_pt_vec->at(i));
+tree->SetBranchAddress(jetType+"m",&bkg_m_vec->at(i));
+tree->SetBranchAddress(jetType+"eta",&bkg_eta_vec->at(i));
+tree->SetBranchAddress(jetType+"phi",&bkg_phi_vec->at(i));
+tree->SetBranchAddress(jetType+"emfrac",&bkg_emfrac_vec->at(i));
+tree->SetBranchAddress(jetType+"Tau1",&bkg_Tau1_vec->at(i));
+tree->SetBranchAddress(jetType+"Tau2",&bkg_Tau2_vec->at(i));
+tree->SetBranchAddress(jetType+"Tau3",&bkg_Tau3_vec->at(i));
+tree->SetBranchAddress(jetType+"WIDTH",&bkg_WIDTH_vec->at(i));
+tree->SetBranchAddress(jetType+"SPLIT12",&bkg_SPLIT12_vec->at(i));
+tree->SetBranchAddress(jetType+"SPLIT23",&bkg_SPLIT23_vec->at(i));
+tree->SetBranchAddress(jetType+"SPLIT34",&bkg_SPLIT34_vec->at(i));
+tree->SetBranchAddress(jetType+"Dip12",&bkg_Dip12_vec->at(i));
+tree->SetBranchAddress(jetType+"Dip13",&bkg_Dip13_vec->at(i));
+tree->SetBranchAddress(jetType+"Dip23",&bkg_Dip23_vec->at(i));
+tree->SetBranchAddress(jetType+"DipExcl12",&bkg_DipExcl12_vec->at(i));
+tree->SetBranchAddress(jetType+"PlanarFlow",&bkg_PlanarFlow_vec->at(i));
+tree->SetBranchAddress(jetType+"Angularity",&bkg_Angularity_vec->at(i));
+tree->SetBranchAddress(jetType+"QW",&bkg_QW_vec->at(i));
+tree->SetBranchAddress(jetType+"PullMag",&bkg_PullMag_vec->at(i));
+tree->SetBranchAddress(jetType+"PullPhi",&bkg_PullPhi_vec->at(i));
+tree->SetBranchAddress(jetType+"Pull_C00",&bkg_Pull_C00_vec->at(i));
+tree->SetBranchAddress(jetType+"Pull_C01",&bkg_Pull_C01_vec->at(i));
+tree->SetBranchAddress(jetType+"Pull_C10",&bkg_Pull_C10_vec->at(i));
+tree->SetBranchAddress(jetType+"Pull_C11",&bkg_Pull_C11_vec->at(i));
+    } // end for loop over topo/truth/groom
+} //addJetIndices()
+
+
+void getBranchesSelection(TTree * tree, std::string & algorithm)
+{
+  std::string alg_prefix = algorithm.find("LCTopo")!=string::npos? "jet_CamKt12LC" : "jet_CamKt12"; // if we are running on lctopo(recluster) we have no LC in the prefix
+  //for (int i = 0; i < 3; i++) // truth, topo, groomed
+      //{
+      
+      /*std::string jetType = ""; //set to truth/ topo/ groomed
+     switch (i)
+       {
+	 // this doesn't yet work for reclustering :/ TODO
+       case 0: // truth
+	 jetType="jet_CamKt12Truth_";
+       case 1: // topo
+	 jetType="jet_CamKt12LCTopo_";
+       case 2: // groomed
+	 jetType=alg_prefix+algorithm+"_";
+	 }*/  
+     // This is stupid - I don't need the jetType thing above
+     tree->SetBranchAddress("jet_CamKt12Truth_eta",&jet_eta_truth);
+     tree->SetBranchAddress("jet_CamKt12Truth_phi",&jet_phi_truth);
+     tree->SetBranchAddress("jet_CamKt12Truth_emfrac",&jet_emfrac_truth);
+     tree->SetBranchAddress("jet_CamKt12Truth_pt",&jet_ept_truth);
+
+     tree->SetBranchAddress("jet_CamKt12LCTopo_eta",&jet_eta_topo);
+     tree->SetBranchAddress("jet_CamKt12LCTopo_phi",&jet_phi_topo);
+     tree->SetBranchAddress("jet_CamKt12LCTopo_emfrac",&jet_emfrac_topo);
+     tree->SetBranchAddress("jet_CamKt12LCTopo_pt",&jet_ept_topo);
+
+     tree->SetBranchAddress(alg_prefix+algorithm+"_eta",&jet_eta_groomed);
+     tree->SetBranchAddress(alg_prefix+algorithm+"_phi",&jet_phi_groomed);
+     tree->SetBranchAddress(alg_prefix+algorithm+"_emfrac",&jet_emfrac_groomed);
+     tree->SetBranchAddress(alg_prefix+algorithm+"_pt",&jet_ept_groomed);
+     //}
+  
+}// getBranchesSelection()
