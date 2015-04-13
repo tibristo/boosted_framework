@@ -16,15 +16,22 @@
 #include <utility>
 #include <fstream>
 #include <boost/filesystem.hpp>
-
+#include <boost/program_options.hpp>
 
 using namespace std;
+namespace po = boost::program_options;
 
 bool ComparePt(TLorentzVector a, TLorentzVector b) { return a.Pt() > b.Pt(); }
 
+template<class T>
+ostream& operator<<(ostream& os, const vector<T>& v)
+{
+    copy(v.begin(), v.end(), ostream_iterator<T>(os, " ")); 
+    return os;
+}
 
 int main( int argc, char * argv[] ) {
-  subjets = true; // should be set from command line argument TODO
+  //subjets = true; // should be set from command line argument TODO
   gROOT->ProcessLine("#include <vector>");
   gInterpreter->GenerateDictionary("std::vector<std::vector<int> >", "vector");
   gInterpreter->GenerateDictionary("vector<vector<double> >", "vector");
@@ -33,15 +40,175 @@ int main( int argc, char * argv[] ) {
   bool filtering = false, trimmed = false, pruned = false, recluster = false, allsamples = false; // we may not want to run this for all at once, so I added these variables to indicate what we're running.  Currently this just looks at the file name, but it might be better to add an arg to the command line indicating which ones we're running, something like -f (split/filter), -t (trim), -ft (both). TODO
   int filteridx = 0, trimidx = 0, pruneidx = 0, reclusteridx = 0; // continuing from the idea above, we set the InputFile[idx] based on the input files that we give the program
   
+  bool makePtPlotsFlag = false;
+  bool scaleHists = false;  
+  bool makePlotsFlag = false;
+  bool getMPVFlag = false;
+  bool checkBkgFrac = false;
+  bool applyMassWindowFlag = false;
+        po::variables_map vm;
+    try {
+        int opt;
+        vector<string> config_file;
+    
+        // Declare a group of options that will be 
+        // allowed only on command line
+        po::options_description generic("Generic options");
+        generic.add_options()
+            ("help", "produce help message")
+	  ("config,c", po::value<vector<string> >()->multitoken(),
+                  "name of a file of a configuration.")
+            ;
+    
+        // Declare a group of options that will be 
+        // allowed both on command line and in
+        // config file
+        po::options_description config("Configuration");
+        config.add_options()
+	  ("signal-file", po::value<vector<string> >()->multitoken(), 
+                  "signal input files")
+	  ("background-file", po::value<vector<string> >()->multitoken(), 
+	   "background input files")
+            ("algorithm-type", 
+	     po::value< string>(), 
+                 "algorithm type")
+	  ("subjets", po::value<bool>(&subjets)->default_value(true),"run subjets")
+	  ("mass-window", po::value<bool>(&applyMassWindowFlag)->default_value(false),"apply mass window cuts")
+	  ("make-plots", po::value<bool>(&makePlotsFlag)->default_value(false),"create plots")
+	  ("make-ptplots", po::value<bool>(&makePtPlotsFlag)->default_value(false),"create pT plots")
+	  ("scale-hists", po::value<bool>(&scaleHists)->default_value(false),"scale mass/ pt histograms")
+	  ("mpv", po::value<bool>(&getMPVFlag)->default_value(false),"Find the MPV")
+	  ("bkg-frac", po::value<bool>(&checkBkgFrac)->default_value(false),"Check the background fraction in the signal")
+            ;
+
+        // Hidden options, will be allowed both on command line and
+        // in config file, but will not be shown to the user.
+        /*po::options_description hidden("Hidden options");
+        hidden.add_options()
+            ("signal-file", po::value< vector<string> >(), "signal input file")
+            ("background-file", po::value< vector<string> >(), "background input file")
+            ;*/
+
+        
+        po::options_description cmdline_options;
+        cmdline_options.add(generic).add(config);//.add(hidden);
+
+        po::options_description config_file_options;
+        config_file_options.add(config);//.add(hidden);
+
+        po::options_description visible("Allowed options");
+        visible.add(generic).add(config);
+        
+        po::positional_options_description p;
+        p.add("background-file", -1);
+        p.add("signal-file", -2);
+        
+
+        store(po::command_line_parser(argc, argv).
+              options(cmdline_options).positional(p).run(), vm);
+        notify(vm);
+        config_file = vm["config"].as<vector<string> >();
+	// need to check what happens if we don't actually add anything here!
+	if (!config_file.empty())
+	  {
+	    for (vector<std::string>::iterator it = config_file.begin(); it!= config_file.end(); it++)
+	      {
+		ifstream ifs((*it).c_str());
+		if (!ifs)
+		  {
+		    cout << "can not open config file: " << config_file << "\n";
+		    return 0;
+		  }
+		else
+		  {
+		    store(parse_config_file(ifs, config_file_options), vm);
+		    notify(vm);
+		  }	    
+		
+	      }
+	  }
+
+    
+        if (vm.count("help")) {
+            cout << visible << "\n";
+            return 0;
+        }
+
+
+        if (vm.count("signal-file"))
+        {
+            cout << "Signal files are: " 
+                 << vm["signal-file"].as< vector<string> >() << "\n";
+        }
+	else
+	  {
+	    cout << "No signal files!" << std::endl;
+	    return 0;
+	  }
+
+        if (vm.count("background-file"))
+        {
+            cout << "Background files are: " 
+                 << vm["background-file"].as< vector<string> >() << "\n";
+        }
+	else
+	  {
+	    cout << "No background files!" << std::endl;
+	    return 0;
+	  }
+	
+	if (vm.count("algorithm"))
+        {
+            cout << "algorithm is: " 
+                 << vm["algorithm"].as< string >() << "\n";
+        }
+	else
+	  {
+	    cout << "No algorithm specified!" << std::endl;
+	    return 0;
+	  }
+
+        if (vm.count("subjets"))
+        {
+	  cout << "Subjets option is: " << subjets << std::endl;
+        }
+
+    }
+    catch(exception& e)
+    {
+        cout << e.what() << "\n";
+        return 1;
+    }    
+
+
+    bool massHistos = applyMassWindowFlag;
+
+    vector<string> inputBkgFiles = vm["background-file"].as<vector<string> > ();
+    vector<string> inputSigFiles = vm["background-file"].as<vector<string> > ();
+
+    string alg_in = vm["algorithm"].as<string>();
   //Make an array of TFiles with all the relevant inputs and add them to my array of trees
-  for (int nArg=1; nArg < argc; nArg++) {
+  //for (int nArg=1; nArg < argc; nArg++) {
     //cout << nArg << " " << argv[nArg] << endl;
-    inputFile[nArg-1] = new TFile(argv[nArg], "READ");
-    inputTree[nArg-1] = ( TTree* ) inputFile[nArg-1]->Get( "physics" );    
-    std::string arg  = std::string(argv[nArg]);
-    std::transform(arg.begin(), arg.end(), arg.begin(), ::tolower);
+    //inputFile[nArg-1] = new TFile(argv[nArg], "READ");
+    //inputTree[nArg-1] = ( TTree* ) inputFile[nArg-1]->Get( "physics" );    
+    inputTChain[sampleType::BACKGROUND] = new TChain("physics");
+    inputTChain[sampleType::SIGNAL] = new TChain("physics");
+    for (vector<string>::iterator it = inputBkgFiles.begin(); it != inputBkgFiles.end(); it++)
+      {
+	inputTChain[sampleType::BACKGROUND]->Add((*it).c_str());
+      }
+    for (vector<string>::iterator it = inputSigFiles.begin(); it != inputSigFiles.end(); it++)
+      {
+	inputTChain[sampleType::SIGNAL]->Add((*it).c_str());
+      }
+    //std::string arg  = std::string(argv[nArg]);
+    //std::transform(arg.begin(), arg.end(), arg.begin(), ::tolower);
+    std::transform(alg_in.begin(), alg_in.end(), alg_in.begin(), ::tolower);
     vector<int> subset;
-    if (arg.find("all")!=string::npos)
+    //if (arg.find("all")!=string::npos)
+    int nArg = 1; // TODO: this will need to be changed when moving from a system where only one algorithm is run at once
+    if (alg_in.find("all")!=string::npos)
       {
 	allsamples = true;
 	filteridx = trimidx = pruneidx = reclusteridx = 0;
@@ -49,7 +216,7 @@ int main( int argc, char * argv[] ) {
 	subset = {0,1,2,3,4,5,6,7,8,9};
 	algoMap.insert(algoMap.end(),subset.begin(),subset.end());
       }
-    else if (false)//arg.find("filter")!=string::npos || arg.find("split")!=string::npos)
+    else if (alg_in.find("filter")!=string::npos || alg_in.find("split")!=string::npos)
       {
 	if (!filtering)
 	  {
@@ -59,7 +226,7 @@ int main( int argc, char * argv[] ) {
 	  }
 	filtering = true;
       }
-    else if (true)//arg.find("trim")!=string::npos)
+    else if (alg_in.find("trim")!=string::npos)
       {
 	if(!trimmed)
 	  {
@@ -69,7 +236,7 @@ int main( int argc, char * argv[] ) {
 	  }
 	trimmed = true;
       }
-    else if (arg.find("prune")!=string::npos)
+    else if (alg_in.find("prune")!=string::npos)
       {
 	if (!pruned)
 	  {
@@ -79,7 +246,7 @@ int main( int argc, char * argv[] ) {
 	  }
 	pruned = true;
       }
-    else if (arg.find("reclust")!=string::npos)
+    else if (alg_in.find("reclust")!=string::npos)
       {
 	if (!recluster)
 	  {
@@ -89,47 +256,52 @@ int main( int argc, char * argv[] ) {
 	  }
 	recluster = true;
       }
+    else 
+      {
+	std::cout << "Incorrect algorithm given! Please choose from split/filter, pruned, trimmed, reclustered or all" << std::endl;
+	return 1;
+      }
     if (!subset.empty())
       {
 	for (std::vector<int>::iterator it = subset.begin(); it != subset.end(); it++)
 	  fileMap[(*it)] = nArg-1; // what about index 0?  That might cause problems because we set it for ALL files!
       }
     
-  }
+		       //}
 
   defineStrings(AlgoList, binLabel, pTbins, finePtBins);
   createHistos();
 
-  bool massHistos = false;
+
   
 
   if (filtering || allsamples)
     {
-      //runAlgorithm(inputTree[filteridx], inputTree[filteridx+1], "TopoSplitFilteredMu67SmallR0YCut9", 0, massHistos);
-      runAlgorithm(inputTree[filteridx], inputTree[filteridx+1], "TopoSplitFilteredMu67SmallR0YCut9", 1, massHistos);
-      runAlgorithm(inputTree[filteridx], inputTree[filteridx+1], "TopoSplitFilteredMu100SmallR30YCut4", 2, massHistos);
-      //runAlgorithm(inputTree[filteridx], inputTree[filteridx+1], "TrimmedPtFrac5SmallR30", 2, massHistos);
+      //runAlgorithm(inputTChain[filteridx], inputTChain[filteridx+1], "TopoSplitFilteredMu67SmallR0YCut9", 0, massHistos);
+      runAlgorithm(inputTChain[filteridx], inputTChain[filteridx+1], "TopoSplitFilteredMu67SmallR0YCut9", 1, massHistos);
+      runAlgorithm(inputTChain[filteridx], inputTChain[filteridx+1], "TopoSplitFilteredMu100SmallR30YCut4", 2, massHistos);
+      //runAlgorithm(inputTChain[filteridx], inputTChain[filteridx+1], "TrimmedPtFrac5SmallR30", 2, massHistos);
     }
   
   if (trimmed || allsamples)
     {
-      runAlgorithm(inputTree[trimidx], inputTree[trimidx+1], "TopoTrimmedPtFrac5SmallR30", 3, massHistos);
-      //runAlgorithm(inputTree[trimidx], inputTree[trimidx+1], "TopoTrimmedPtFrac5SmallR20", 4, massHistos);
+      runAlgorithm(inputTChain[trimidx], inputTChain[trimidx+1], "TopoTrimmedPtFrac5SmallR30", 3, massHistos);
+      //runAlgorithm(inputTChain[trimidx], inputTChain[trimidx+1], "TopoTrimmedPtFrac5SmallR20", 4, massHistos);
     }
   
   if (pruned || allsamples)
     {
-      runAlgorithm(inputTree[pruneidx], inputTree[pruneidx+1], "TopoPrunedCaRcutFactor50Zcut10", 5, massHistos);
-      runAlgorithm(inputTree[pruneidx], inputTree[pruneidx+1], "TopoPrunedCaRcutFactor50Zcut20", 6, massHistos);
+      runAlgorithm(inputTChain[pruneidx], inputTChain[pruneidx+1], "TopoPrunedCaRcutFactor50Zcut10", 5, massHistos);
+      runAlgorithm(inputTChain[pruneidx], inputTChain[pruneidx+1], "TopoPrunedCaRcutFactor50Zcut20", 6, massHistos);
     }
   
   //reclustering
 
   if (false)//recluster || allsamples)
     {
-      runAlgorithm(inputTree[reclusteridx], inputTree[reclusteridx+1], "AntiKt2LCTopo", 7, massHistos);
-      runAlgorithm(inputTree[reclusteridx], inputTree[reclusteridx+1], "AntiKt3LCTopo", 8, massHistos);      
-      runAlgorithm(inputTree[reclusteridx], inputTree[reclusteridx+1], "AntiKt4LCTopo", 9, massHistos);
+      runAlgorithm(inputTChain[reclusteridx], inputTChain[reclusteridx+1], "AntiKt2LCTopo", 7, massHistos);
+      runAlgorithm(inputTChain[reclusteridx], inputTChain[reclusteridx+1], "AntiKt3LCTopo", 8, massHistos);      
+      runAlgorithm(inputTChain[reclusteridx], inputTChain[reclusteridx+1], "AntiKt4LCTopo", 9, massHistos);
     }
   
 
@@ -141,7 +313,7 @@ int main( int argc, char * argv[] ) {
   // Note, for NEvents for SherpaW + jets we need to call getNormSherpaW() because the weighting is slightly different
   // Normalization = CrossSection(at NLO) * Luminosity / NEvents
 
-  bool scaleHists = false;
+
   if (scaleHists)
     {
       
@@ -172,7 +344,7 @@ int main( int argc, char * argv[] ) {
       }
     } // end scaleHists if
   
-  bool makePlotsFlag = false;
+
 
   if (makePlotsFlag)
     {
@@ -184,7 +356,7 @@ int main( int argc, char * argv[] ) {
   // WPRIME VECTOR: Wprime_Lead_CA12_mass[i][j]
 
   //1. Get the MPV
-  bool getMPVFlag = false;
+
   if (getMPVFlag)
     {
 
@@ -201,7 +373,7 @@ int main( int argc, char * argv[] ) {
     }
   
   //2. Get the mass window which gives 68% W mass efficiency 
-  bool applyMassWindowFlag = false; // should be read in from a command line option!
+
   if (applyMassWindowFlag)
     {
       for (int ii=0; ii<nAlgos; ii++){//-1; ii++){
@@ -226,7 +398,7 @@ int main( int argc, char * argv[] ) {
 
   //3. Check background fraction in this window
 
-  bool checkBkgFrac = false;
+  
   if (checkBkgFrac)
     {
       for (int ii=0; ii<nAlgos; ii++){//-1; ii++){
@@ -245,7 +417,7 @@ int main( int argc, char * argv[] ) {
       }
     }
 
-  bool makePtPlotsFlag = false;
+
 
   if (makePtPlotsFlag)
     makePtPlots();
@@ -322,7 +494,7 @@ void Qw(double &minWidth, double &topEdge, TH1F* histo, double frac){
 }
 
 
-void runAlgorithm(TTree *inputTree, TTree *inputTree1, TString groomAlgo, int groomAlgoIndex, bool massHistos)//, int fileidx)
+void runAlgorithm(TChain *inputTree, TChain *inputTree1, TString groomAlgo, int groomAlgoIndex, bool massHistos)//, int fileidx)
 {
   if (!massHistos)
     {
@@ -338,7 +510,7 @@ void runAlgorithm(TTree *inputTree, TTree *inputTree1, TString groomAlgo, int gr
 }
 
 
-void getMassHistograms(TTree *inputTree, TTree *inputTree1, TString groomAlgo, int groomAlgoIndex){
+void getMassHistograms(TChain *inputTree, TChain *inputTree1, TString groomAlgo, int groomAlgoIndex){
   
   cout<<"getBranches() for " << groomAlgo <<endl;
   getBranches(inputTree, inputTree1, groomAlgo, groomAlgoIndex);
@@ -1019,7 +1191,7 @@ void deleteVectors(){
 
   }
 */
-void getBranches(TTree *inputTree, TTree *inputTree1, TString groomAlgo, int groomAlgoIndex){
+void getBranches(TChain *inputTree, TChain *inputTree1, TString groomAlgo, int groomAlgoIndex){
 
   //if not reclustering
   if (groomAlgoIndex<7){
@@ -1799,9 +1971,10 @@ void makeMassWindowFile(bool applyMassWindow)
 	  signal = k == 0 ? false : true;
 	  initVectors();
 	  
-	  int fileIdx = signal ? fileMap[ii]+1 : fileMap[ii];
+	  int tchainIdx = signal ? sampleType::SIGNAL : sampleType::BACKGROUND;//fileMap[ii]+1 : fileMap[ii];
 	  //std::cout << "fileIdx " << fileIdx << endl;
-	  TTree * intree = (TTree*) inputFile[fileIdx]->Get("physics");
+	  //TTree * intree = (TTree*) inputTChain[fileIdx]->Get("physics");
+	  TChain * intree = inputTChain[tchainIdx];
 	  intree->SetBranchStatus("*",0);
 	  // turn on the branches we're interested it
 	  for (std::vector<string>::iterator it = branches.begin(); it != branches.end(); it++)
@@ -2073,7 +2246,7 @@ vector<std::string> getListOfJetBranches(std::string &algorithm)
   } // plotVariables()*/
 
 
-void setMassBranch(TTree * tree, std::string &algorithm, int groomAlgoIndex)
+void setMassBranch(TChain * tree, std::string &algorithm, int groomAlgoIndex)
 {
   if (algorithm.find("AntiKt") == std::string::npos)
     {
@@ -2152,7 +2325,7 @@ void clearVectors()
 } // clear VEctors
 
 
-void addJets(TTree * tree, std::string &groomalgo, bool signal, int groomIdx)
+void addJets(TChain * tree, std::string &groomalgo, bool signal, int groomIdx)
 {
   //if (addJetIndex)
   //{
@@ -2287,7 +2460,7 @@ void addJets(TTree * tree, std::string &groomalgo, bool signal, int groomIdx)
     }
 
 }//addJets
-void addSubJets(TTree * tree, std::string & groomalgo, bool signal, int groomIdx)
+void addSubJets(TChain * tree, std::string & groomalgo, bool signal, int groomIdx)
 {
 
   std::string samplePrefix = "";

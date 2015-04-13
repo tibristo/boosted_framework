@@ -6,6 +6,7 @@
 /// 
 
 #include <TH1F.h>
+#include "TChain.h"
 #include <TH1I.h>
 #include "TH1.h"
 #include "TFile.h"
@@ -83,24 +84,24 @@ void Qw(double &minWidth, double &topEdge, TH1F* histo, double frac);
 //void cleanBranches();
 //void defineStrings(TString *AlgoList, TString *binLabel, TString *pTbins, TString *finePtBins);
 void createHistos();
-void getMassHistograms(TTree *inputTree, TTree *inputTree1, TString groomAlgo, int groomAlgoIndex);
+void getMassHistograms(TChain *inputTree, TChain *inputTree1, TString groomAlgo, int groomAlgoIndex);
 void initializeVariables();
-void getBranches(TTree *inputTree, TTree *inputTree1, TString groomAlgo, int groomAlgoIndex);
+void getBranches(TChain *inputTree, TChain *inputTree1, TString groomAlgo, int groomAlgoIndex);
 void deleteVectors();
 void getNormSherpaW(TString inputTree, unsigned long & evnum, double & weight);
 void makeROC(int type, TH1F *&S,TH1F *&B,TGraph &curve, TString name="", bool draw=false);
 void makePlots();
 void makePtPlots();
-void setMassBranch(TTree * tree, std::string &algorithm, int groomAlgoIndex);
-void plotVariables(TTree * tree, vector<std::string> & branches);
+void setMassBranch(TChain * tree, std::string &algorithm, int groomAlgoIndex);
+void plotVariables(TChain * tree, vector<std::string> & branches);
 std::vector<std::string> getListOfBranches(std::string &algorithm);
-//void make68Plots(int algidx, TTree * bkg, TTree * sig);
+//void make68Plots(int algidx, TChain * bkg, TChain * sig);
 void makeMassWindowFile(bool applyMassWindow);
-void addJets(TTree * tree, std::string & algorithm, bool signal, int groomIdx);
-void addSubJets(TTree * tree, std::string & algorithm, bool signal, int groomIdx);
-//void getBranchesSelection(TTree * tree, std::string & algorithm);
+void addJets(TChain * tree, std::string & algorithm, bool signal, int groomIdx);
+void addSubJets(TChain * tree, std::string & algorithm, bool signal, int groomIdx);
+//void getBranchesSelection(TChain * tree, std::string & algorithm);
 void setSelectionVectors(bool signal, std::string & algorithm);
-void runAlgorithm(TTree *inputTree, TTree *inputTree1, TString groomAlgo, int groomAlgoIndex, bool massHistos);
+void runAlgorithm(TChain *inputTree, TChain *inputTree1, TString groomAlgo, int groomAlgoIndex, bool massHistos);
 vector<std::string> getListOfJetBranches(std::string & algorithm);
 void initVectors();
 std::pair<int,int> getTwoLeadingSubjets(std::vector<int> & indices, std::vector<float> * subjets);
@@ -110,6 +111,7 @@ void clearVectors();
 
 
 enum class groomAlgoEnum{groomZero, TopoSplitFilteredMu67SmallR0YCut9, TopoSplitFilteredMu100SmallR30YCut4, TopoTrimmedPtFrac5SmallR30, TopoTrimmedPtFrac5SmallR20, TopoPrunedCaRcutFactor50Zcut10, TopoPrunedCaRcutFactor50Zcut20, AntiKt2LCTopo, AntiKt3LCTopo, AntiKt4LCTopo};
+enum sampleType{BACKGROUND, SIGNAL};
 //groomAlgo options:
 //TopoSplitFilteredMu67SmallR0YCut9   - 1
 //TopoSplitFilteredMu100SmallR30YCut4  - 2
@@ -136,7 +138,7 @@ vector<TLorentzVector> Recluster(vector<TLorentzVector> small_jets, double PTcut
 
 TFile *inputFile[20];
 TTree *inputTree[20];
-
+TChain *inputTChain[2];
 
 //get the branches we want to use
 Int_t leadGroomedIndex = 0;
