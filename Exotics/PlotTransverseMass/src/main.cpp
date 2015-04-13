@@ -101,9 +101,9 @@ int main( int argc, char * argv[] ) {
 
   if (filtering || allsamples)
     {
-      runAlgorithm(inputTree[filteridx], inputTree[filteridx+1], "TopoSplitFilteredMu67SmallR0YCut9", 0);
-      //runAlgorithm(inputTree[filteridx], inputTree[filteridx+1], "TopoSplitFilteredMu67SmallR0YCut9", 1);
-      //runAlgorithm(inputTree[filteridx], inputTree[filteridx+1], "TopoSplitFilteredMu100SmallR30YCut4", 2);
+      //runAlgorithm(inputTree[filteridx], inputTree[filteridx+1], "TopoSplitFilteredMu67SmallR0YCut9", 0);
+      runAlgorithm(inputTree[filteridx], inputTree[filteridx+1], "TopoSplitFilteredMu67SmallR0YCut9", 1);
+      runAlgorithm(inputTree[filteridx], inputTree[filteridx+1], "TopoSplitFilteredMu100SmallR30YCut4", 2);
     }
   
   if (trimmed || allsamples)
@@ -137,7 +137,7 @@ int main( int argc, char * argv[] ) {
   // Normalization = CrossSection(at NLO) * Luminosity / NEvents
 
 
-  for (int ii=0; ii<nAlgos-1; ii++){
+  for (int ii=0; ii<nAlgos; ii++){//-1; ii++){
     int i = algoMap[ii]; // this is here because we don't always run all algorithms, just a subsample...
     
     qcd_Lead_CA12_pt[i]->Scale(1.0/qcd_Lead_CA12_pt[i]->Integral());  
@@ -172,7 +172,7 @@ int main( int argc, char * argv[] ) {
 
   //1. Get the MPV
 
-  for (int ii=0; ii<nAlgos-1; ii++){
+  for (int ii=0; ii<nAlgos; ii++){//-1; ii++){
     int i = algoMap[ii];
     for (int j=0; j<nPtBins; j++){
       myMPV[i][j]=mpv(Wprime_Lead_CA12_mass[i][j]);
@@ -185,10 +185,11 @@ int main( int argc, char * argv[] ) {
   
   //2. Get the mass window which gives 68% W mass efficiency 
 
-  for (int ii=0; ii<nAlgos-1; ii++){
+  for (int ii=0; ii<nAlgos; ii++){//-1; ii++){
     int i = algoMap[ii];
     for (int j=0; j<nPtBins; j++){
       Qw(WidthMassWindow[i][j],TopEdgeMassWindow[i][j],Wprime_Lead_CA12_mass[i][j], 0.68);
+      //std::cout << "TopEdge: " << TopEdgeMassWindow[i][j] << std::endl;
       //one and two are outputs, three and four are inputs
       BottomEdgeMassWindow[i][j]=TopEdgeMassWindow[i][j]-WidthMassWindow[i][j];    
       //cout << AlgoList[i] << ": top edge " << TopEdgeMassWindow[i][j] << " bottom edge " << BottomEdgeMassWindow[i][j] << " mass window " << WidthMassWindow[i][j] << endl;
@@ -205,7 +206,7 @@ int main( int argc, char * argv[] ) {
 
   //3. Check background fraction in this window
 
-  for (int ii=0; ii<nAlgos-1; ii++){
+  for (int ii=0; ii<nAlgos; ii++){//-1; ii++){
     int i = algoMap[ii];
     for (int j=0; j<nPtBins; j++){
       QCDfrac[i][j]=qcd_Lead_CA12_mass[i][j]->Integral(qcd_Lead_CA12_mass[i][j]->FindBin(BottomEdgeMassWindow[i][j]),qcd_Lead_CA12_mass[i][j]->FindBin(TopEdgeMassWindow[i][j]));
@@ -732,7 +733,10 @@ void createHistos(){
   // make an array with histograms for all sorts of algorithms used
   int M = 100;
   for (int i=0; i<nAlgosMax-1; i++){
+    //std::cout << nAlgos << std::endl;
+    //for (int ii=0; ii<nAlgos; ii++){
     //int i = algoMap[ii];
+    //std::cout << i << std::endl;
     for (int j=0; j<nFineBins; j++){
       qcd_finePtBin_mass[i][j] = new TH1F("qcd_finePtBin_mass_"+AlgoList[i]+finePtBins[j], "qcd_finePtBin_mass_"+AlgoList[i]+finePtBins[j], 150, 0.0, 300.0);
       //qcd_finePtBin_mass_curve[i][j] = new TH1D("qcd_finePtBin_mass_"+AlgoList[i]+finePtBins[j]+"_ROC","qcd_finePtBin_mass_"+AlgoList[i]+finePtBins[j]+"_ROC",M,0,1);
@@ -774,24 +778,24 @@ void createHistos(){
       
   }
   
-  qcd_Lead_CA12_mass[nAlgos-1][0] = new TH1F("qcd_Lead_CA12_mass_"+AlgoList[nAlgos-1], "qcd_Lead_CA12_mass_"+AlgoList[nAlgos-1], 100, 0.0, 300.0);
-  qcd_Lead_CA12_mass[nAlgos-1][0]->Sumw2();
-  Wprime_Lead_CA12_mass[nAlgos-1][0] = new TH1F("Wprime_Lead_CA12_mass_"+AlgoList[nAlgos-1], "Wprime_Lead_CA12_mass_"+AlgoList[nAlgos-1], 100, 0.0, 300.0);
-  Wprime_Lead_CA12_mass[nAlgos-1][0]->Sumw2();
+  qcd_Lead_CA12_mass[nAlgosMax-1][0] = new TH1F("qcd_Lead_CA12_mass_"+AlgoList[nAlgosMax-1], "qcd_Lead_CA12_mass_"+AlgoList[nAlgosMax-1], 100, 0.0, 300.0);
+  qcd_Lead_CA12_mass[nAlgosMax-1][0]->Sumw2();
+  Wprime_Lead_CA12_mass[nAlgosMax-1][0] = new TH1F("Wprime_Lead_CA12_mass_"+AlgoList[nAlgosMax-1], "Wprime_Lead_CA12_mass_"+AlgoList[nAlgosMax-1], 100, 0.0, 300.0);
+  Wprime_Lead_CA12_mass[nAlgosMax-1][0]->Sumw2();
 
-  //qcd_Lead_CA12_mass_curve[nAlgos-1][0] = new TH1F("qcd_Lead_CA12_mass_"+AlgoList[nAlgos-1]+"_ROC", "qcd_Lead_CA12_mass_"+AlgoList[nAlgos-1]+"_ROC", M, 0, 1);
-  //Lead_CA12_mass_curve[nAlgos-1][0] = new TH1F("Lead_CA12_mass_"+AlgoList[nAlgos-1]+"_ROC", "Lead_CA12_mass_"+AlgoList[nAlgos-1]+"_ROC", M, 0, 1);
-  //Lead_CA12_mass_curve[nAlgos-1][0] = new TGraph( M, 0, 1);
+  //qcd_Lead_CA12_mass_curve[nAlgosMax-1][0] = new TH1F("qcd_Lead_CA12_mass_"+AlgoList[nAlgosMax-1]+"_ROC", "qcd_Lead_CA12_mass_"+AlgoList[nAlgosMax-1]+"_ROC", M, 0, 1);
+  //Lead_CA12_mass_curve[nAlgosMax-1][0] = new TH1F("Lead_CA12_mass_"+AlgoList[nAlgosMax-1]+"_ROC", "Lead_CA12_mass_"+AlgoList[nAlgosMax-1]+"_ROC", M, 0, 1);
+  //Lead_CA12_mass_curve[nAlgosMax-1][0] = new TGraph( M, 0, 1);
   
-  qcd_Lead_CA12_pt[nAlgos-1] = new TH1F("qcd_Lead_CA12_pt_"+AlgoList[nAlgos-1], "qcd_Lead_CA12_pt_"+AlgoList[nAlgos-1], 350, 0.0, 3500.0);
-  Wprime_Lead_CA12_pt[nAlgos-1] = new TH1F("Wprime_Lead_CA12_pt_"+AlgoList[nAlgos-1], "Wprime_Lead_CA12_pt_"+AlgoList[nAlgos-1], 350, 0.0, 3500.0);
-  Wprime_Lead_CA12_scaled_pt[nAlgos-1] = new TH1F("Wprime_Lead_CA12_scaled_pt_"+AlgoList[nAlgos-1], "Wprime_Lead_CA12_scaled_pt_"+AlgoList[nAlgos-1], 350, 0.0, 3500.0);
+  qcd_Lead_CA12_pt[nAlgosMax-1] = new TH1F("qcd_Lead_CA12_pt_"+AlgoList[nAlgosMax-1], "qcd_Lead_CA12_pt_"+AlgoList[nAlgosMax-1], 350, 0.0, 3500.0);
+  Wprime_Lead_CA12_pt[nAlgosMax-1] = new TH1F("Wprime_Lead_CA12_pt_"+AlgoList[nAlgosMax-1], "Wprime_Lead_CA12_pt_"+AlgoList[nAlgosMax-1], 350, 0.0, 3500.0);
+  Wprime_Lead_CA12_scaled_pt[nAlgosMax-1] = new TH1F("Wprime_Lead_CA12_scaled_pt_"+AlgoList[nAlgosMax-1], "Wprime_Lead_CA12_scaled_pt_"+AlgoList[nAlgosMax-1], 350, 0.0, 3500.0);
 
-  //qcd_Lead_CA12_pt_curve[nAlgos-1] = new TH1F("qcd_Lead_CA12_pt_"+AlgoList[nAlgos-1]+"_ROC", "qcd_Lead_CA12_pt_"+AlgoList[nAlgos-1]+"_ROC", M, 0, 1);
-  //Lead_CA12_pt_curve[nAlgos-1] = new TH1F("Lead_CA12_pt_"+AlgoList[nAlgos-1]+"_ROC", "Lead_CA12_pt_"+AlgoList[nAlgos-1]+"_ROC", M, 0, 1);
-  //Lead_CA12_pt_curve[nAlgos-1] = new TGraph( M, 0, 1);
-  //Lead_CA12_scaled_pt_curve[nAlgos-1] = new TH1F("Lead_CA12_scaled_pt_"+AlgoList[nAlgos-1]+"_ROC", "Lead_CA12_scaled_pt_"+AlgoList[nAlgos-1]+"_ROC", M, 0, 1);
-  //Lead_CA12_scaled_pt_curve[nAlgos-1] = new TGraph( M, 0, 1);
+  //qcd_Lead_CA12_pt_curve[nAlgosMax-1] = new TH1F("qcd_Lead_CA12_pt_"+AlgoList[nAlgosMax-1]+"_ROC", "qcd_Lead_CA12_pt_"+AlgoList[nAlgosMax-1]+"_ROC", M, 0, 1);
+  //Lead_CA12_pt_curve[nAlgosMax-1] = new TH1F("Lead_CA12_pt_"+AlgoList[nAlgosMax-1]+"_ROC", "Lead_CA12_pt_"+AlgoList[nAlgosMax-1]+"_ROC", M, 0, 1);
+  //Lead_CA12_pt_curve[nAlgosMax-1] = new TGraph( M, 0, 1);
+  //Lead_CA12_scaled_pt_curve[nAlgosMax-1] = new TH1F("Lead_CA12_scaled_pt_"+AlgoList[nAlgosMax-1]+"_ROC", "Lead_CA12_scaled_pt_"+AlgoList[nAlgosMax-1]+"_ROC", M, 0, 1);
+  //Lead_CA12_scaled_pt_curve[nAlgosMax-1] = new TGraph( M, 0, 1);
 
 }
 
@@ -1233,8 +1237,11 @@ void makePlots(){
 
   // CANVAS FOR THE MASS PLOTS
   
-  for (int i=0; i<nAlgos-2; i++){
-
+  //for (int i=0; i<nAlgos-1; i++){//-2; i++){
+  for (int ii=0; ii<nAlgos; ii++){//-2; i++){
+    //std::cout << "ii: " << ii << std::endl;
+    int i = algoMap[ii];
+    //std::cout << "i: " << i << std::endl;
     for (int j=0; j<nPtBins; j++){
 
       c1[i][j] = new TCanvas();
@@ -1322,8 +1329,9 @@ void makePlots(){
   
   ///// Fine pT bins plots
   
-  for (int i=0; i<nAlgos-2; i++){
-    
+  //for (int i=0; i<nAlgos-1; i++){//-2; i++){
+  for (int ii=0; ii<nAlgos-1; ii++){//-2; i++){
+    int i = algoMap[ii];
     for (int j=0; j<nFineBins; j++){
       
       c3[i][j] = new TCanvas();
@@ -1424,7 +1432,7 @@ void makePtPlots(){
 
   // for (int i=0; i<nAlgos-2; i++){
   //for now only the algos I already have: 0,1,2,3,4,5,6,7,8,9 
-  for (int ii=0; ii<nAlgos-2; ii++){  
+  for (int ii=0; ii<nAlgos; ii++){  //-2; ii++){  
     int i = algoMap[ii];
     for (int j=0; j<nPtBins; j++){
       hMassLow[j]->SetBinContent(i+1,BottomEdgeMassWindow[i][j]);
@@ -1437,7 +1445,7 @@ void makePtPlots(){
   
   //NOW PLOT WINDOW WIDTH VS PT
   //Christo's plot
-  for (int ii=0; ii<nAlgos-2; ii++){
+  for (int ii=0; ii<nAlgos; ii++){//-2; ii++){
     int i = algoMap[ii];
     windowsVsPt[i] = new TH1F("windowVsPt_"+AlgoList[i], "windowVsPt_"+AlgoList[i], 10, 0.0, 2500.);
     windowsVsPt[i]->Sumw2();
@@ -1469,11 +1477,11 @@ void makePtPlots(){
   }
   
 
-  TCanvas *wVsPt[nAlgos-2];
-  TPad *pad11[nAlgos-2];
-  TPad *pad22[nAlgos-2];
+  TCanvas *wVsPt[nAlgos]; // was -2
+  TPad *pad11[nAlgos];
+  TPad *pad22[nAlgos];
 	     
-  for (int ii=1; ii<nAlgos-2; ii++){
+  for (int ii=0; ii<nAlgos; ii++){//ii = 1; ...... -2; ii++){
     int i = algoMap[ii];
     wVsPt[i] = new TCanvas("wVsPt", "wVsPt", 700, 550);
     
@@ -1644,12 +1652,12 @@ void makePtPlots(){
   //ROC(S,B,curve);
   int type = 1;
   
-  for (int ii=0; ii<nAlgos-2; ii++){
+  for (int ii=0; ii<nAlgos; ii++){//-2; ii++){
     int i = algoMap[ii];
     windowsVsPt[i]->Write();
   }
 
-  for (int ii=0; ii<nAlgos-1; ii++){
+  for (int ii=0; ii<nAlgos; ii++){//-1; ii++){
     int i = algoMap[ii];
     
     qcd_Lead_CA12_pt[i]->Write();
@@ -1723,7 +1731,7 @@ void make68Plots()//TTree * bkg, TTree * sig)
 	  runbkg = k == 0 ? false : true;
 	  initVectors();
 	  int fileIdx = runbkg ? fileMap[ii] : fileMap[ii]+1;
-	  std::cout << "fileIdx " << fileIdx << endl;
+	  //std::cout << "fileIdx " << fileIdx << endl;
 	  //TTree * currTree;
 	  //currTree = runbkg ?  inputTree[fileMap[ii]] : inputTree[fileMap[ii]+1];
 	  //setBranches(currTree, branches); // need to do this for signal and bkg!!!  Do we want to plot on the same thing?  Separately?  Can we not just do this once if all_samples = true?
@@ -1742,33 +1750,25 @@ void make68Plots()//TTree * bkg, TTree * sig)
 	      }
 	    }
 	  setMassBranch(intree, AlgoNames[i]);
-	  //getBranchesSelection(intree, AlgoNames[i]);
-	  std::cout << "done set branchstatus" << std::endl;
 	  //getBranchesSelection(currTree, AlgoNames[i]);
-	  std::cout << "done getbranchesselection" << std::endl;
+
 	  std::stringstream ss; // store the name of the output file and include the i and j indices!
 	  std::string bkg = runbkg ? "sig": "bkg";
-	  ss << AlgoNames[i] << "_" << i << "_" << j << "_" << bkg << ".root";
+	  ss << AlgoNames[i] << "_" << i << "_" << pTbins[j] << "_" << bkg << ".root";
 	  TFile * outfile = new TFile(ss.str().c_str(),"RECREATE");	  
 	  TTree * outTree;
-	  //outTree = currTree->CloneTree(0);
 
-	  bool addJetIndices = true;
-	  std::cout << "clonedtree" << std::endl;
-	  // addJets(outTree) changed to intree....
+
 	  addJets(intree, AlgoNames[i], runbkg);//, addJetIndices); //set all of the branches for the output tree for the jets
 	  outTree = intree->CloneTree(0);
-	  std::cout << "done addjets()" << std::endl;
 	  mass_max = TopEdgeMassWindow[i][j];
 	  mass_min = BottomEdgeMassWindow[i][j];
 
-	  //int entries = (int)currTree->GetEntries();
 	  int entries = (int)intree->GetEntries();
-	  cout << "n entries: " << entries << endl;
+
 	  double mass = 0;
 	  for (int n = 0; n < entries; n++)
 	    {
-	      //currTree->GetEntry(n);
 	      intree->GetEntry(n);
 	      pt_reweight = runbkg ? qcd_PtReweight[i]->GetBinContent(j) : Wp_PtReweight[i]->GetBinContent(j);
 	      // check pt bins? check if it should be passing, find leading jets, truth index, set weight
@@ -1778,8 +1778,6 @@ void make68Plots()//TTree * bkg, TTree * sig)
 	      setSelectionVectors(runbkg, AlgoNames[i]);
 	      if (groomAlgoIndex != 0) // check the pt is in the correct bin
 		{
-		  //std::cout << "ptrange.first " << ptrange[j].first << std::endl;
-		  //std::cout << "ptrange.second " << ptrange[j].second << std::endl;
 		  if ((*jet_pt_truth)[0]/1000.0 < ptrange[j].first || (*jet_pt_truth)[0]/1000.0 > ptrange[j].second)
 		    continue;
 		  //std::cout << "passed truth pt cut " << std::endl;
@@ -1828,10 +1826,7 @@ void make68Plots()//TTree * bkg, TTree * sig)
 	    leadTruthIndex = chosenLeadTruthJetIndex;
 	    leadTopoIndex = chosenLeadTopoJetIndex;
 	    mass = runbkg ? (*signal_m_vec[2])[leadGroomedIndex]/1000.0 : (*bkg_m_vec[2])[leadGroomedIndex]/1000.0;
-	      //mass = (*currTree_mass)[leadGroomedIndex];
-	    std::cout << "mass: " << mass << std::endl;
-	    std::cout << mass_max << std::endl;
-	    std::cout << mass_min << std::endl;
+
 	    if (mass < mass_max && mass > mass_min)
 	      {
 		outTree->Fill();
@@ -1862,7 +1857,7 @@ vector<std::string> getListOfJetBranches(std::string &algorithm)
   vector<string> branches;
   ifstream in(algorithm+"_branches.txt");
   string line;
-  // what to do about branches that have * in them?
+  // what OBto do about branches that have * in them?
   while (getline(in, line))
     {
       branches.push_back(rtrim(line));
@@ -1914,7 +1909,7 @@ void addJets(TTree * tree, std::string &groomalgo, bool signal)
 	}
       if (signal)
 	{
-	  std::cout << "setE " << jetType << std::endl;
+
       tree->SetBranchAddress(std::string(jetType+"E").c_str(),&signal_E_vec[i]);
       tree->SetBranchAddress(std::string(jetType+"pt").c_str(),&signal_pt_vec.at(i));
       tree->SetBranchAddress(std::string(jetType+"m").c_str(),&signal_m_vec.at(i));
@@ -1945,45 +1940,33 @@ void addJets(TTree * tree, std::string &groomalgo, bool signal)
 	}
       else
 	{
-	  std::cout << "jetType: " << jetType << std::endl;
 	  tree->SetBranchAddress(std::string(jetType+"E").c_str(),&bkg_E_vec.at(i));
 	  tree->SetBranchAddress(std::string(jetType+"pt").c_str(),&bkg_pt_vec.at(i));
 	  tree->SetBranchAddress(std::string(jetType+"m").c_str(),&bkg_m_vec.at(i));
 	  tree->SetBranchAddress(std::string(jetType+"eta").c_str(),&bkg_eta_vec.at(i));
 	  tree->SetBranchAddress(std::string(jetType+"phi").c_str(),&bkg_phi_vec.at(i));
-	  if (bkg_emfrac_vec.find(i) == bkg_emfrac_vec.end())
-	    std::cout << "missing vector entry emfrac" << std::endl;
 	  if (i != 0)
 	    tree->SetBranchAddress(std::string(jetType+"emfrac").c_str(),&bkg_emfrac_vec.at(i));
-	  if (bkg_Tau1_vec.find(i) == bkg_Tau1_vec.end())
-	    std::cout << "missing vector entry Tau1" << std::endl;
-      tree->SetBranchAddress(std::string(jetType+"Tau1").c_str(),&bkg_Tau1_vec.at(i));
-      tree->SetBranchAddress(std::string(jetType+"Tau2").c_str(),&bkg_Tau2_vec.at(i));
-      tree->SetBranchAddress(std::string(jetType+"Tau3").c_str(),&bkg_Tau3_vec.at(i));
-      tree->SetBranchAddress(std::string(jetType+"WIDTH").c_str(),&bkg_WIDTH_vec.at(i));
-      if (bkg_WIDTH_vec.find(i) == bkg_WIDTH_vec.end())
-	    std::cout << "missing vector entry WIDTH" << std::endl;
-      tree->SetBranchAddress(std::string(jetType+"SPLIT12").c_str(),&bkg_SPLIT12_vec.at(i));
-      tree->SetBranchAddress(std::string(jetType+"SPLIT23").c_str(),&bkg_SPLIT23_vec.at(i));
-      tree->SetBranchAddress(std::string(jetType+"SPLIT34").c_str(),&bkg_SPLIT34_vec.at(i));
-      if (bkg_Dip12_vec.find(i) == bkg_Dip12_vec.end())
-	std::cout << "missing vector entry WIDTH" << std::endl;
-      tree->SetBranchAddress(std::string(jetType+"Dip12").c_str(),&bkg_Dip12_vec.at(i));
-      tree->SetBranchAddress(std::string(jetType+"Dip13").c_str(),&bkg_Dip13_vec.at(i));
-      tree->SetBranchAddress(std::string(jetType+"Dip23").c_str(),&bkg_Dip23_vec.at(i));
-      tree->SetBranchAddress(std::string(jetType+"DipExcl12").c_str(),&bkg_DipExcl12_vec.at(i));
-      tree->SetBranchAddress(std::string(jetType+"PlanarFlow").c_str(),&bkg_PlanarFlow_vec.at(i));
-      if (bkg_Angularity_vec.find(i) == bkg_Angularity_vec.end())
-	    std::cout << "missing vector entry WIDTH" << std::endl;
-      tree->SetBranchAddress(std::string(jetType+"Angularity").c_str(),&bkg_Angularity_vec.at(i));
-      tree->SetBranchAddress(std::string(jetType+"QW").c_str(),&bkg_QW_vec.at(i));
-      tree->SetBranchAddress(std::string(jetType+"PullMag").c_str(),&bkg_PullMag_vec.at(i));
-      tree->SetBranchAddress(std::string(jetType+"PullPhi").c_str(),&bkg_PullPhi_vec.at(i));
-      tree->SetBranchAddress(std::string(jetType+"Pull_C00").c_str(),&bkg_Pull_C00_vec.at(i));
-      tree->SetBranchAddress(std::string(jetType+"Pull_C01").c_str(),&bkg_Pull_C01_vec.at(i));
-      tree->SetBranchAddress(std::string(jetType+"Pull_C10").c_str(),&bkg_Pull_C10_vec.at(i));
-      tree->SetBranchAddress(std::string(jetType+"Pull_C11").c_str(),&bkg_Pull_C11_vec.at(i));
-      std::cout << "end loop thingy " << i << endl;
+	  tree->SetBranchAddress(std::string(jetType+"Tau1").c_str(),&bkg_Tau1_vec.at(i));
+	  tree->SetBranchAddress(std::string(jetType+"Tau2").c_str(),&bkg_Tau2_vec.at(i));
+	  tree->SetBranchAddress(std::string(jetType+"Tau3").c_str(),&bkg_Tau3_vec.at(i));
+	  tree->SetBranchAddress(std::string(jetType+"WIDTH").c_str(),&bkg_WIDTH_vec.at(i));
+	  tree->SetBranchAddress(std::string(jetType+"SPLIT12").c_str(),&bkg_SPLIT12_vec.at(i));
+	  tree->SetBranchAddress(std::string(jetType+"SPLIT23").c_str(),&bkg_SPLIT23_vec.at(i));
+	  tree->SetBranchAddress(std::string(jetType+"SPLIT34").c_str(),&bkg_SPLIT34_vec.at(i));
+	  tree->SetBranchAddress(std::string(jetType+"Dip12").c_str(),&bkg_Dip12_vec.at(i));
+	  tree->SetBranchAddress(std::string(jetType+"Dip13").c_str(),&bkg_Dip13_vec.at(i));
+	  tree->SetBranchAddress(std::string(jetType+"Dip23").c_str(),&bkg_Dip23_vec.at(i));
+	  tree->SetBranchAddress(std::string(jetType+"DipExcl12").c_str(),&bkg_DipExcl12_vec.at(i));
+	  tree->SetBranchAddress(std::string(jetType+"PlanarFlow").c_str(),&bkg_PlanarFlow_vec.at(i));
+	  tree->SetBranchAddress(std::string(jetType+"Angularity").c_str(),&bkg_Angularity_vec.at(i));
+	  tree->SetBranchAddress(std::string(jetType+"QW").c_str(),&bkg_QW_vec.at(i));
+	  tree->SetBranchAddress(std::string(jetType+"PullMag").c_str(),&bkg_PullMag_vec.at(i));
+	  tree->SetBranchAddress(std::string(jetType+"PullPhi").c_str(),&bkg_PullPhi_vec.at(i));
+	  tree->SetBranchAddress(std::string(jetType+"Pull_C00").c_str(),&bkg_Pull_C00_vec.at(i));
+	  tree->SetBranchAddress(std::string(jetType+"Pull_C01").c_str(),&bkg_Pull_C01_vec.at(i));
+	  tree->SetBranchAddress(std::string(jetType+"Pull_C10").c_str(),&bkg_Pull_C10_vec.at(i));
+	  tree->SetBranchAddress(std::string(jetType+"Pull_C11").c_str(),&bkg_Pull_C11_vec.at(i));
 	}
     } // end for loop over topo/truth/groom
 } //addJets()
