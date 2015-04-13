@@ -102,6 +102,8 @@ void setSelectionVectors(bool signal, std::string & algorithm);
 void runAlgorithm(TTree *inputTree, TTree *inputTree1, TString groomAlgo, int groomAlgoIndex);
 vector<std::string> getListOfJetBranches(std::string & algorithm);
 void initVectors();
+std::pair<int,int> getTwoLeadingSubjets(std::vector<int> indices, std::vector<float> * subjets);
+std::string returnJetType(std::string & samplePrefix, std::string & groomalgo, bool addLC, int idx);
 
 enum class groomAlgoEnum{groomZero, TopoSplitFilteredMu67SmallR0YCut9, TopoSplitFilteredMu100SmallR30YCut4, TopoTrimmedPtFrac5SmallR30, TopoTrimmedPtFrac5SmallR20, TopoPrunedCaRcutFactor50Zcut10, TopoPrunedCaRcutFactor50Zcut20, AntiKt2LCTopo, AntiKt3LCTopo, AntiKt4LCTopo};
 //groomAlgo options:
@@ -297,7 +299,7 @@ TPad *pad2[nPtBins];
 
 
 void defineStrings(TString *AlgoList, TString *binLabel, TString *pTbins, TString *finePtBins){
-  
+
   AlgoList[0]="TruthJet_RecoMatch";
   AlgoNames[0] = "";
   AlgoPrefix[0] = "";
@@ -305,18 +307,22 @@ void defineStrings(TString *AlgoList, TString *binLabel, TString *pTbins, TStrin
   AlgoList[1]="SF67r0Y9";
   AlgoNames[1]="TopoSplitFilteredMu67SmallR0YCut9";
   AlgoPrefix[1] = "CamKt12";
+  subjetMap["TopoSplitFilteredMu67SmallR0YCut9"] = "TopoSplitFiltSubjetsMu67SmallR0YCut9";
   //SplitFilteredMu100SmallR30YCut4
   AlgoList[2]="SF100r30Y4";
   AlgoNames[2] = "TopoSplitFilteredMu100SmallR30YCut4";
   AlgoPrefix[2] = "CamKt12";
+  subjetMap["TopoSplitFilteredMu100SmallR30YCut4"] = "TopoSplitFiltSubjetsMu100SmallR0YCut4";
   //TrimmedPtFrac5SmallR30
   AlgoList[3]="TrimPt5r30";
   AlgoNames[3] = "TopoTrimmedPtFrac5SmallR30";
   AlgoPrefix[3] = "AntiKt10";
+  subjetMap["TopoTrimmedPtFrac5SmallR30"] = "TopoTrimmedSubjetsPtFrac5SmallR30";
   //TrimmedPtFrac5SmallR20
   AlgoList[4]="TrimPt5r20";
   AlgoNames[4] = "TopoTrimmedPtFrac5SmallR20";
   AlgoPrefix[4] = "AntiKt10";
+  subjetMap["TopoTrimmedPtFrac5SmallR20"] = "";
   //PrunedCaRcutFactor50Zcut10
   AlgoList[5]="PrunRf50Z10";
   AlgoNames[5] = "TopoPrunedCaRcutFactor50Zcut10";
@@ -487,3 +493,29 @@ std::map<int, std::vector<Float_t> *> bkg_Pull_C01_vec;
 std::map<int, std::vector<Float_t> *> bkg_Pull_C10_vec;
 std::map<int, std::vector<Float_t> *> bkg_Pull_C11_vec;
 
+
+std::map<int, std::vector<std::vector < int> * > > signal_constit_index;
+std::map<int, std::vector<std::vector < int> * > > bkg_constit_index;
+
+std::vector<Float_t> * signal_subjets_E_vec;
+std::vector<Float_t> * signal_subjets_pt_vec;
+std::vector<Float_t> * signal_subjets_m_vec;
+std::vector<Float_t> * signal_subjets_eta_vec;
+std::vector<Float_t> * signal_subjets_phi_vec;
+
+std::vector<Float_t> * bkg_subjets_E_vec;
+std::vector<Float_t> * bkg_subjets_pt_vec;
+std::vector<Float_t> * bkg_subjets_m_vec;
+std::vector<Float_t> * bkg_subjets_eta_vec;
+std::vector<Float_t> * bkg_subjets_phi_vec;
+
+std::vector<Float_t> * signal_massdrop_vec;
+std::vector<Float_t> * signal_yt_vec;
+std::vector<Float_t> * bkg_massdrop_vec;
+std::vector<Float_t> * bkg_yt_vec;
+std::map<int, std::vector<Float_t> *> signal_Tau21_vec;
+std::map<int, std::vector<Float_t> *> bkg_Tau21_vec;
+
+bool subjets;
+
+std::map<std::string, std::string> subjetMap;
