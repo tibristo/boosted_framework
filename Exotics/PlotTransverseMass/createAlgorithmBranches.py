@@ -16,10 +16,12 @@ for alg in algorithms:
         #changes numbins[tcount] to 20 for now....
         
         if t != 'emfrac':
-            f.write('truth_'+t+','+'jet_CamKt12Truth_'+t+','+str(40) + ',' + str(axisvalues[tcount][0]) + ','+str(axisvalues[tcount][1])+',\n')
-            f2.write('jet_CamKt12Truth_'+t+'\n')
-        f.write('topo_'+t+','+'jet_CamKt12LCTopo_'+t+','+str(40) + ',' + str(axisvalues[tcount][0]) + ','+str(axisvalues[tcount][1])+',\n')        
-        f.write('groomed_'+t+','+prefix+alg+'_'+t+','+str(40) + ',' + str(axisvalues[tcount][0]) + ','+str(axisvalues[tcount][1])+',\n')
+            #f.write('truth_'+t+','+'jet_CamKt12Truth_'+t+','+str(20) + ',' + str(axisvalues[tcount][0]) + ','+str(axisvalues[tcount][1])+',\n')
+            f.write('truth_'+t+','+'jet_CamKt12Truth'+alg[4:]+'_'+t+','+str(20) + ',' + str(axisvalues[tcount][0]) + ','+str(axisvalues[tcount][1])+',\n')
+            #f2.write('jet_CamKt12Truth_'+t+'\n')
+            f2.write('jet_CamKt12Truth'+alg[4:]+'_'+t+'\n')
+        f.write('topo_'+t+','+'jet_CamKt12LCTopo_'+t+','+str(20) + ',' + str(axisvalues[tcount][0]) + ','+str(axisvalues[tcount][1])+',\n')        
+        f.write('groomed_'+t+','+prefix+alg+'_'+t+','+str(20) + ',' + str(axisvalues[tcount][0]) + ','+str(axisvalues[tcount][1])+',\n')
 
 
         f2.write('jet_CamKt12LCTopo_'+t+'\n')

@@ -141,7 +141,7 @@ Float_t normalisation = 1.0;
 Int_t NEvents = 0;
 std::map<int, float> NEvents_weighted;
 Float_t mc_event_weight = 1.0;
-Int_t mc_channel_number  = 0;
+UInt_t mc_channel_number  = 0;
 
 //QCD split filtering with Y cut 9
 vector<float> * qcd_CA12_truth_pt = 0;

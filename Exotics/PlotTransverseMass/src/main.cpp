@@ -1864,8 +1864,9 @@ void makeMassWindowFile(bool applyMassWindow)
 		}     
 	      } // end loop over jet_pt_groomed
 	      
-	      if (chosenLeadTruthJetIndex < 0 && chosenLeadGroomedIndex == -99) // failed selection
+	      if (chosenLeadTruthJetIndex < 0 || chosenLeadGroomedIndex == -99) // failed selection
 		  continue;
+	      
 
 	      
 	    leadGroomedIndex = chosenLeadGroomedIndex;
@@ -1999,7 +2000,8 @@ void addJets(TTree * tree, std::string &groomalgo, bool signal)
 	{
 	case 0: // truth
 	  //jetType="jet_CamKt12Truth_";
-	  jetType = "jet_" + samplePrefix + "Truth_";
+	  //jetType = "jet_" + samplePrefix + "Truth_";
+	  jetType = "jet_" + samplePrefix + "Truth"+groomalgo.substr(4,groomalgo.length())+"_"; // added groomalgo+"_"
 	  break;
 	case 1: // topo
 	  //jetType="jet_CamKt12LCTopo_";

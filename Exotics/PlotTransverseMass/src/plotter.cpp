@@ -90,7 +90,7 @@ plotter::plotter(std::string & algorithm_in, TTree * bkg_in, TTree * sig_in, std
     */
 
     readAlgorithmConfig(algorithm_in); // reads in the variables and the parameters for the TH1Fs for each one - bin numbers, limits, etc.  This is all read into a map called config
-    getWeights(); // get all of the weights for the different samples - k-factors, xs, efficiency
+    getWeights(algorithm_in, params); // get all of the weights for the different samples - k-factors, xs, efficiency
     sig = sig_in;
     bkg = bkg_in;
     algorithm = algorithm_in;
@@ -555,13 +555,19 @@ void plotter::readAlgorithmConfig(std::string &algorithm)
   } // readAlgorithmConfig()
 
 
-void plotter::getWeights()
+void plotter::getWeights(std::string & algorithm, std::string & params)
 {
   /*
     Read in the weights for all of the samples.  Weights include cross section, k-factor and filter efficiency weights.  The are stored according to Run Number.
     All read in from weightings.csv.
 
     It creates and fills the weighting map, which is a map of Int_t (the RunNumber) containing a vector of weights, which are stored as strings here, later converted to float using std::stod().
+
+    The number of events, weighted by mc_event_weight is read into events[] maphere.
+
+    Keyword args:
+    algorithm --- algorithm name
+    params --- algorithm parameters, like pt bin name
    */
 
 
@@ -594,6 +600,26 @@ void plotter::getWeights()
       }
     }
   f.close();
+
+
+  std::cout << algorithm << std::endl;
+  std::vector<std::string> files = {algorithm+"_"+params+"_sig",algorithm+"_"+params+"_bkg"};
+  for (std::vector<std::string>::iterator it = files.begin(); it!=files.end(); it++)
+    {
+      std::cout << (*it) << std::endl;
+      ifstream evts((*it)+".nevents");
+  
+      while (getline(evts,line))
+	{
+	  line = rtrim(line);
+	  size_t pos = 0;
+	  pos = line.find(delimeter);
+	  //std::cout << line.substr(pos, line.length()) << std::endl;
+	  events[std::stoi(line.substr(0,pos))] = std::stod(line.substr(pos+1, line.length()));
+	  //std::cout << line << std::endl;
+	}
+      evts.close();
+    }
   
 } // getWeights()
 
@@ -615,7 +641,7 @@ void plotter::setBranches()
     sig->SetBranchAddress("mc_event_weight",&signal_mc_event_weight);
     sig->SetBranchAddress("RunNumber",&signal_RunNumber);
     sig->SetBranchAddress("mc_channel_number",&signal_RunNumber);
-    sig->SetBranchAddress("NEvents_weighted",&signal_NEvents_weighted);
+    //sig->SetBranchAddress("NEvents_weighted",&signal_NEvents_weighted);
     sig->SetBranchAddress("NEvents",&signal_NEvents);
 
     bkg->SetBranchAddress("normalisation",&bkg_normalisation);
@@ -625,11 +651,11 @@ void plotter::setBranches()
     bkg->SetBranchAddress("mc_event_weight",&bkg_mc_event_weight);
     bkg->SetBranchAddress("RunNumber",&bkg_RunNumber);
     bkg->SetBranchAddress("mc_channel_number",&bkg_RunNumber);
-    bkg->SetBranchAddress("NEvents_weighted",&bkg_NEvents_weighted);
+    //bkg->SetBranchAddress("NEvents_weighted",&bkg_NEvents_weighted);
     bkg->SetBranchAddress("NEvents",&bkg_NEvents);
 
     const char * str[] = {"truth","topo", "groomed"};
-   // create a vector containing the jetTypes so we can make an iterator...
+    // create a vector containing the jetTypes so we can make an iterator...
     std::vector<std::string> jetTypes(str, std::end(str));
     // and a map for easy referencing
     std::map<std::string, int> jetMap = {{"truth",jet_type::TRUTH},{"topo",jet_type::TOPO},{"groomed",jet_type::GROOMED}};
@@ -711,14 +737,14 @@ void plotter::compareHistograms(TH1F * hist1, TH1F * hist2, std::string file_nam
 
   hist1->SetLineColor(kBlue);
   hist1->Sumw2();
-  hist1->Scale(1./hist1->Integral());
+  //hist1->Scale(1./hist1->Integral());
   //hist1->GetXaxis()->SetLabel();
   hist1->GetYaxis()->SetTitle("# Entries");
   hist1->SetMarkerSize(3);
   hist1->SetLineWidth(2);
   hist2->SetLineColor(kRed);
   hist2->Sumw2();
-  hist2->Scale(1./hist2->Integral());
+  //hist2->Scale(1./hist2->Integral());
   //hist2->GetXaxis()->SetLabel();
   hist2->GetYaxis()->SetTitle("# Entries");
   hist2->SetMarkerSize(3);
@@ -778,7 +804,7 @@ void plotter::fillHistograms(TTree * tree, bool signal)
 	Int_t runNum = signal ? signal_RunNumber : bkg_RunNumber;
 
 	// the number of events weighted by the mc_evt for the FULL sample, before mass window cuts
-	double nevents_weighted = signal ? signal_NEvents_weighted : bkg_NEvents_weighted;
+	//double nevents_weighted = signal ? signal_NEvents_weighted : bkg_NEvents_weighted;
 	double nevents_original = signal ? signal_NEvents : bkg_NEvents;
 	//std::cout << "NEVENTS: " << nevents_original << std::endl;
 	//std::cout << "NEVENTS_W: " << nevents_weighted << std::endl;
@@ -791,7 +817,8 @@ void plotter::fillHistograms(TTree * tree, bool signal)
 	    weight*=(20100*std::stod(weighting[runNum][3])*std::stod(weighting[runNum][2]));
 	    weight*= std::stod(weighting[runNum][1]);
 	    // normalise the weighting
-	    //weight/=nevents_weighted;
+	    //std::cout << events[runNum] << std::endl;
+	    weight/=events[runNum];
 	    
 	  }
 
@@ -813,11 +840,11 @@ void plotter::fillHistograms(TTree * tree, bool signal)
 	if (signal)
 	  {
 	    //double pt = signal ? (*signal_pt_vec[0])[signal_truth_index]:(*bkg_pt_vec[0])[bkg_truth_index];
-
+	    weight*=getPtWeight(pt);
 	    // does this need to be unnormalised somehow? :/ *rewight->Integral()?
-	    Int_t pt_idx = pt_reweight_hist->GetXaxis()->FindBin(pt);
+	    //Int_t pt_idx = pt_reweight_hist->GetXaxis()->FindBin(pt);
 	    //std::cout << "BEFORE " << weight << std::endl;
-	    weight *= (pt_reweight_hist->GetBinContent(pt_idx));///nevents_original);
+	    //weight *= (pt_reweight_hist->GetBinContent(pt_idx));///nevents_original);
 	    //std::cout << "AFTER " << weight << std::endl;
 	  }
 	// fill all the histograms for truth,topo.groomed
@@ -1166,3 +1193,36 @@ void plotter::initVectors()
       }  
   } // initVectors()
 
+float plotter::getPtWeight(double & pt_for_binning)
+{
+  double scalept = 1.0;
+  if     (pt_for_binning <= 225.0) scalept = 0.27;
+
+  else if(pt_for_binning <= 250.0) scalept = 0.32;
+
+  else if(pt_for_binning <= 275.0) scalept = 0.73;
+
+  else if(pt_for_binning <= 300.0) scalept = 1.72;
+
+  else if(pt_for_binning <= 335.0) scalept = 2.09;
+
+  else if(pt_for_binning <= 350.0) scalept = 2.34;
+
+  else if(pt_for_binning <= 400.0) scalept = 0.42;
+
+  else if(pt_for_binning <= 450.0) scalept = 0.73;
+
+  else if(pt_for_binning <= 500.0) scalept = 1.33;
+
+  else if(pt_for_binning <= 600.0) scalept = 0.35;
+
+  else if(pt_for_binning <= 700.0) scalept = 1.00;
+
+  else if(pt_for_binning <= 800.0) scalept = 2.55;
+
+  else if(pt_for_binning <= 900.0) scalept = 5.16;
+
+  else if(pt_for_binning <= 1000.0) scalept = 15.15;
+
+  return scalept;
+} //getPtWeight
