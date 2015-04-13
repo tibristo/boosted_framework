@@ -97,6 +97,7 @@ std::vector<std::string> getListOfBranches(std::string &algorithm);
 //void make68Plots(int algidx, TTree * bkg, TTree * sig);
 void makeMassWindowFile(bool applyMassWindow);
 void addJets(TTree * tree, std::string & algorithm, bool signal, int groomIdx);
+void addSubJets(TTree * tree, std::string & algorithm, bool signal, int groomIdx);
 //void getBranchesSelection(TTree * tree, std::string & algorithm);
 void setSelectionVectors(bool signal, std::string & algorithm);
 void runAlgorithm(TTree *inputTree, TTree *inputTree1, TString groomAlgo, int groomAlgoIndex, bool massHistos);
@@ -240,6 +241,7 @@ TString AlgoList[nAlgosMax];
 std::string AlgoNames[nAlgosMax];
 std::map<std::string, std::string> subjetMap;
 std::string AlgoPrefix[nAlgosMax];
+std::map<std::string, std::string> subjetIndex;
 TString binLabel[nAlgosMax-2];
 const int nPtBins=6;
 TString pTbins[nPtBins];
@@ -306,27 +308,31 @@ void defineStrings(TString *AlgoList, TString *binLabel, TString *pTbins, TStrin
 
   AlgoList[0]="TruthJet_RecoMatch";
   AlgoNames[0] = "";
-  AlgoPrefix[0] = "";
+  AlgoPrefix[0] = "";  
   //SplitFilteredMu67SmallR0YCut9
   AlgoList[1]="SF67r0Y9";
   AlgoNames[1]="TopoSplitFilteredMu67SmallR0YCut9";
   AlgoPrefix[1] = "CamKt12";
   subjetMap["TopoSplitFilteredMu67SmallR0YCut9"] = "TopoSplitFiltSubjetsMu67SmallR0YCut9";
+  subjetIndex["TopoSplitFilteredMu67SmallR0YCut9"] = "jet_CamKt12LCTopo_SplitFiltSubjetsMu67SmallR0YCut9_index";
   //SplitFilteredMu100SmallR30YCut4
   AlgoList[2]="SF100r30Y4";
   AlgoNames[2] = "TopoSplitFilteredMu100SmallR30YCut4";
   AlgoPrefix[2] = "CamKt12";
   subjetMap["TopoSplitFilteredMu100SmallR30YCut4"] = "TopoSplitFiltSubjetsMu100SmallR0YCut4";
+  subjetIndex["TopoSplitFilteredMu100SmallR30YCut4"] = "jet_CamKt12LCTopo_SplitFiltSubjetsMu100SmallR30YCut4_index";
   //TrimmedPtFrac5SmallR30
   AlgoList[3]="TrimPt5r30";
   AlgoNames[3] = "TopoTrimmedPtFrac5SmallR30";
   AlgoPrefix[3] = "AntiKt10";
   subjetMap["TopoTrimmedPtFrac5SmallR30"] = "TopoTrimmedSubjetsPtFrac5SmallR30";
+  subjetIndex["TopoTrimmedPtFrac5SmallR30"] = "jet_AntiKt10LCTopoTrimmedPtFrac5SmallR30_TrimmedSubjetsPtFrac5SmallR30_index";
   //TrimmedPtFrac5SmallR20
   AlgoList[4]="TrimPt5r20";
   AlgoNames[4] = "TopoTrimmedPtFrac5SmallR20";
   AlgoPrefix[4] = "AntiKt10";
-  subjetMap["TopoTrimmedPtFrac5SmallR20"] = "";
+  subjetMap["TopoTrimmedPtFrac5SmallR20"] = "TopoTrimmedSubjetsPtFrac5SmallR20";
+  subjetIndex["TopoTrimmedPtFrac5SmallR20"] = "jet_AntiKt10LCTopoTrimmedPtFrac5SmallR20_TrimmedSubjetsPtFrac5SmallR20_index";
   //PrunedCaRcutFactor50Zcut10
   AlgoList[5]="PrunRf50Z10";
   AlgoNames[5] = "TopoPrunedCaRcutFactor50Zcut10";
@@ -500,6 +506,10 @@ std::map<int, std::vector<Float_t> *> bkg_Pull_C11_vec;
 
 std::map<int, std::vector<std::vector < int>  > * > signal_constit_index;
 std::map<int, std::vector<std::vector < int>  > * > bkg_constit_index;
+
+std::vector<std::vector <int> > * subjet_index;
+
+
 
 std::vector<Float_t> * signal_subjets_E_vec;
 std::vector<Float_t> * signal_subjets_pt_vec;
