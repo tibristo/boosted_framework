@@ -827,117 +827,117 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
 		    }
 		}
 	      
-	      // do truth matching with topo jets
-	      if (algorithmType.find("truthmatch") != std::string::npos)
-		{
-		  //check which is the CA12 ungroomed reco jet with EMfrac<0.99 and |eta|<1.2
-		  //loop over all topo jets and get the leading with cuts
-		  bool hasTopoJet=false;
-		  
-		  for (int jet_i=0; jet_i<(*var_pt_vec[jetType::TOPO]).size(); jet_i++)
-		    {
-		      // some samples don't have emfrac info, so this is a safeguard
-		      float emfractmp = 0.5;
-		      if (!xAOD)//emfrac)
-			emfractmp = (*var_emfrac_vec[jetType::TOPO])[jet_i];
-		      // check quality
-		      if (!hasTopoJet && emfractmp<0.99 && fabs((*var_eta_vec[jetType::TOPO])[jet_i])<1.2) 
-			{
-			  chosenLeadTopoJetIndex=jet_i;
-			  hasTopoJet=true;
-			  // quit loop
-			  continue;
-			} 
-		    } // end loop over var_pt_vec[jetType::TOPO]
-		  
-		  //now match truth jet with the chosen topo jet
-		  if (hasTopoJet)
-		    {
-		      for (int jet_i=0; jet_i<(*var_pt_vec[jetType::TRUTH]).size(); jet_i++)
-			{
-			  // truth match on deltaR
-			  if (chosenLeadTruthJetIndex<0 && DeltaR((*var_eta_vec[jetType::TOPO])[chosenLeadTopoJetIndex],(*var_phi_vec[jetType::TOPO])[chosenLeadTopoJetIndex],(*var_eta_vec[jetType::TRUTH])[jet_i],(*var_phi_vec[jetType::TRUTH])[jet_i])<0.9)
-			    { 
-			      chosenLeadTruthJetIndex=jet_i;
-			      // quit loop
-			      continue;
-			    }	  
-			}	// end loop over var_pt_vec[jetType::TRUTH]
-		    } // end if(hasTopoJet)
-		} // end if(groomAlgoIndex==0)
 	      
 	      // if truth match on topo jets was done, leave as is, otherwise use 0
-	      chosenLeadTruthJetIndex = algorithmType.find("truthmatch") != std::string::npos ? chosenLeadTruthJetIndex : 0;
-	      if (chosenLeadTruthJetIndex == 0)
+	      //chosenLeadTruthJetIndex = algorithmType.find("truthmatch") != std::string::npos ? chosenLeadTruthJetIndex : 0;
+	      int chosenLeadGroomedIndex=-99;
+	      //if (chosenLeadTruthJetIndex == 0)
+	      //{
+	      // This used to be a method for finding the leading truth jet, but now we are changing to find the leading groomed jet.
+	      float maxpt = 0;
+	      int count = 0;
+	      for (vector<float>::iterator it = (*var_pt_vec[jetType::GROOMED]).begin(); it != (*var_pt_vec[jetType::GROOMED]).end() ; it++)
 		{
-		  float maxpt = 0;
-		  int count = 0;
-		  for (vector<float>::iterator it = (*var_pt_vec[jetType::TRUTH]).begin(); it != (*var_pt_vec[jetType::TRUTH]).end() ; it++)
-		    {
-		      if ((*it)>maxpt)
-			{
-			  maxpt = (*it);
-			  chosenLeadTruthJetIndex = count;
-			}
-		      count+=1;
-		    }
-		}
 
-	      if (chosenLeadTruthJetIndex > 0)
-		std::cout << "Found new leading truth jet!!!!" << std::endl;
+		  if ((*it)>maxpt)		  // emfrac is not always available
+		    {
+		      maxpt = (*it);
+		      //chosenLeadTruthJetIndex = count;
+		      float emfractmp = 0.5;
+		      if (!xAOD)//emfrac)
+			emfractmp = (*var_emfrac_vec[jetType::GROOMED])[count];
+		      if (emfractmp < 0.9 && fabs((*var_eta_vec[jetType::GROOMED])[count])<1.2)
+			chosenLeadGroomedIndex = count;
+		    }
+		  count+=1;
+		}
+	      //}
+	      
+	      //if (chosenLeadTruthJetIndex > 0)
+	      //std::cout << "Found new leading truth jet!!!!" << std::endl;
 	      
 	      // veto the event if we have no good truth jets.
-	      if (chosenLeadTruthJetIndex < 0)
+	      //if (chosenLeadTruthJetIndex < 0)
+	      if (chosenLeadGroomedIndex < 0)
 		continue;
 
+	      bool passedTruthBoson = signal ? false : true;
 	      // truth boson matching done on the leading truth jet (signal only) to check if it is a Z or W boson.
 	      int truthBosonIndex = -1;
+
+
+	      // 18/03/2015: Previously we were looking for a match on the truth jet here, not the groomed jet.
 	      if (truthBosonMatching && signal)
 		{
 		  int count = 0;
 		  for (int jet_i = 0; jet_i < (*var_truthboson_eta_vec).size(); jet_i++)
 		    {
 		      // delta R matching of truth jet with truth boson
-		      if (truthBosonIndex<0 && DeltaR((*var_eta_vec[jetType::TRUTH])[chosenLeadTruthJetIndex],(*var_phi_vec[jetType::TRUTH])[chosenLeadTruthJetIndex],(*var_truthboson_eta_vec)[jet_i],(*var_truthboson_phi_vec)[jet_i])<0.75*radius)
+		      if (truthBosonIndex<0 && DeltaR((*var_eta_vec[jetType::GROOMED])[chosenLeadGroomedIndex],(*var_phi_vec[jetType::GROOMED])[chosenLeadGroomedIndex],(*var_truthboson_eta_vec)[jet_i],(*var_truthboson_phi_vec)[jet_i])<(0.75*radius))
 			{
-			  truthBosonIndex = count;
+
+			  // if there is a Z boson within this radius, regardless of whether or not there is also a W, we veto the event
+			  if (abs((*var_truthboson_ID_vec)[truthBosonIndex]) == 23)
+			    {
+			      passedTruthBoson = false;
+			      continue;
+			    }
+			  else
+			    truthBosonIndex = count;
 			}
 		      count++;
 		    }
+
 		  // check that a parent was found, if not, veto event
 		  if (truthBosonIndex < 0)
 		    {
-		      std::cout << "No truth boson parent found, vetoing event." << std::endl;
-		      continue;
+		      //std::cout << "No truth boson parent found, vetoing event." << std::endl;
+		      passedTruthBoson = false;
+		      //continue;
 		    }
 		  // check that the parent is a W
-		  if (abs((*var_truthboson_ID_vec)[truthBosonIndex]) != 24)
+		  else if (abs((*var_truthboson_ID_vec)[truthBosonIndex]) != 24)
 		    {
-		      std::cout << "Truth boson parent is not a W, vetoing event." << std::endl;
-		      continue;
+		      //std::cout << "Truth boson parent is not a W, vetoing event." << std::endl;
+		      passedTruthBoson = false;
+		      //continue;
 		    }
-		}
+		  else
+		    {
+		      passedTruthBoson = true;
+		    }
+		} // truth boson matching done
 
-	      
+	      if (truthBosonMatching && !passedTruthBoson)
+		continue;
 
-	      // find groomed jets
-	      int chosenLeadGroomedIndex=-99;
-	      for (int jet_i=0; jet_i<(*var_pt_vec[jetType::GROOMED]).size(); jet_i++)
+	      // find truth jets /////groomed jets
+	      // 18/03/2015: this was previously used to find the groomed jet matching with the TRUTH jet.  This order has been reversed
+	      // if truth match on topo jets was done, leave as is, otherwise use 0
+	      chosenLeadTruthJetIndex = -99;//algorithmType.find("truthmatch") != std::string::npos ? chosenLeadTruthJetIndex : 0;
+	      for (int jet_i=0; jet_i<(*var_pt_vec[jetType::TRUTH]).size(); jet_i++)
 		{
 		  // emfrac is not always available
-		  float emfractmp = 0.5;
+		  /*float emfractmp = 0.5;
 		  if (!xAOD)//emfrac)
-		    emfractmp = (*var_emfrac_vec[jetType::GROOMED])[jet_i];
+		  emfractmp = (*var_emfrac_vec[jetType::GROOMED])[jet_i];*/
 		  // truth match on dR with some eta and emfrac cuts
 		  // is the dR < 0.75 ot 0.9???
-		  if (chosenLeadGroomedIndex<0 && DeltaR((*var_eta_vec[jetType::TRUTH])[chosenLeadTruthJetIndex],(*var_phi_vec[jetType::TRUTH])[chosenLeadTruthJetIndex],(*var_eta_vec[jetType::GROOMED])[jet_i],(*var_phi_vec[jetType::GROOMED])[jet_i])<(0.75*radius) && emfractmp<0.99 && fabs((*var_eta_vec[jetType::GROOMED])[jet_i])<1.2)
+		  if (/*chosenLeadGroomedIndex<0*/chosenLeadTruthJetIndex < 0 && DeltaR((*var_eta_vec[jetType::TRUTH])[jet_i],(*var_phi_vec[jetType::TRUTH])[jet_i],(*var_eta_vec[jetType::GROOMED])[chosenLeadGroomedIndex],(*var_phi_vec[jetType::GROOMED])[chosenLeadGroomedIndex])<(0.75*radius))// && emfractmp<0.99 && fabs((*var_eta_vec[jetType::GROOMED])[])<1.2)
 		    {
-		      chosenLeadGroomedIndex=jet_i;
+
+		      //chosenLeadGroomedIndex=jet_i;
+		      chosenLeadTruthJetIndex=jet_i;
 		      continue;
+
 		    }     
 		} // end loop over var_pt_vec[jetType::GROOMED]
 	      
-	      if (chosenLeadGroomedIndex == -99) // failed selection
+
+
+
+	      //if (chosenLeadGroomedIndex == -99) // failed selection
+	      if (chosenLeadTruthJetIndex < 0) // failed selection
 		{
 		  continue;	      
 		}
@@ -1267,6 +1267,16 @@ vector<std::pair<std::string,bool> > getListOfJetBranches(std::string &algorithm
   branchmap["nVertices"] = true;
   branchmap["averageIntPerXing"] = true;
   branchmap["mc_event_weight"] = true;
+  if (xAOD)
+    {
+      branchmap["actualIntPerXing"] = true;
+      branchmap["evt_nEvts"] = true;
+      branchmap["evt_kfactor"] = true;
+      branchmap["evt_filtereff"] = true;
+      branchmap["evt_xsec"] = true;
+      branchmap["evt_sumWeights"] = true;
+      branchmap["evt_scale1fb"] = true;
+    }
 
   // need to add leptons
   branchmap["electrons"] = true;
@@ -1322,6 +1332,7 @@ std::string returnJetType(std::string & samplePrefix, std::string & groomalgo, b
   std::string jet = "";
   std::string xaod = "";
   // right now we have an issue with xAOD where it adds "Jets" before _variable, so we need a quick fix for this
+  std::string trAlgo (groomalgo);
   if (xAODJets)
     {
       xaod = "Jets";
@@ -1329,7 +1340,9 @@ std::string returnJetType(std::string & samplePrefix, std::string & groomalgo, b
   switch (i)
     {
     case jetType::TRUTH: // truth
-      jet="jet_CamKt12Truth"+xaod+"_";
+      replace(trAlgo, "Topo", "Truth");
+      //jet="jet_CamKt12Truth"+xaod+"_";
+      jet = "jet_"+samplePrefix+trAlgo+"_";
       break;
     case jetType::TOPO: // topo
       if (addLC)
@@ -1822,20 +1835,20 @@ void setJetsBranches(TChain * tree, std::string &groomalgo,  std::string & groom
       else
 	tree->SetBranchAddress("averageIntPerXing",&avgIntpXingIn_d3pd);
     }
-  if (brancharray.find("evt_scale1fb") != brancharray.end() && branchmap["evt_scale1fb"])
-    tree->SetBranchAddress("evt_scale1fb",&scale1fb);
+  //if (brancharray.find("evt_scale1fb") != brancharray.end() && branchmap["evt_scale1fb"])
+  //tree->SetBranchAddress("evt_scale1fb",&scale1fb);
   if (xAOD)
     {
-      if (brancharray.find("evt_kfactor") != brancharray.end() && branchmap["evt_kfactor"])
-	tree->SetBranchAddress("evt_kfactor",&evt_kfactor);
-      if (brancharray.find("evt_filtereff") != brancharray.end() && branchmap["evt_filtereff"])
-	tree->SetBranchAddress("evt_filtereff",&evt_filtereff);
-      if (brancharray.find("evt_nEvts") != brancharray.end() && branchmap["evt_nEvts"])
-	tree->SetBranchAddress("evt_nEvts",&evt_nEvts);
-      if (brancharray.find("evt_sumWeights") != brancharray.end() && branchmap["evt_sumWeights"])
-	tree->SetBranchAddress("evt_sumWeights",&evt_sumWeights);
-      if (brancharray.find("evt_xsec") != brancharray.end() && branchmap["evt_xsec"])
-      	tree->SetBranchAddress("evt_xsec",&evt_xsec);
+      tree->SetBranchAddress("evt_scale1fb",&scale1fb);
+      tree->SetBranchAddress("evt_kfactor",&evt_kfactor);
+      //if (brancharray.find("evt_filtereff") != brancharray.end() && branchmap["evt_filtereff"])
+      tree->SetBranchAddress("evt_filtereff",&evt_filtereff);
+      //if (brancharray.find("evt_nEvts") != brancharray.end() && branchmap["evt_nEvts"])
+      tree->SetBranchAddress("evt_nEvts",&evt_nEvts);
+      //if (brancharray.find("evt_sumWeights") != brancharray.end() && branchmap["evt_sumWeights"])
+      tree->SetBranchAddress("evt_sumWeights",&evt_sumWeights);
+      //if (brancharray.find("evt_xsec") != brancharray.end() && branchmap["evt_xsec"])
+      tree->SetBranchAddress("evt_xsec",&evt_xsec);
     }
 
 
@@ -2405,7 +2418,7 @@ void setOutputVariables( int jet_idx_truth, int jet_idx_topo, int jet_idx_groome
     } // end for loop
 
       // yfilt only exists for groomed jets
-  if (var_YFilt_vec != NULL)
+  if (calcYFilt)//var_YFilt_vec != NULL)
     {
 
       // yfilt doesn't exist in the split/filtered samples, so it needs to be derived
@@ -2414,6 +2427,8 @@ void setOutputVariables( int jet_idx_truth, int jet_idx_topo, int jet_idx_groome
 
     }
  
+  calculateResponseValues();
+
   // only store this for groomed jets
   if (subjetscalc)
     {
@@ -2457,7 +2472,10 @@ void calculateResponseValues()
   response_ZCUT12 = var_ZCUT12[g_idx]/var_ZCUT12[t_idx];
   response_Mu12 = var_Mu12[g_idx]/var_Mu12[t_idx];
   response_FoxWolfram20 = var_FoxWolfram20[g_idx]/var_FoxWolfram20[t_idx];
-  response_softdrop = var_softdrop[g_idx]/var_softdrop[t_idx];
+  if (var_softdrop[t_idx] != 0)
+    response_softdrop = var_softdrop[g_idx]/var_softdrop[t_idx];
+  else 
+    response_softdrop = var_softdrop[g_idx]*10000; // something really high -> infinity
 
 } // calculateResponseValues
 
@@ -2638,7 +2656,7 @@ void setOutputBranches(TTree * tree, std::string & groomalgo, std::string & groo
   if (xAOD)
     {
       tree->Branch("evt_kfactor",&evt_kfactor_out,"evt_kfactor/F");
-      tree->Branch("evt_nEvts",&evt_nEvts_out,"evt_nEvts/F");
+      tree->Branch("evt_nEvts",&evt_nEvts_out,"evt_nEvts/I");
       tree->Branch("evt_filtereff",&evt_filtereff_out,"evt_filtereff/F");
       tree->Branch("evt_sumWeights",&evt_sumWeights_out,"evt_sumWeights/F");
       tree->Branch("evt_xsec",&evt_xsec_out,"evt_xsec/F");
@@ -2949,7 +2967,7 @@ void setOutputBranches(TTree * tree, std::string & groomalgo, std::string & groo
 	  // add the response branch, but only need one
 	  if (addResponse)
 	    {
-	      tree->Branch("response_QJetsVol",&response_QJetsVol,"response_QJetsVol/F");
+	      tree->Branch("response_QJetsVol",&response_QjetVol,"response_QJetsVol/F");
 	    }
 	}
       if (useBranch(string(jetString+"FoxWolfram20")))
@@ -3000,7 +3018,7 @@ void setOutputBranches(TTree * tree, std::string & groomalgo, std::string & groo
 	  // add the response branch, but only need one
 	  if (addResponse)
 	    {
-	      tree->Branch("response_SoftDrop",&response_SoftDrop,"response_SoftDrop/F");
+	      tree->Branch("response_SoftDrop",&response_softdrop,"response_SoftDrop/F");
 	    }
 	}
 >>>>>>> Added the scale factors that are calculated in the post processing of the xAODs.
@@ -3063,7 +3081,7 @@ void setOutputBranches(TTree * tree, std::string & groomalgo, std::string & groo
   for (int tau_idx = 0 ; tau_idx < jetType::MAX; tau_idx++)
     {
       string jetstring = returnJetType(samplePrefix, groomalgo, addLC,tau_idx);
-      bool addResponse = wta_idx == 0 ? true : false;
+      bool addResponse = tau_idx == 0 ? true : false;
       if (useBranch(string(jetstring+"Tau21")))
 	{
 	  tree->Branch(std::string(jetstring+"Tau21").c_str(),&var_Tau21.at(tau_idx),std::string(jetstring+"Tau21/F").c_str());
