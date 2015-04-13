@@ -99,11 +99,14 @@ void makeMassWindowFile(bool applyMassWindow);
 void addJets(TTree * tree, std::string & algorithm, bool signal, int groomIdx);
 //void getBranchesSelection(TTree * tree, std::string & algorithm);
 void setSelectionVectors(bool signal, std::string & algorithm);
-void runAlgorithm(TTree *inputTree, TTree *inputTree1, TString groomAlgo, int groomAlgoIndex);
+void runAlgorithm(TTree *inputTree, TTree *inputTree1, TString groomAlgo, int groomAlgoIndex, bool massHistos);
 vector<std::string> getListOfJetBranches(std::string & algorithm);
 void initVectors();
-std::pair<int,int> getTwoLeadingSubjets(std::vector<int> indices, std::vector<float> * subjets);
+std::pair<int,int> getTwoLeadingSubjets(std::vector<int> & indices, std::vector<float> * subjets);
 std::string returnJetType(std::string & samplePrefix, std::string & groomalgo, bool addLC, int idx);
+std::string returnSubJetType(std::string & samplePrefix, std::string & groomalgo, bool addLC);
+void clearVectors();
+
 
 enum class groomAlgoEnum{groomZero, TopoSplitFilteredMu67SmallR0YCut9, TopoSplitFilteredMu100SmallR30YCut4, TopoTrimmedPtFrac5SmallR30, TopoTrimmedPtFrac5SmallR20, TopoPrunedCaRcutFactor50Zcut10, TopoPrunedCaRcutFactor50Zcut20, AntiKt2LCTopo, AntiKt3LCTopo, AntiKt4LCTopo};
 //groomAlgo options:
@@ -235,6 +238,7 @@ const int nAlgosMax=12;
 int nAlgos=0;
 TString AlgoList[nAlgosMax];
 std::string AlgoNames[nAlgosMax];
+std::map<std::string, std::string> subjetMap;
 std::string AlgoPrefix[nAlgosMax];
 TString binLabel[nAlgosMax-2];
 const int nPtBins=6;
@@ -298,7 +302,7 @@ TPad *pad1[nPtBins];
 TPad *pad2[nPtBins];
 
 
-void defineStrings(TString *AlgoList, TString *binLabel, TString *pTbins, TString *finePtBins){
+void defineStrings(TString *AlgoList, TString *binLabel, TString *pTbins, TString *finePtBins){//, std::map<std::string, std::string> subjetMap){
 
   AlgoList[0]="TruthJet_RecoMatch";
   AlgoNames[0] = "";
@@ -494,8 +498,8 @@ std::map<int, std::vector<Float_t> *> bkg_Pull_C10_vec;
 std::map<int, std::vector<Float_t> *> bkg_Pull_C11_vec;
 
 
-std::map<int, std::vector<std::vector < int> * > > signal_constit_index;
-std::map<int, std::vector<std::vector < int> * > > bkg_constit_index;
+std::map<int, std::vector<std::vector < int>  > * > signal_constit_index;
+std::map<int, std::vector<std::vector < int>  > * > bkg_constit_index;
 
 std::vector<Float_t> * signal_subjets_E_vec;
 std::vector<Float_t> * signal_subjets_pt_vec;
@@ -509,13 +513,13 @@ std::vector<Float_t> * bkg_subjets_m_vec;
 std::vector<Float_t> * bkg_subjets_eta_vec;
 std::vector<Float_t> * bkg_subjets_phi_vec;
 
-std::vector<Float_t> * signal_massdrop_vec;
-std::vector<Float_t> * signal_yt_vec;
-std::vector<Float_t> * bkg_massdrop_vec;
-std::vector<Float_t> * bkg_yt_vec;
-std::map<int, std::vector<Float_t> *> signal_Tau21_vec;
-std::map<int, std::vector<Float_t> *> bkg_Tau21_vec;
+std::vector<Float_t> signal_massdrop_vec;
+std::vector<Float_t> signal_yt_vec;
+std::vector<Float_t> bkg_massdrop_vec;
+std::vector<Float_t> bkg_yt_vec;
+std::map<int, std::vector<Float_t> > signal_Tau21_vec;
+std::map<int, std::vector<Float_t> > bkg_Tau21_vec;
 
 bool subjets;
 
-std::map<std::string, std::string> subjetMap;
+
