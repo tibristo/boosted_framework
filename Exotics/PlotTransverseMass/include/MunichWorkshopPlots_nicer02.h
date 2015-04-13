@@ -95,7 +95,7 @@ void setMassBranch(TTree * tree, std::string &algorithm);
 void plotVariables(TTree * tree, vector<std::string> & branches);
 std::vector<std::string> getListOfBranches(std::string &algorithm);
 //void make68Plots(int algidx, TTree * bkg, TTree * sig);
-void make68Plots();
+void makeMassWindowFile(bool applyMassWindow);
 void addJets(TTree * tree, std::string & algorithm, bool signal);
 //void getBranchesSelection(TTree * tree, std::string & algorithm);
 void setSelectionVectors(bool signal, std::string & algorithm);
@@ -139,8 +139,9 @@ Int_t leadTopoIndex = 0;
 TH1F * pt_reweight = 0;
 Float_t normalisation = 1.0;
 Int_t NEvents = 0;
-Float_t NEvents_weighted = 0;
+std::map<int, float> NEvents_weighted;
 Float_t mc_event_weight = 1.0;
+Int_t mc_channel_number  = 0;
 
 //QCD split filtering with Y cut 9
 vector<float> * qcd_CA12_truth_pt = 0;
