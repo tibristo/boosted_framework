@@ -1990,23 +1990,26 @@ void makeMassWindowFile(bool applyMassWindow, std::vector<std::string> & inputBk
 	  //std::cout << "fileIdx " << fileIdx << endl;
 	  //TTree * intree = (TTree*) inputTChain[tchainIdx]->GetTree();//("physics");
 	  //TChain * intree = new TChain("physics");//inputTChain[tchainIdx];
-	  inputTChain[tchainIdx]->LoadTree(0);
-	  TTree * intree = inputTChain[tchainIdx]->GetTree();
+	  //inputTChain[tchainIdx]->LoadTree(0);
+	  inputTChain[tchainIdx]->GetEntries();
+	  TTree * intree = (TTree*)inputTChain[tchainIdx]->GetTree();
 
+	  inputTChain[tchainIdx]->SetBranchStatus("*",0);
 	  intree->SetBranchStatus("*",0);
 	  // turn on the branches we're interested in
 	  for (std::vector<string>::iterator it = branches.begin(); it != branches.end(); it++)
 	    {
+	      inputTChain[tchainIdx]->SetBranchStatus((*it).c_str(),1);
 	      intree->SetBranchStatus((*it).c_str(),1);
 	      if(!intree->GetListOfBranches()->FindObject((*it).c_str())) {
 		std::cout << "could not find branch: " << (*it) << std::endl;
 	      }
 	    }
-	  setMassBranch(intree, AlgoNames[i], i);
+	  //setMassBranch(intree, AlgoNames[i], i);
+	  //setMassBranch(intree, AlgoNames[i], i);
 
-	  addJets(intree, AlgoNames[i], signal, i); //set all of the branches for the output tree for the jets
-	  if (subjets)
-	    addSubJets(intree, AlgoNames[i], signal, i);
+	  addJets(inputTChain[tchainIdx], AlgoNames[i], signal, i); //set all of the branches for the output tree for the jets
+
 
 	  mass_max = TopEdgeMassWindow[i][j];
 	  mass_min = BottomEdgeMassWindow[i][j];
@@ -2017,9 +2020,10 @@ void makeMassWindowFile(bool applyMassWindow, std::vector<std::string> & inputBk
 	  //TTree * newtc = (TTree*)intree->GetTree();
 	  //std::cout << newtc->GetEntries() << std::endl;
 	  outfile->cd();
-	  outTree = (TTree*)intree->CloneTree(0);//intree->CloneTree(0);
-
-	  long entries = (long)intree->GetEntries();
+	  outTree = (TTree*)intree->CloneTree(0);
+	  if (subjets)
+	    addSubJets(outTree, AlgoNames[i], signal, i);
+	  long entries = (long)inputTChain[tchainIdx]->GetEntries();
 
 	  // these numbers are chosen somewhat arb - they come from the settings I use
 	  // in the config files for the plotter() code... such bad coding :(
@@ -2033,7 +2037,8 @@ void makeMassWindowFile(bool applyMassWindow, std::vector<std::string> & inputBk
 
 	  for (long n = 0; n < entries; n++)
 	    {
-	      intree->GetEntry(n);
+	      //intree->GetEntry(n);
+	      inputTChain[tchainIdx]->GetEntry(n);
 	      clearVectors();
 	      if (n%1000==0)
 		std::cout << "Entry: "<< n << std::endl;
@@ -2361,35 +2366,25 @@ void clearVectors()
 } // clear VEctors
 
 
-void addJets(TTree * tree, std::string &groomalgo, bool signal, int groomIdx)
+void addJetsBranches(TTree * tree, std::string & groomalgo, bool signal, int groomIdx)
 {
-  //if (addJetIndex)
-  //{
   tree->Branch("leadTruthIndex",&leadTruthIndex, "leadTruthIndex/I");
   tree->Branch("leadTopoIndex",&leadTopoIndex, "leadTopoIndex/I");
   tree->Branch("leadGroomedIndex",&leadGroomedIndex, "leadGroomedIndex/I");
   //tree->Branch("pt_reweight",&pt_reweight, "pt_reweight/F");
   tree->Branch("normalisation",&normalisation, "normalisation/F");
   tree->Branch("NEvents",&NEvents,"NEvents/I");
-  //tree->Branch("NEvents_weighted",&NEvents_weighted,"NEvents_weighted/F");
-  //tree->Branch("NEvents_weighted",&NEvents_weighted,"NEvents_weighted/F");
+}// addJetsBranches
+
+void addJets(TChain * tree, std::string &groomalgo, bool signal, int groomIdx)
+{
   tree->SetBranchAddress("mc_event_weight",&mc_event_weight);
   tree->SetBranchAddress("mc_channel_number", &mc_channel_number);
-  //}
+
   std::string samplePrefix = "";
   bool addLC = false;
   samplePrefix = AlgoPrefix[groomIdx];
-  /*if (groomalgo.find("AntiKt") != string::npos)
-    {
-      samplePrefix = "AntiKt10";
-    }
-  
-  else
-    {
-      samplePrefix = "CamKt12"; // this is not a good solution
-      addLC = true;
-    }
-  */
+
 
   if (groomIdx <= 6) // we're doing reclustering
     addLC = true; // just add the LC to the name
@@ -2483,7 +2478,6 @@ void addJets(TTree * tree, std::string &groomalgo, bool signal, int groomIdx)
       tree->SetBranchAddress(std::string(subjetType+"E").c_str(),&signal_subjets_E_vec);
       tree->SetBranchAddress(std::string(subjetType+"pt").c_str(),&signal_subjets_pt_vec);
       tree->SetBranchAddress(std::string(subjetType+"m").c_str(),&signal_subjets_m_vec);
-      std::cout << std::string(subjetType+"m") << std::endl;
       tree->SetBranchAddress(std::string(subjetType+"eta").c_str(),&signal_subjets_eta_vec);
       tree->SetBranchAddress(std::string(subjetType+"phi").c_str(),&signal_subjets_phi_vec);
     }
@@ -2492,12 +2486,12 @@ void addJets(TTree * tree, std::string &groomalgo, bool signal, int groomIdx)
       tree->SetBranchAddress(std::string(subjetType+"E").c_str(),&bkg_subjets_E_vec);
       tree->SetBranchAddress(std::string(subjetType+"pt").c_str(),&bkg_subjets_pt_vec);
       tree->SetBranchAddress(std::string(subjetType+"m").c_str(),&bkg_subjets_m_vec);
-      std::cout << std::string(subjetType+"m") << std::endl;
       tree->SetBranchAddress(std::string(subjetType+"eta").c_str(),&bkg_subjets_eta_vec);
       tree->SetBranchAddress(std::string(subjetType+"phi").c_str(),&bkg_subjets_phi_vec);
     }
 
 }//addJets
+
 void addSubJets(TTree * tree, std::string & groomalgo, bool signal, int groomIdx)
 {
 
