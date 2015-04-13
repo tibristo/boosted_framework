@@ -1686,31 +1686,46 @@ void make68Plots(int algidx, TTree * bkg, TTree * sig)
     int i = algoMap[ii];
     branches = getListOfBranches(groomAlgo[i]);
     for (int j=0; j<nPtBins; j++){
-      TFile * outfile;
-      mass_max = TopEdgeMassWindow[i][j];
-      mass_min = BottomEdgeMassWindow[i][j];
+      runbkg = false;
+      for (int k = 0; k < 2; k++)
+	{
+	  runbkg = k == 0 ? false : true;
       currTree = runbkg ?  sig : bkg;
-      setBranches(currTree, branches); // need to do this for signal and bkg!!!  Do we want to plot on the same thing?  Separately?
-      TTree * outTree;
+      //setBranches(currTree, branches); // need to do this for signal and bkg!!!  Do we want to plot on the same thing?  Separately?  Can we not just do this once if all_samples = true?
       currTree->SetBranches("*",0);
+      setMassBranch(currTree, groomAlgo[i]);
       for (std::vector<string>::iterator it = branches.begin(); it != branches.end(); it++)
 	{
 	  currTree->SetBranchStatus(*it,1);
 	}
+      std::stringstream ss; // store the name of the output file and include the i and j indices!
+      std::string bkg = runbkg ? "sig": "bkg";
+      ss << groomAlgo[i] << "_" << i << "_" << j << "_" << bkg << ".root";
+      TFile * outfile = new TFile(ss.str(),"RECREATE");
+      TTree * outTree;
       outTree = currTree->CloneTree();
+
+      mass_max = TopEdgeMassWindow[i][j];
+      mass_min = BottomEdgeMassWindow[i][j];
+
+
       int entries = (int)currTree->GetEntries();
+      double mass = 0;
       for (int n = 0; n < entries; n++)
 	{
 	  currTree->GetEntry(n);
+	  mass = currTree_mass;
 	  if (mass < mass_max && mass > mass_min)
 	    {
 	      outTree->Fill();
 	    }
 	}
-      plotVariables(currTree, branches);
-      outfile.Close();
+      //plotVariables(currTree, branches);
+      outfile->Close();
+      outTree->GetCurrentFile().Write();
+      outTree->GetCurrentFile().Close();
     }
-
+    }
     for (int j=0; j<nFineBins; j++){
       mass_max = TopEdgeMassWindow_finePt[i][j];
       mass_min = BottomEdgeMassWindow_finePt[i][j];
@@ -1724,15 +1739,28 @@ void make68Plots(int algidx, TTree * bkg, TTree * sig)
 
 vector<std::string> getListOfBranches(std::string &algorithm)
 {
+  // Ideally we want this stored in an XML file, but for now it'll have to be a standard text file because I'm short on time!
   vector<string> branches;
-
+  ifstream in("branches.txt");
+  string line;
+  // what to do about branches that have * in them?
+  while (getline(in, line))
+    {
+      branches.push_back(rtrim(line));
+    }
+  in.close();
   return branches;
+} // getListOfBranches()
 
-}
-
-void plotVariables(TTree * tree, vector<std:string> & branches)
+/*void plotVariables(TTree * tree, vector<std:string> & branches)
 {
   
   
   
-}
+} // plotVariables()*/
+
+
+void setMassBranch(TTree * tree, std::string &algorithm)
+{
+  tree->SetBranchAddress("jet_"+algorithm+"_mass", &currTree_mass);
+} // setMassBranch()

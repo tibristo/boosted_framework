@@ -91,6 +91,10 @@ void getNormSherpaW(TString inputTree, unsigned long & evnum, double & weight);
 void makeROC(int type, TH1F *&S,TH1F *&B,TGraph &curve, TString name="", bool draw=false);
 void makePlots();
 void makePtPlots();
+void setMassBranch(TTree * tree, std::string &algorithm);
+void plotVariables(TTree * tree, vector<std:string> & branches);
+std::vector<std::string> getListOfBranches(std::string &algorithm);
+void make68Plots(int algidx, TTree * bkg, TTree * sig);
 
 enum class groomAlgo{groomZero, TopoSplitFilteredMu67SmallR0YCut9, TopoSplitFilteredMu100SmallR30YCut4, TopoTrimmedPtFrac5SmallR30, TopoTrimmedPtFrac5SmallR20, TopoPrunedCaRcutFactor50Zcut10, TopoPrunedCaRcutFactor50Zcut20, AntiKt2LCTopo, AntiKt3LCTopo, AntiKt4LCTopo};
 //groomAlgo options:
@@ -171,6 +175,8 @@ vector<float> * Wp_CA12_groomed_phi = 0;
 vector<float> * Wp_CA12_groomed_mass = 0;
 vector<float> * Wp_CA12_groomed_E = 0;
 vector<float> * Wp_CA12_groomed_emfrac = 0;
+
+vector<float> * currTree_mass = 0;
 
 // create a hashtable/ map for all the variables we want to plot.... Index on variable name - we can read this in from xml config
 
@@ -350,4 +356,10 @@ void defineStrings(TString *AlgoList, TString *binLabel, TString *pTbins, TStrin
 
 
 
+}
+
+
+static inline std::string &rtrim(std::string &s) {
+  s.erase(std::find_if(s.rbegin(), s.rend(), std::not1(std::ptr_fun<int, int>(std::isspace))).base(), s.end());
+  return s;
 }
