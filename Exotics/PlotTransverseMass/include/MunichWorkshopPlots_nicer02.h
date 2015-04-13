@@ -88,7 +88,7 @@ void initializeVariables();
 void getBranches(TTree *inputTree, TTree *inputTree1, TString groomAlgo, int groomAlgoIndex);
 void deleteVectors();
 void getNormSherpaW(TString inputTree, unsigned long & evnum, double & weight);
-void makeROC(int type, TH1D *&S,TH1D *&B,TGraph &curve);
+void makeROC(int type, TH1F *&S,TH1F *&B,TGraph &curve, TString name="", bool draw=false);
 void makePlots();
 void makePtPlots();
 
@@ -104,6 +104,9 @@ enum class groomAlgo{groomZero, TopoSplitFilteredMu67SmallR0YCut9, TopoSplitFilt
 //AntiKt2LCTopo - 7
 //AntiKt3LCTopo - 8
 //AntiKt4LCTopo - 9
+
+vector<int> algoMap; // stores the algorithm used for inputTree[x] in the case that we are not using all the input types - split/filter, trim, prune and recluster
+vector<int> fileMap; // stores the index of the input file for each grooming algorithm
 
 //DECLARATIONS FOR RECLUSTERING FUNCTIONS
 
@@ -169,7 +172,7 @@ vector<float> * Wp_CA12_groomed_mass = 0;
 vector<float> * Wp_CA12_groomed_E = 0;
 vector<float> * Wp_CA12_groomed_emfrac = 0;
 
-
+// create a hashtable/ map for all the variables we want to plot.... Index on variable name - we can read this in from xml config
 
 //counters for efficiency issues
 int nEvt_0=0; //total events
@@ -186,41 +189,42 @@ int nEvt1_3=0; // events with split cut 9 matched to truth jet matches to proper
 int nEvt1_4=0;
 
 
-const int nAlgos=12;
-TString AlgoList[nAlgos];
-TString binLabel[nAlgos-2];
+const int nAlgosMax=12;
+int nAlgos=0;
+TString AlgoList[nAlgosMax];
+TString binLabel[nAlgosMax-2];
 const int nPtBins=6;
 TString pTbins[nPtBins];
 const int nFineBins=12;
 TString finePtBins[nFineBins];
 
 
-TH1F *qcd_finePtBin_mass[nAlgos][nFineBins];
-TH1F *Wprime_finePtBin_mass[nAlgos][nFineBins];
+TH1F *qcd_finePtBin_mass[nAlgosMax][nFineBins];
+TH1F *Wprime_finePtBin_mass[nAlgosMax][nFineBins];
 
-TH1F *qcd_Lead_CA12_mass[nAlgos][nPtBins]; 
-TH1F *Wprime_Lead_CA12_mass[nAlgos][nPtBins];
-TH1F *qcd_Lead_CA12_pt[nAlgos];
-TH1F *Wprime_Lead_CA12_pt[nAlgos];
-TH1F *Wprime_Lead_CA12_scaled_pt[nAlgos];
-TH1F *pTweights[nAlgos];
-TH1F *qcd_PtReweight[nAlgos];
-TH1F *Wp_PtReweight[nAlgos];
-TString AlgoListN[nAlgos];
+TH1F *qcd_Lead_CA12_mass[nAlgosMax][nPtBins]; 
+TH1F *Wprime_Lead_CA12_mass[nAlgosMax][nPtBins];
+TH1F *qcd_Lead_CA12_pt[nAlgosMax];
+TH1F *Wprime_Lead_CA12_pt[nAlgosMax];
+TH1F *Wprime_Lead_CA12_scaled_pt[nAlgosMax];
+TH1F *pTweights[nAlgosMax];
+TH1F *qcd_PtReweight[nAlgosMax];
+TH1F *Wp_PtReweight[nAlgosMax];
+TString AlgoListN[nAlgosMax];
 TString pTbinsN[nPtBins];
 TString pTFinebinsN[nFineBins];
 
-double myMPV[nAlgos][nPtBins];
-double WidthMassWindow[nAlgos][nPtBins];
-double TopEdgeMassWindow[nAlgos][nPtBins];
-double BottomEdgeMassWindow[nAlgos][nPtBins];
-double QCDfrac[nAlgos][nPtBins];
+double myMPV[nAlgosMax][nPtBins];
+double WidthMassWindow[nAlgosMax][nPtBins];
+double TopEdgeMassWindow[nAlgosMax][nPtBins];
+double BottomEdgeMassWindow[nAlgosMax][nPtBins];
+double QCDfrac[nAlgosMax][nPtBins];
 
-double myMPV_finePt[nAlgos][nFineBins];
-double WidthMassWindow_finePt[nAlgos][nFineBins];
-double TopEdgeMassWindow_finePt[nAlgos][nFineBins];
-double BottomEdgeMassWindow_finePt[nAlgos][nFineBins];
-double QCDfrac_finePt[nAlgos][nFineBins];
+double myMPV_finePt[nAlgosMax][nFineBins];
+double WidthMassWindow_finePt[nAlgosMax][nFineBins];
+double TopEdgeMassWindow_finePt[nAlgosMax][nFineBins];
+double BottomEdgeMassWindow_finePt[nAlgosMax][nFineBins];
+double QCDfrac_finePt[nAlgosMax][nFineBins];
 
 
 TH1F * hMassLow[nPtBins];
@@ -229,13 +233,22 @@ TH1F * hMPV[nPtBins];
 TH1F * hWmass[nPtBins];
 TH1F * hQCDeff[nPtBins];
 
-TH1F * hQCDeff_finePt[nAlgos];
+TH1F * hQCDeff_finePt[nAlgosMax];
 
 
-TH1F * windowsVsPt[nAlgos];
+TH1F * windowsVsPt[nAlgosMax];
 
-TCanvas * c1[nAlgos][nPtBins]; 
-TCanvas * c3[nAlgos][nFineBins];
+// ROC
+TGraph *finePtBin_mass_curve[nAlgosMax][nFineBins];
+TGraph *Lead_CA12_mass_curve[nAlgosMax][nPtBins];
+TGraph *Lead_CA12_pt_curve[nAlgosMax];
+TGraph *Lead_CA12_scaled_pt_curve[nAlgosMax];
+TGraph *pTweights_curve[nAlgosMax];
+TGraph *PtReweight_curve[nAlgosMax];
+
+
+TCanvas * c1[nAlgosMax][nPtBins]; 
+TCanvas * c3[nAlgosMax][nFineBins];
 TCanvas * c2[nPtBins];
 TPad *pad1[nPtBins];
 TPad *pad2[nPtBins];
