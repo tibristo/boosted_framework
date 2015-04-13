@@ -115,6 +115,7 @@ void setRadius(std::string & prefix);
 void printTLV(vector<TLorentzVector> & tlv);
 std::unordered_map<std::string,bool> createBranchMap(TObjArray *& arr);
 void SignalHandlerMapAccess(int signal);
+void calculateResponseValues();
 
 // typedef for the exception when accessing a missing element from a map
 typedef void (*SignalHandlerPointer)(int);
@@ -124,6 +125,15 @@ void tlvvec(vector<TLorentzVector> *& tmp);
 void floatvec(vector<float> * & tmp);
 void intvec(vector<int> * & tmp);
 void vecintvec(vector< vector<int> > *& tmp);
+
+
+bool replace(std::string& str, const std::string& from, const std::string& to) {
+  size_t start_pos = str.find(from);
+  if(start_pos == std::string::npos)
+    return false;
+  str.replace(start_pos, from.length(), to);
+  return true;
+}
 
 // calculate the mean of a vector of masses
 inline double mean(vector<double>& masses){
@@ -512,21 +522,21 @@ Float_t var_k_factor;
 Float_t var_filter_eff;
 Float_t var_xs;
 // some have the weights pre-calculated
-Float_t evt_kfactor;
-Float_t evt_nEvts;
-Float_t evt_filtereff;
-Float_t evt_sumWeights;
-Float_t evt_xsec;
+Float_t evt_kfactor = 0;
+Int_t evt_nEvts = 0;
+Float_t evt_filtereff = 0;
+Float_t evt_sumWeights = 0;
+Float_t evt_xsec = 0;
 
 Float_t evt_kfactor_out;
-Float_t evt_nEvts_out;
+Int_t evt_nEvts_out;
 Float_t evt_filtereff_out;
 Float_t evt_sumWeights_out;
 Float_t evt_xsec_out;
 // for reading in
 Float_t var_filtereff_in;
 Float_t var_kfactor_in;
-Float_t scale1fb = -1;
+Float_t scale1fb = 0;
 Float_t scale1fbOut;
 // if subjets are being used
 bool subjetscalc;
