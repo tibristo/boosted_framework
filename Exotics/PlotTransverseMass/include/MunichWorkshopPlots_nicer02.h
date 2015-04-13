@@ -136,8 +136,11 @@ TTree *inputTree[20];
 Int_t leadGroomedIndex = 0;
 Int_t leadTruthIndex = 0;
 Int_t leadTopoIndex = 0;
-Float_t pt_reweight = 1.0;
+TH1F * pt_reweight = 0;
 Float_t normalisation = 1.0;
+Int_t NEvents = 0;
+Float_t NEvents_weighted = 0;
+Float_t mc_event_weight = 1.0;
 
 //QCD split filtering with Y cut 9
 vector<float> * qcd_CA12_truth_pt = 0;
