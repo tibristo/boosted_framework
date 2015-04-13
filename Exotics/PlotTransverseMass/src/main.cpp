@@ -63,13 +63,14 @@ int main( int argc, char * argv[] ) {
         // Declare a group of options that will be 
         // allowed both on command line and in
         // config file
+	std::cout << " setting configuration" << std::endl;
         po::options_description config("Configuration");
         config.add_options()
 	  ("signal-file", po::value<vector<string> >()->multitoken(), 
                   "signal input files")
 	  ("background-file", po::value<vector<string> >()->multitoken(), 
 	   "background input files")
-            ("algorithm-type", 
+            ("algorithm", 
 	     po::value< string>(), 
                  "algorithm type")
 	  ("subjets", po::value<bool>(&subjets)->default_value(true),"run subjets")
@@ -98,19 +99,30 @@ int main( int argc, char * argv[] ) {
 
         po::options_description visible("Allowed options");
         visible.add(generic).add(config);
-        
+
         po::positional_options_description p;
-        p.add("background-file", -1);
-        p.add("signal-file", -2);
-        
+        p.add("background-file", 1);
+        p.add("signal-file", 1);
+	p.add("algorithm",1);
+
 
         store(po::command_line_parser(argc, argv).
               options(cmdline_options).positional(p).run(), vm);
         notify(vm);
-        config_file = vm["config"].as<vector<string> >();
+
+        if (vm.count("help")) {
+            cout << visible << "\n";
+            return 0;
+        }
+
+
+
+
 	// need to check what happens if we don't actually add anything here!
-	if (!config_file.empty())
+	std::cout << "check config files" << std::endl;
+	if (vm.count("config"))
 	  {
+	    config_file = vm["config"].as<vector<string> >();
 	    for (vector<std::string>::iterator it = config_file.begin(); it!= config_file.end(); it++)
 	      {
 		ifstream ifs((*it).c_str());
@@ -129,11 +141,6 @@ int main( int argc, char * argv[] ) {
 	  }
 
     
-        if (vm.count("help")) {
-            cout << visible << "\n";
-            return 0;
-        }
-
 
         if (vm.count("signal-file"))
         {
@@ -180,11 +187,10 @@ int main( int argc, char * argv[] ) {
         return 1;
     }    
 
-
     bool massHistos = applyMassWindowFlag;
 
     vector<string> inputBkgFiles = vm["background-file"].as<vector<string> > ();
-    vector<string> inputSigFiles = vm["background-file"].as<vector<string> > ();
+    vector<string> inputSigFiles = vm["signal-file"].as<vector<string> > ();
 
     string alg_in = vm["algorithm"].as<string>();
   //Make an array of TFiles with all the relevant inputs and add them to my array of trees
@@ -193,14 +199,17 @@ int main( int argc, char * argv[] ) {
     //inputFile[nArg-1] = new TFile(argv[nArg], "READ");
     //inputTree[nArg-1] = ( TTree* ) inputFile[nArg-1]->Get( "physics" );    
     inputTChain[sampleType::BACKGROUND] = new TChain("physics");
-    inputTChain[sampleType::SIGNAL] = new TChain("physics");
+
     for (vector<string>::iterator it = inputBkgFiles.begin(); it != inputBkgFiles.end(); it++)
       {
 	inputTChain[sampleType::BACKGROUND]->Add((*it).c_str());
+	std::cout << "bkg file added: " << (*it) << std::endl;
       }
+    inputTChain[sampleType::SIGNAL] = new TChain("physics");
     for (vector<string>::iterator it = inputSigFiles.begin(); it != inputSigFiles.end(); it++)
       {
 	inputTChain[sampleType::SIGNAL]->Add((*it).c_str());
+	std::cout << "sig file added: " << (*it) << std::endl;
       }
     //std::string arg  = std::string(argv[nArg]);
     //std::transform(arg.begin(), arg.end(), arg.begin(), ::tolower);
@@ -428,7 +437,7 @@ int main( int argc, char * argv[] ) {
   //{
   //int groomIdx = algoMap[ii];
   //int fileIdx = fileMap[ii]; // basically points to filteridx, reclusteridx, etc.
-  makeMassWindowFile(applyMassWindowFlag);//inputTree[fileIdx], inputTree[fileIdx]); // pass input file indices too?
+  makeMassWindowFile(applyMassWindowFlag, inputBkgFiles, inputSigFiles);//inputTree[fileIdx], inputTree[fileIdx]); // pass input file indices too?
   //  }
   
 
@@ -504,13 +513,13 @@ void runAlgorithm(TChain *inputTree, TChain *inputTree1, TString groomAlgo, int 
   initializeVariables();
   //algoMap.push_back(groomAlgoIndex);
   //fileMap.push_back(fileidx);
-  getMassHistograms(inputTree, inputTree1, groomAlgo, groomAlgoIndex);
+  getMassHistograms(inputTree->GetTree(), inputTree1->GetTree(), groomAlgo, groomAlgoIndex);
   nAlgos++;
   deleteVectors();
 }
 
 
-void getMassHistograms(TChain *inputTree, TChain *inputTree1, TString groomAlgo, int groomAlgoIndex){
+void getMassHistograms(TTree *inputTree, TTree *inputTree1, TString groomAlgo, int groomAlgoIndex){
   
   cout<<"getBranches() for " << groomAlgo <<endl;
   getBranches(inputTree, inputTree1, groomAlgo, groomAlgoIndex);
@@ -1191,7 +1200,7 @@ void deleteVectors(){
 
   }
 */
-void getBranches(TChain *inputTree, TChain *inputTree1, TString groomAlgo, int groomAlgoIndex){
+void getBranches(TTree *inputTree, TTree *inputTree1, TString groomAlgo, int groomAlgoIndex){
 
   //if not reclustering
   if (groomAlgoIndex<7){
@@ -1947,7 +1956,7 @@ void makePtPlots(){
 } // end makePtPlots()
 
 
-void makeMassWindowFile(bool applyMassWindow)
+void makeMassWindowFile(bool applyMassWindow, std::vector<std::string> & inputBkgFiles, std::vector<std::string> & inputSigFiles)
 {
   std::cout << "starting make mass window output files " << std::endl;
   double mass_max = 0.0;
@@ -1972,11 +1981,20 @@ void makeMassWindowFile(bool applyMassWindow)
 	  initVectors();
 	  
 	  int tchainIdx = signal ? sampleType::SIGNAL : sampleType::BACKGROUND;//fileMap[ii]+1 : fileMap[ii];
+	  std::stringstream ss; // store the name of the output file and include the i and j indices!
+	  std::string bkg = signal ? "sig": "bkg";
+	  ss << AlgoNames[i] << "_" << i << "_" << pTbins[j] << "_" << bkg << ".root";
+	  boost::filesystem::path dir(AlgoNames[i]);
+	  boost::filesystem::create_directory(dir);
+	  std::cout << AlgoNames[i] << "/" << ss.str() << std::endl;
 	  //std::cout << "fileIdx " << fileIdx << endl;
-	  //TTree * intree = (TTree*) inputTChain[fileIdx]->Get("physics");
-	  TChain * intree = inputTChain[tchainIdx];
+	  //TTree * intree = (TTree*) inputTChain[tchainIdx]->GetTree();//("physics");
+	  //TChain * intree = new TChain("physics");//inputTChain[tchainIdx];
+	  inputTChain[tchainIdx]->LoadTree(0);
+	  TTree * intree = inputTChain[tchainIdx]->GetTree();
+
 	  intree->SetBranchStatus("*",0);
-	  // turn on the branches we're interested it
+	  // turn on the branches we're interested in
 	  for (std::vector<string>::iterator it = branches.begin(); it != branches.end(); it++)
 	    {
 	      intree->SetBranchStatus((*it).c_str(),1);
@@ -1985,19 +2003,21 @@ void makeMassWindowFile(bool applyMassWindow)
 	      }
 	    }
 	  setMassBranch(intree, AlgoNames[i], i);
-	  std::stringstream ss; // store the name of the output file and include the i and j indices!
-	  std::string bkg = signal ? "sig": "bkg";
-	  ss << AlgoNames[i] << "_" << i << "_" << pTbins[j] << "_" << bkg << ".root";
-	  boost::filesystem::path dir(AlgoNames[i]);
-	  boost::filesystem::create_directory(dir);
-	  TFile * outfile = new TFile(std::string(AlgoNames[i]+"/"+ss.str()).c_str(),"RECREATE");	  
-	  TTree * outTree;
 
-	  addJets(intree, AlgoNames[i], signal, i);//, addJetIndices); //set all of the branches for the output tree for the jets
-	  addSubJets(intree, AlgoNames[i], signal, i);
-	  outTree = intree->CloneTree(0);
+	  addJets(intree, AlgoNames[i], signal, i); //set all of the branches for the output tree for the jets
+	  if (subjets)
+	    addSubJets(intree, AlgoNames[i], signal, i);
+
 	  mass_max = TopEdgeMassWindow[i][j];
 	  mass_min = BottomEdgeMassWindow[i][j];
+
+	  TFile * outfile = new TFile(std::string(AlgoNames[i]+"/"+ss.str()).c_str(),"RECREATE");	  
+	  TTree * outTree;
+	  //intree->LoadTree(0);
+	  //TTree * newtc = (TTree*)intree->GetTree();
+	  //std::cout << newtc->GetEntries() << std::endl;
+	  outfile->cd();
+	  outTree = (TTree*)intree->CloneTree(0);//intree->CloneTree(0);
 
 	  long entries = (long)intree->GetEntries();
 
@@ -2008,7 +2028,9 @@ void makeMassWindowFile(bool applyMassWindow)
 	  double mass = 0;
 	  NEvents = entries;
 	  NEvents_weighted.clear();
-	  //NEvents_weighted = 0;
+
+	  //int negative = 0;
+
 	  for (long n = 0; n < entries; n++)
 	    {
 	      intree->GetEntry(n);
@@ -2023,9 +2045,10 @@ void makeMassWindowFile(bool applyMassWindow)
 	      int chosenLeadTruthJetIndex=-99;
 	      int chosenLeadTopoJetIndex=-99;
 	      setSelectionVectors(signal, AlgoNames[i]);
-	      //std::cout << "SetSelectionVectors" << std::endl;
-	      if ((*jet_pt_truth)[0] / 1000.0 < 100) 
+
+	      if ((*jet_pt_truth)[0] / 1000.0 < 100)// || (*jet_m_truth)[0]/1000.0 < 100) 
 		continue;
+	      
 	      if (groomAlgoIndex != 0) // check the pt is in the correct bin
 		{
 		  if ((*jet_pt_truth)[0]/1000.0 < ptrange[j].first || (*jet_pt_truth)[0]/1000.0 > ptrange[j].second)
@@ -2069,9 +2092,7 @@ void makeMassWindowFile(bool applyMassWindow)
 	      } // end loop over jet_pt_groomed
 	      
 	      if (chosenLeadTruthJetIndex < 0 || chosenLeadGroomedIndex == -99) // failed selection
-		  continue;
-	      
-
+		  continue;	      
 	      
 	    leadGroomedIndex = chosenLeadGroomedIndex;
 	    leadTruthIndex = chosenLeadTruthJetIndex;
@@ -2082,71 +2103,85 @@ void makeMassWindowFile(bool applyMassWindow)
 	      {
 		continue;
 	      }
-	    //std::cout << "getting subjet variables" << std::endl;
-	    for (int jj = 0 ; jj < (*jet_pt_groomed).size() ; jj++)
-	      {
-		//std::vector<int> subjet_idx = signal ? (*signal_constit_index[2]).at(jj) : (*bkg_constit_index[2]).at(jj); // only groomed ones.....
-		//std::cout << "getting subjet_index" << std::endl;
 
-		//std::cout << subjet_index << std::endl;
-		//std::cout << subjet_index->size() << std::endl;
-		//std::cout << subjet_index->at(jj).size() << std::endl;
-		std::vector<int> subjet_idx = (*subjet_index).at(jj); // only groomed ones.....
-		//std::cout << "calculating two leading subjets" << std::endl;
-		std::pair<int,int> subjet_leading = signal ? getTwoLeadingSubjets(subjet_idx,signal_subjets_pt_vec) : getTwoLeadingSubjets(subjet_idx,bkg_subjets_pt_vec) ;
-	    // calculate the mass drop
-		if (subjet_leading.first == subjet_leading.second)
+	    if (subjets)
+	      {
+		for (int jj = leadGroomedIndex ; jj <= leadGroomedIndex; jj++)// (*jet_pt_groomed).size() ; jj++)
 		  {
-		    /*std::cout << "COULD NOT FIND SUBJETS PROPERLY" << std::endl;
-		    std::cout << subjet_leading.first << std::endl;
-		    std::cout << subjet_leading.second << std::endl;
-		    std::cout << "num subjets: " << subjet_idx.size() << std::endl;*/
+		    std::vector<int> subjet_idx = (*subjet_index).at(jj); // only groomed ones.....
+		    
+		    std::pair<int,int> subjet_leading = signal ? getTwoLeadingSubjets(subjet_idx,signal_subjets_pt_vec) : getTwoLeadingSubjets(subjet_idx,bkg_subjets_pt_vec) ;
+		    // calculate the mass drop
+		    /*if (subjet_leading.first == -1 || subjet_leading.second == -1)
+		      {
+			std::cout << "couldn't get the subjet information!!!! subjet_idx size: "  << subjet_idx.size() << std::endl;
+			continue;
+			}*/
+		    if (subjet_idx.size() <= 1)
+		      {
+			/*std::cout << "COULD NOT FIND SUBJETS PROPERLY" << std::endl;
+			  std::cout << subjet_leading.first << std::endl;
+			  std::cout << subjet_leading.second << std::endl;
+			  std::cout << "num subjets: " << subjet_idx.size() << std::endl;*/
+			if (signal)
+			  {
+			    signal_massdrop_vec.push_back(-999);
+			    signal_yt_vec.push_back(-999);
+			  }
+			else
+			  {
+			    bkg_massdrop_vec.push_back(-999);
+			    bkg_yt_vec.push_back(-999);
+			  }
+			continue;
+		      }
+		    double pt1 = signal ? (*signal_subjets_pt_vec)[subjet_leading.first] : (*bkg_subjets_pt_vec)[subjet_leading.first];
+		    double pt2 = signal ? (*signal_subjets_pt_vec)[subjet_leading.second] : (*bkg_subjets_pt_vec)[subjet_leading.second];
+		    double eta_1 = signal ? (*signal_subjets_eta_vec)[subjet_leading.first] : (*bkg_subjets_eta_vec)[subjet_leading.first];
+		    double eta_2 = signal ? (*signal_subjets_eta_vec)[subjet_leading.second] : (*bkg_subjets_eta_vec)[subjet_leading.second];
+		    double phi_1 = signal ? (*signal_subjets_phi_vec)[subjet_leading.first] : (*bkg_subjets_phi_vec)[subjet_leading.first];
+		    double phi_2 = signal ? (*signal_subjets_phi_vec)[subjet_leading.second] : (*bkg_subjets_phi_vec)[subjet_leading.second];
+		    double e1 = signal ? (*signal_subjets_E_vec)[subjet_leading.first] : (*bkg_subjets_E_vec)[subjet_leading.first];
+		    //TLorentzVector subjet_vec;
+		    //subjet_vec.SetPtEtaPhiE(pt1,eta_1, phi_1, e1);
+		    //double subjet_mass = subjet_vec.M();//signal ? (*signal_subjets_m_vec)[subjet_leading.first] : (*bkg_subjets_m_vec)[subjet_leading.first];
+		    double subjet_mass = signal ? (*signal_subjets_m_vec)[subjet_leading.first] : (*bkg_subjets_m_vec)[subjet_leading.first];
+		    //std::cout << "s_mass: " << subjet_mass << std::endl;
+		    double mu12 = subjet_mass/(mass*1000);
+		    /*if (mu12 < 0)
+		      {
+			if (signal)
+			  std::cout<<(*signal_subjets_m_vec)[subjet_leading.first] << std::endl;
+			else
+			  std::cout<<(*bkg_subjets_m_vec)[subjet_leading.first] << std::endl;
+			std::cout << "mass: " << mass << std::endl;
+			std::cout << "mu12: " << mu12 << std::endl;
+			std::cout << "pt1: " << pt1 << std::endl;
+			std::cout << "pt2: " << pt2 << std::endl;
+			std::cout << "E: " << e1 << std::endl;
+			std::cout << "derivedmass: " << subjet_mass << std::endl;
+			negative++;
+			}*/
 		    if (signal)
-		      {
-			signal_massdrop_vec.push_back(1);
-			signal_yt_vec.push_back(0);
-		      }
+		      signal_massdrop_vec.push_back(mu12);
 		    else
-		      {
-			bkg_yt_vec.push_back(0);
-			bkg_massdrop_vec.push_back(1);
-		      }
-		    continue;
+		      bkg_massdrop_vec.push_back(mu12);
+		    // momentum balance
+
+		    double dRsub12 = DeltaR (eta_1, phi_1, eta_2, phi_2);
+		    Float_t yt = (pt2*dRsub12)/(mass*1000);		    
+		    yt*=yt;
+		    if (yt > 100000)
+		      std::cout << "yt: " << yt << std::endl;
+		    //std::cout << "yt: " << yt << std::endl;
+		    if (signal)
+		      signal_yt_vec.push_back(yt);
+		    else
+		      bkg_yt_vec.push_back(yt);
 		  }
-		double subjet_mass = signal ? (*signal_subjets_m_vec)[subjet_leading.first] : (*bkg_subjets_m_vec)[subjet_leading.first];
-		//std::cout << "s_mass: " << subjet_mass << std::endl;
-		Float_t mu12 = subjet_mass/(mass*1000);
-		//std::cout << "mass: " << mass << std::endl;
-		//std::cout <<"mu12: " << mu12 << std::endl;
-		if (signal)
-		  signal_massdrop_vec.push_back(mu12);
-		else
-		  bkg_massdrop_vec.push_back(mu12);
-		// momentum balance
-		double pt2 = signal ? (*signal_subjets_pt_vec)[subjet_leading.second] : (*bkg_subjets_pt_vec)[subjet_leading.second];
-		double eta_1 = signal ? (*signal_subjets_eta_vec)[subjet_leading.first] : (*bkg_subjets_eta_vec)[subjet_leading.first];
-		//std::cout << "eta1: " << eta_1 << std::endl;
-		double eta_2 = signal ? (*signal_subjets_eta_vec)[subjet_leading.second] : (*bkg_subjets_eta_vec)[subjet_leading.second];
-		//std::cout << "eta2: " << eta_2 << std::endl;
-		double phi_1 = signal ? (*signal_subjets_phi_vec)[subjet_leading.first] : (*bkg_subjets_phi_vec)[subjet_leading.first];
-		//std::cout << "phi1: " << phi_1 << std::endl;
-		double phi_2 = signal ? (*signal_subjets_phi_vec)[subjet_leading.second] : (*bkg_subjets_phi_vec)[subjet_leading.second];
-		//std::cout << "phi2: " << phi_2 << std::endl;
-		double dRsub12 = DeltaR (eta_1, phi_1, eta_2, phi_2);
-		//std::cout << "pt2: " << pt2 << std::endl;
-		//std::cout << "dr: " << dRsub12 << std::endl;
-		Float_t yt = (pt2*dRsub12)/(mass*1000);
-		//std::cout << "yt: " << yt << std::endl;
-		yt*=yt;
-		//std::cout << "yt: " << yt << std::endl;
-		if (signal)
-		  signal_yt_vec.push_back(yt);
-		else
-		  bkg_yt_vec.push_back(yt);
-		// tau21
 	      }
 
-	    
+	    // tau21
 	    for (int tr = 0; tr < 3; tr++)
 	      {
 		// Need another loop here
@@ -2162,7 +2197,7 @@ void makeMassWindowFile(bool applyMassWindow)
 	    }
 	  // write the rweight th1f things to the outfile...
 	  // calculate the new reweight with a new histogram!
-
+	  //std::cout << "negative masses: " << negative << std::endl;
 	  outTree->GetCurrentFile()->Write();
 	  pt_reweight->Write();
 
@@ -2177,6 +2212,7 @@ void makeMassWindowFile(bool applyMassWindow)
 	    ev_out << it->first << "," << NEvents_weighted[it->first] << std::endl;
 	  ev_out.close();
 	  delete outfile;
+	  delete intree;
 	}
     }
     // not doing this yet.... TODO
@@ -2196,8 +2232,8 @@ std::pair<int,int> getTwoLeadingSubjets(std::vector<int> & jet_idx, std::vector<
   // jet_idx contains the indices in the subjet vector for the subjets of jet i
   double max_pt = 0;
   double sec_pt = 0;
-  int max = 0;
-  int sec = 0;
+  int max = -1;
+  int sec = -1;
 
     for (int i = 0; i < jet_idx.size(); i++)
     {
@@ -2246,7 +2282,7 @@ vector<std::string> getListOfJetBranches(std::string &algorithm)
   } // plotVariables()*/
 
 
-void setMassBranch(TChain * tree, std::string &algorithm, int groomAlgoIndex)
+void setMassBranch(TTree * tree, std::string &algorithm, int groomAlgoIndex)
 {
   if (algorithm.find("AntiKt") == std::string::npos)
     {
@@ -2325,7 +2361,7 @@ void clearVectors()
 } // clear VEctors
 
 
-void addJets(TChain * tree, std::string &groomalgo, bool signal, int groomIdx)
+void addJets(TTree * tree, std::string &groomalgo, bool signal, int groomIdx)
 {
   //if (addJetIndex)
   //{
@@ -2447,6 +2483,7 @@ void addJets(TChain * tree, std::string &groomalgo, bool signal, int groomIdx)
       tree->SetBranchAddress(std::string(subjetType+"E").c_str(),&signal_subjets_E_vec);
       tree->SetBranchAddress(std::string(subjetType+"pt").c_str(),&signal_subjets_pt_vec);
       tree->SetBranchAddress(std::string(subjetType+"m").c_str(),&signal_subjets_m_vec);
+      std::cout << std::string(subjetType+"m") << std::endl;
       tree->SetBranchAddress(std::string(subjetType+"eta").c_str(),&signal_subjets_eta_vec);
       tree->SetBranchAddress(std::string(subjetType+"phi").c_str(),&signal_subjets_phi_vec);
     }
@@ -2455,12 +2492,13 @@ void addJets(TChain * tree, std::string &groomalgo, bool signal, int groomIdx)
       tree->SetBranchAddress(std::string(subjetType+"E").c_str(),&bkg_subjets_E_vec);
       tree->SetBranchAddress(std::string(subjetType+"pt").c_str(),&bkg_subjets_pt_vec);
       tree->SetBranchAddress(std::string(subjetType+"m").c_str(),&bkg_subjets_m_vec);
+      std::cout << std::string(subjetType+"m") << std::endl;
       tree->SetBranchAddress(std::string(subjetType+"eta").c_str(),&bkg_subjets_eta_vec);
       tree->SetBranchAddress(std::string(subjetType+"phi").c_str(),&bkg_subjets_phi_vec);
     }
 
 }//addJets
-void addSubJets(TChain * tree, std::string & groomalgo, bool signal, int groomIdx)
+void addSubJets(TTree * tree, std::string & groomalgo, bool signal, int groomIdx)
 {
 
   std::string samplePrefix = "";
@@ -2514,6 +2552,7 @@ void setSelectionVectors(bool signal, std::string & algorithm)
       jet_eta_truth = signal_eta_vec[0];
       jet_phi_truth = signal_phi_vec[0];
       jet_pt_truth = signal_pt_vec[0];
+      jet_m_truth = signal_m_vec[0];
 
       jet_eta_topo = signal_eta_vec[1];
       jet_phi_topo = signal_phi_vec[1];
@@ -2530,6 +2569,7 @@ void setSelectionVectors(bool signal, std::string & algorithm)
       jet_eta_truth = bkg_eta_vec[0];
       jet_phi_truth = bkg_phi_vec[0];
       jet_pt_truth = bkg_pt_vec[0];
+      jet_m_truth = bkg_m_vec[0];
 
       jet_eta_topo = bkg_eta_vec[1];
       jet_phi_topo = bkg_phi_vec[1];
@@ -2551,6 +2591,7 @@ void setSelectionVectors(bool signal, std::string & algorithm)
     jet_eta_truth = 0;
     jet_phi_truth = 0;
     jet_pt_truth = 0;
+    jet_m_truth = 0;
     jet_eta_topo = 0;
     jet_phi_topo = 0;
     jet_pt_topo = 0;
