@@ -26,6 +26,7 @@
 </algorithm>
 
 <algorithm>
+<<<<<<< HEAD
   <Algorithm>CamKt6LCTopoSplitFilteredMu100SmallR30YCut0</Algorithm>
   <GroomingAlgorithm>TopoSplitFilteredMu100SmallR30YCut0</GroomingAlgorithm>
   <JetAlgorithm>CamKt6</JetAlgorithm>
@@ -100,6 +101,8 @@
 
 
 <algorithm>
+=======
+>>>>>>> master
   <Algorithm>CamKt12LCTopoSplitFilteredMu100SmallR30YCut0</Algorithm>
   <GroomingAlgorithm>TopoSplitFilteredMu100SmallR30YCut0</GroomingAlgorithm>
   <JetAlgorithm>CamKt12</JetAlgorithm>
@@ -159,6 +162,7 @@
   <BinLabel>CA12 Split-Filt (1.0, 0.15, 0.3)</BinLabel>
 </algorithm>
 
+<<<<<<< HEAD
 
 <algorithm>
   <Algorithm>AntiKt4LCTopoTrimmedPtFrac5SmallR20</Algorithm>
@@ -209,6 +213,8 @@
 </algorithm>
 
 
+=======
+>>>>>>> master
 <algorithm>
   <Algorithm>AntiKt10LCTopoTrimmedPtFrac5SmallR30</Algorithm>
   <GroomingAlgorithm>TopoTrimmedPtFrac5SmallR30</GroomingAlgorithm>
@@ -222,6 +228,7 @@
 </algorithm>
 
 <algorithm>
+<<<<<<< HEAD
   <Algorithm>AntiKt8LCTopoTrimmedPtFrac5SmallR20</Algorithm>
   <GroomingAlgorithm>TopoTrimmedPtFrac5SmallR20</GroomingAlgorithm>
   <JetAlgorithm>AntiKt8</JetAlgorithm>
@@ -234,6 +241,8 @@
 </algorithm>
 
 <algorithm>
+=======
+>>>>>>> master
   <Algorithm>AntiKt10LCTopoTrimmedPtFrac5SmallR20</Algorithm>
   <GroomingAlgorithm>TopoTrimmedPtFrac5SmallR20</GroomingAlgorithm>
   <JetAlgorithm>AntiKt10</JetAlgorithm>
@@ -245,6 +254,7 @@
   <BinLabel>AK10 Trimmed (0.05, 0.2)</BinLabel>
 </algorithm>
 
+<<<<<<< HEAD
 <algorithm>
   <Algorithm>AntiKt12LCTopoTrimmedPtFrac5SmallR20</Algorithm>
   <GroomingAlgorithm>TopoTrimmedPtFrac5SmallR20</GroomingAlgorithm>
@@ -257,6 +267,8 @@
   <BinLabel>AK12 Trimmed (0.05, 0.2)</BinLabel>
 </algorithm>
 
+=======
+>>>>>>> master
 
 <algorithm>
   <Algorithm>CamKt12LCTopoTrimmedPtFrac5SmallR30</Algorithm>
@@ -271,6 +283,7 @@
 </algorithm>
 
 <algorithm>
+<<<<<<< HEAD
   <Algorithm>CamKt6LCTopoTrimmedPtFrac5SmallR20</Algorithm>
   <GroomingAlgorithm>TopoTrimmedPtFrac5SmallR20</GroomingAlgorithm>
   <JetAlgorithm>CamKt6</JetAlgorithm>
@@ -307,6 +320,8 @@
 </algorithm>
 
 <algorithm>
+=======
+>>>>>>> master
   <Algorithm>CamKt12LCTopoTrimmedPtFrac5SmallR20</Algorithm>
   <GroomingAlgorithm>TopoTrimmedPtFrac5SmallR20</GroomingAlgorithm>
   <JetAlgorithm>CamKt12</JetAlgorithm>
@@ -356,6 +371,7 @@
 </algorithm>
 
 <algorithm>
+<<<<<<< HEAD
   <Algorithm>CamKt10LCTopoPrunedCaRcutFactor50Zcut15</Algorithm>
   <GroomingAlgorithm>TopoPrunedCaRcutFactor50Zcut15</GroomingAlgorithm>
   <JetAlgorithm>CamKt10</JetAlgorithm>
@@ -393,6 +409,8 @@
 </algorithm>
 
 <algorithm>
+=======
+>>>>>>> master
   <Algorithm>CamKt12LCTopoPrunedCaRcutFactor50Zcut10</Algorithm>
   <GroomingAlgorithm>TopoPrunedCaRcutFactor50Zcut10</GroomingAlgorithm>
   <JetAlgorithm>CamKt12</JetAlgorithm>
@@ -431,6 +449,7 @@
 
 
 <algorithm>
+<<<<<<< HEAD
   <Algorithm>CamKt6LCTopoPrunedCaRcutFactor50Zcut10</Algorithm>
   <GroomingAlgorithm>TopoPrunedCaRcutFactor50Zcut10</GroomingAlgorithm>
   <JetAlgorithm>CamKt6</JetAlgorithm>
@@ -482,6 +501,8 @@
 
 
 <algorithm>
+=======
+>>>>>>> master
   <Algorithm>AntiKt2LCTopo</Algorithm>
   <GroomingAlgorithm>Topo</GroomingAlgorithm>
   <JetAlgorithm>AntiKt2</JetAlgorithm>

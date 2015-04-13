@@ -13,7 +13,11 @@ RM           = rm -f
 AR           = ar cru
 
 ##Flags
+<<<<<<< HEAD
 CXXFLAGS     = -O3 -fPIC -funroll-loops -std=c++11 -pg #-Wall 
+=======
+CXXFLAGS     = -O2 -g -fPIC -funroll-loops -std=c++11 #-Wall 
+>>>>>>> master
 
 EXENAME		= PlotsMunichWorkshop
 SRCEXT   	= cpp
@@ -21,6 +25,7 @@ SRCDIR  	= src
 INCDIR   	= include
 OBJDIR   	= build
 EXEDIR  	= bin
+<<<<<<< HEAD
 SRCS    	:= src/main.cpp # src/LinkDefDict.cpp #$(shell find $(SRCDIR) -name '*.$(SRCEXT)')
 
 OBJS    	:= build/main.o #build/LinkDefDict.o #$(patsubst $(SRCDIR)/%.$(SRCEXT),$(OBJDIR)/%.o,$(SRCS))
@@ -36,27 +41,44 @@ GARBAGE  = $(OBJDIR)/main.o $(EXEDIR)/$(EXENAME)
 INCDIR+=-I/home/tim/Programs/fastjet-install/include
 #add qjetsplugin
 INCDIR+=-I/home/tim/boosted_framework/Exotics/Qjets/
+=======
+SRCS    	:= src/main.cpp #$(shell find $(SRCDIR) -name '*.$(SRCEXT)')
+OBJS    	:= build/main.o #$(patsubst $(SRCDIR)/%.$(SRCEXT),$(OBJDIR)/%.o,$(SRCS))
+
+GARBAGE  = $(OBJDIR)/main.o $(EXEDIR)/$(EXENAME)
+INCDIR+=-I/home/tim/Programs/fastjet-install/include
+>>>>>>> master
 #################
 ##Dependencies
 # Linux
 ifeq "$(UNAME)" "Linux"
 RANLIB       = ranlib
 CXXFLAGS    += -I$(INCDIR) $(ROOTCFLAGS) #-I$(GSLINC)
+<<<<<<< HEAD
 LINKFLAGS    = $(shell root-config --nonew) $(shell root-config --ldflags) -Wl,--no-as-needed -pg
 endif
 
 
+=======
+LINKFLAGS    = -g $(shell root-config --nonew) $(shell root-config --ldflags) -Wl,--no-as-needed
+endif
+
+>>>>>>> master
 # OS X
 ifeq "$(UNAME)" "Darwin"
 RANLIB       = ranlib
 CXXFLAGS    += -I$(INCDIR) $(ROOTCFLAGS) `/home/tim/Programs/fastjet-install/bin/fastjet-config --cxxflags` -I/usr/local/include
+<<<<<<< HEAD
 
+=======
+>>>>>>> master
 #
 #-I$(GSLINC)
 LINKFLAGS    =
 endif
 
 ##Libraries
+<<<<<<< HEAD
 #LIBS       += $(ROOTLIBS) -lThread `/home/tim/Programs/fastjet-install/bin/fastjet-config --libs` -L/usr/local/lib -lboost_filesystem -lboost_system -lboost_program_options
 LIBS       += $(ROOTLIBS) -lTreePlayer -lThread `/home/tim/Programs/fastjet-install/bin/fastjet-config --libs` -L/usr/local/lib -lQjets -lboost_filesystem -lboost_system -lboost_program_options -lboost_regex -L/home/tim/Programs/fastjet-install/lib -L./lib
 
@@ -66,6 +88,12 @@ LIBS       += $(ROOTLIBS) -lTreePlayer -lThread `/home/tim/Programs/fastjet-inst
 FILES = build/Qjets.o build/QjetsPlugin.o
 
 all : lib/libQjets.a $(EXEDIR)/$(EXENAME)
+=======
+LIBS       += $(ROOTLIBS) -lThread `/home/tim/Programs/fastjet-install/bin/fastjet-config --libs` -L/usr/local/lib -lboost_filesystem -lboost_system -lboost_program_options
+
+##Targets
+all : $(EXEDIR)/$(EXENAME)
+>>>>>>> master
 
 $(EXEDIR)/$(EXENAME) : $(OBJS)
 	$(CXX) -o $@ $(OBJS) $(LINKFLAGS) $(LIBS)
@@ -73,6 +101,7 @@ $(EXEDIR)/$(EXENAME) : $(OBJS)
 $(OBJDIR)/main.o : $(SRCDIR)/main.$(SRCEXT)
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
+<<<<<<< HEAD
 
 $(OBJDIR)/Qjets.o : $(SRCDIRQJ)/Qjets.C
 	$(CXX) $(CXXFLAGS) -c $< -o $@
@@ -89,6 +118,8 @@ lib/libQjets.so: $(FILES) $(FILES:.cc=.o)
 	gcc $(SOFLAGS) -o $@ $(FILES)
 
 
+=======
+>>>>>>> master
 clean   :
 	$(RM) $(GARBAGE)
 
