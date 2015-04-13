@@ -2,7 +2,7 @@
 
 algorithms = ['TopoSplitFilteredMu67SmallR0YCut9','TopoSplitFilteredMu100SmallR30YCut4','TopoTrimmedPtFrac5SmallR30','TopoTrimmedPtFrac5SmallR20','TopoPrunedCaRcutFactor50Zcut10','TopoPrunedCaRcutFactor50Zcut20','AntiKt2LCTopo','AntiKt3LCTopo','AntiKt4LCTopo']
 numbins = [] # give all 20 bins?
-axisvalues = [[0,1700],[0,1200],[0,120],[-5,5],[-4,4],[-2,2],[0,1],[0,100],[0,1],[0,0.3],[0,90],[0,30],[0,15],[-2,5],[-2,5],[-2,10],[-2,5],[-1500,100],[-1500,100],[0,150],[-1500,100],[-1500,100],[-1500,100],[-1500,100],[-1500,100],[-1500,100]] #going to be 2d for min, max
+axisvalues = [[0,1700],[0,1200],[0,300],[-5,5],[-4,4],[-2,2],[0,1],[0,100],[0,1],[0,0.3],[0,90],[0,30],[0,15],[-2,5],[-2,5],[-2,10],[-2,5],[0.1,1],[0,1],[0,150],[-1500,100],[-1500,100],[-1500,100],[-1500,100],[-1500,100],[-1500,100]] #going to be 2d for min, max
 var_type = ['E','pt','m','eta','phi','emfrac','Tau1','Tau2','Tau3','WIDTH','SPLIT12','SPLIT23','SPLIT34','Dip12','Dip13','Dip23','DipExcl12','PlanarFlow','Angularity','QW','PullMag','PullPhi','Pull_C00','Pull_C01','Pull_C10','Pull_C11']
 
 for alg in algorithms:

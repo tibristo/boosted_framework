@@ -91,12 +91,12 @@ void getNormSherpaW(TString inputTree, unsigned long & evnum, double & weight);
 void makeROC(int type, TH1F *&S,TH1F *&B,TGraph &curve, TString name="", bool draw=false);
 void makePlots();
 void makePtPlots();
-void setMassBranch(TTree * tree, std::string &algorithm);
+void setMassBranch(TTree * tree, std::string &algorithm, int groomAlgoIndex);
 void plotVariables(TTree * tree, vector<std::string> & branches);
 std::vector<std::string> getListOfBranches(std::string &algorithm);
 //void make68Plots(int algidx, TTree * bkg, TTree * sig);
 void makeMassWindowFile(bool applyMassWindow);
-void addJets(TTree * tree, std::string & algorithm, bool signal);
+void addJets(TTree * tree, std::string & algorithm, bool signal, int groomIdx);
 //void getBranchesSelection(TTree * tree, std::string & algorithm);
 void setSelectionVectors(bool signal, std::string & algorithm);
 void runAlgorithm(TTree *inputTree, TTree *inputTree1, TString groomAlgo, int groomAlgoIndex);
@@ -233,6 +233,7 @@ const int nAlgosMax=12;
 int nAlgos=0;
 TString AlgoList[nAlgosMax];
 std::string AlgoNames[nAlgosMax];
+std::string AlgoPrefix[nAlgosMax];
 TString binLabel[nAlgosMax-2];
 const int nPtBins=6;
 TString pTbins[nPtBins];
@@ -299,31 +300,42 @@ void defineStrings(TString *AlgoList, TString *binLabel, TString *pTbins, TStrin
   
   AlgoList[0]="TruthJet_RecoMatch";
   AlgoNames[0] = "";
+  AlgoPrefix[0] = "";
   //SplitFilteredMu67SmallR0YCut9
   AlgoList[1]="SF67r0Y9";
   AlgoNames[1]="TopoSplitFilteredMu67SmallR0YCut9";
+  AlgoPrefix[1] = "CamKt12";
   //SplitFilteredMu100SmallR30YCut4
   AlgoList[2]="SF100r30Y4";
   AlgoNames[2] = "TopoSplitFilteredMu100SmallR30YCut4";
+  AlgoPrefix[2] = "CamKt12";
   //TrimmedPtFrac5SmallR30
   AlgoList[3]="TrimPt5r30";
   AlgoNames[3] = "TopoTrimmedPtFrac5SmallR30";
+  AlgoPrefix[3] = "AntiKt10";
   //TrimmedPtFrac5SmallR20
   AlgoList[4]="TrimPt5r20";
   AlgoNames[4] = "TopoTrimmedPtFrac5SmallR20";
+  AlgoPrefix[4] = "AntiKt10";
   //PrunedCaRcutFactor50Zcut10
   AlgoList[5]="PrunRf50Z10";
   AlgoNames[5] = "TopoPrunedCaRcutFactor50Zcut10";
+  AlgoPrefix[5] = "AntiKt10";
   //PrunedCaRcutFactor50Zcut20
   AlgoList[6]="PrunRf50Z20";
   AlgoNames[6] = "TopoPrunedCaRcutFactor50Zcut20";
+  AlgoPrefix[3] = "AntiKt10";
+
   //reclustering
   AlgoList[7]="ReclusAK2";
   AlgoNames[7] = "AntiKt2LCTopo";
+  AlgoPrefix[7] = "AntiKt2";
   AlgoList[8]="ReclusAK3";
   AlgoNames[8] = "AntiKt3LCTopo";
+  AlgoPrefix[8] = "AntiKt3";
   AlgoList[9]="ReclusAK4";
   AlgoNames[9] = "AntiKt4LCTopo";
+  AlgoPrefix[9] = "AntiKt4";
   //
   AlgoList[10]="LeadTruthJet"; //for pt reweighting
   AlgoList[11]="LeadTruthJet_finebin"; //to show off
