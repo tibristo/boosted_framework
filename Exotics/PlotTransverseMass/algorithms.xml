@@ -27,6 +27,9 @@
 
 <algorithm>
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> 393929b3c6507b0be568335e02ce19e45373b4b3
   <Algorithm>CamKt6LCTopoSplitFilteredMu100SmallR30YCut0</Algorithm>
   <GroomingAlgorithm>TopoSplitFilteredMu100SmallR30YCut0</GroomingAlgorithm>
   <JetAlgorithm>CamKt6</JetAlgorithm>
@@ -101,8 +104,11 @@
 
 
 <algorithm>
+<<<<<<< HEAD
 =======
 >>>>>>> master
+=======
+>>>>>>> 393929b3c6507b0be568335e02ce19e45373b4b3
   <Algorithm>CamKt12LCTopoSplitFilteredMu100SmallR30YCut0</Algorithm>
   <GroomingAlgorithm>TopoSplitFilteredMu100SmallR30YCut0</GroomingAlgorithm>
   <JetAlgorithm>CamKt12</JetAlgorithm>
@@ -163,6 +169,9 @@
 </algorithm>
 
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> 393929b3c6507b0be568335e02ce19e45373b4b3
 
 <algorithm>
   <Algorithm>AntiKt4LCTopoTrimmedPtFrac5SmallR20</Algorithm>
@@ -213,8 +222,11 @@
 </algorithm>
 
 
+<<<<<<< HEAD
 =======
 >>>>>>> master
+=======
+>>>>>>> 393929b3c6507b0be568335e02ce19e45373b4b3
 <algorithm>
   <Algorithm>AntiKt10LCTopoTrimmedPtFrac5SmallR30</Algorithm>
   <GroomingAlgorithm>TopoTrimmedPtFrac5SmallR30</GroomingAlgorithm>
@@ -229,6 +241,9 @@
 
 <algorithm>
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> 393929b3c6507b0be568335e02ce19e45373b4b3
   <Algorithm>AntiKt8LCTopoTrimmedPtFrac5SmallR20</Algorithm>
   <GroomingAlgorithm>TopoTrimmedPtFrac5SmallR20</GroomingAlgorithm>
   <JetAlgorithm>AntiKt8</JetAlgorithm>
@@ -241,8 +256,11 @@
 </algorithm>
 
 <algorithm>
+<<<<<<< HEAD
 =======
 >>>>>>> master
+=======
+>>>>>>> 393929b3c6507b0be568335e02ce19e45373b4b3
   <Algorithm>AntiKt10LCTopoTrimmedPtFrac5SmallR20</Algorithm>
   <GroomingAlgorithm>TopoTrimmedPtFrac5SmallR20</GroomingAlgorithm>
   <JetAlgorithm>AntiKt10</JetAlgorithm>
@@ -255,6 +273,9 @@
 </algorithm>
 
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> 393929b3c6507b0be568335e02ce19e45373b4b3
 <algorithm>
   <Algorithm>AntiKt12LCTopoTrimmedPtFrac5SmallR20</Algorithm>
   <GroomingAlgorithm>TopoTrimmedPtFrac5SmallR20</GroomingAlgorithm>
@@ -267,8 +288,11 @@
   <BinLabel>AK12 Trimmed (0.05, 0.2)</BinLabel>
 </algorithm>
 
+<<<<<<< HEAD
 =======
 >>>>>>> master
+=======
+>>>>>>> 393929b3c6507b0be568335e02ce19e45373b4b3
 
 <algorithm>
   <Algorithm>CamKt12LCTopoTrimmedPtFrac5SmallR30</Algorithm>
@@ -284,6 +308,9 @@
 
 <algorithm>
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> 393929b3c6507b0be568335e02ce19e45373b4b3
   <Algorithm>CamKt6LCTopoTrimmedPtFrac5SmallR20</Algorithm>
   <GroomingAlgorithm>TopoTrimmedPtFrac5SmallR20</GroomingAlgorithm>
   <JetAlgorithm>CamKt6</JetAlgorithm>
@@ -320,8 +347,11 @@
 </algorithm>
 
 <algorithm>
+<<<<<<< HEAD
 =======
 >>>>>>> master
+=======
+>>>>>>> 393929b3c6507b0be568335e02ce19e45373b4b3
   <Algorithm>CamKt12LCTopoTrimmedPtFrac5SmallR20</Algorithm>
   <GroomingAlgorithm>TopoTrimmedPtFrac5SmallR20</GroomingAlgorithm>
   <JetAlgorithm>CamKt12</JetAlgorithm>
@@ -372,6 +402,9 @@
 
 <algorithm>
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> 393929b3c6507b0be568335e02ce19e45373b4b3
   <Algorithm>CamKt10LCTopoPrunedCaRcutFactor50Zcut15</Algorithm>
   <GroomingAlgorithm>TopoPrunedCaRcutFactor50Zcut15</GroomingAlgorithm>
   <JetAlgorithm>CamKt10</JetAlgorithm>
@@ -409,8 +442,11 @@
 </algorithm>
 
 <algorithm>
+<<<<<<< HEAD
 =======
 >>>>>>> master
+=======
+>>>>>>> 393929b3c6507b0be568335e02ce19e45373b4b3
   <Algorithm>CamKt12LCTopoPrunedCaRcutFactor50Zcut10</Algorithm>
   <GroomingAlgorithm>TopoPrunedCaRcutFactor50Zcut10</GroomingAlgorithm>
   <JetAlgorithm>CamKt12</JetAlgorithm>
@@ -450,6 +486,9 @@
 
 <algorithm>
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> 393929b3c6507b0be568335e02ce19e45373b4b3
   <Algorithm>CamKt6LCTopoPrunedCaRcutFactor50Zcut10</Algorithm>
   <GroomingAlgorithm>TopoPrunedCaRcutFactor50Zcut10</GroomingAlgorithm>
   <JetAlgorithm>CamKt6</JetAlgorithm>
@@ -501,8 +540,11 @@
 
 
 <algorithm>
+<<<<<<< HEAD
 =======
 >>>>>>> master
+=======
+>>>>>>> 393929b3c6507b0be568335e02ce19e45373b4b3
   <Algorithm>AntiKt2LCTopo</Algorithm>
   <GroomingAlgorithm>Topo</GroomingAlgorithm>
   <JetAlgorithm>AntiKt2</JetAlgorithm>

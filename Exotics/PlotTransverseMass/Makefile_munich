@@ -14,10 +14,14 @@ AR           = ar cru
 
 ##Flags
 <<<<<<< HEAD
+<<<<<<< HEAD
 CXXFLAGS     = -O3 -fPIC -funroll-loops -std=c++11 -pg #-Wall 
 =======
 CXXFLAGS     = -O2 -g -fPIC -funroll-loops -std=c++11 #-Wall 
 >>>>>>> master
+=======
+CXXFLAGS     = -O3 -fPIC -funroll-loops -std=c++11 -pg #-Wall 
+>>>>>>> 393929b3c6507b0be568335e02ce19e45373b4b3
 
 EXENAME		= PlotsMunichWorkshop
 SRCEXT   	= cpp
@@ -25,6 +29,7 @@ SRCDIR  	= src
 INCDIR   	= include
 OBJDIR   	= build
 EXEDIR  	= bin
+<<<<<<< HEAD
 <<<<<<< HEAD
 SRCS    	:= src/main.cpp # src/LinkDefDict.cpp #$(shell find $(SRCDIR) -name '*.$(SRCEXT)')
 
@@ -44,16 +49,34 @@ INCDIR+=-I/home/tim/boosted_framework/Exotics/Qjets/
 =======
 SRCS    	:= src/main.cpp #$(shell find $(SRCDIR) -name '*.$(SRCEXT)')
 OBJS    	:= build/main.o #$(patsubst $(SRCDIR)/%.$(SRCEXT),$(OBJDIR)/%.o,$(SRCS))
+=======
+SRCS    	:= src/main.cpp # src/LinkDefDict.cpp #$(shell find $(SRCDIR) -name '*.$(SRCEXT)')
+>>>>>>> 393929b3c6507b0be568335e02ce19e45373b4b3
 
+OBJS    	:= build/main.o #build/LinkDefDict.o #$(patsubst $(SRCDIR)/%.$(SRCEXT),$(OBJDIR)/%.o,$(SRCS))
+
+OBJS+=build/Qjets.o build/QjetsPlugin.o
+
+SRCS+=/home/tim/boosted_framework/Exotics/Qjets/Qjets.C
+SRCS+=/home/tim/boosted_framework/Exotics/Qjets/QjetsPlugin.C
+SRCDIRQJ = /home/tim/boosted_framework/Exotics/Qjets
+
+INCDIR+=-I/usr/local/include
 GARBAGE  = $(OBJDIR)/main.o $(EXEDIR)/$(EXENAME)
 INCDIR+=-I/home/tim/Programs/fastjet-install/include
+<<<<<<< HEAD
 >>>>>>> master
+=======
+#add qjetsplugin
+INCDIR+=-I/home/tim/boosted_framework/Exotics/Qjets/
+>>>>>>> 393929b3c6507b0be568335e02ce19e45373b4b3
 #################
 ##Dependencies
 # Linux
 ifeq "$(UNAME)" "Linux"
 RANLIB       = ranlib
 CXXFLAGS    += -I$(INCDIR) $(ROOTCFLAGS) #-I$(GSLINC)
+<<<<<<< HEAD
 <<<<<<< HEAD
 LINKFLAGS    = $(shell root-config --nonew) $(shell root-config --ldflags) -Wl,--no-as-needed -pg
 endif
@@ -64,20 +87,31 @@ LINKFLAGS    = -g $(shell root-config --nonew) $(shell root-config --ldflags) -W
 endif
 
 >>>>>>> master
+=======
+LINKFLAGS    = $(shell root-config --nonew) $(shell root-config --ldflags) -Wl,--no-as-needed -pg
+endif
+
+
+>>>>>>> 393929b3c6507b0be568335e02ce19e45373b4b3
 # OS X
 ifeq "$(UNAME)" "Darwin"
 RANLIB       = ranlib
 CXXFLAGS    += -I$(INCDIR) $(ROOTCFLAGS) `/home/tim/Programs/fastjet-install/bin/fastjet-config --cxxflags` -I/usr/local/include
 <<<<<<< HEAD
+<<<<<<< HEAD
 
 =======
 >>>>>>> master
+=======
+
+>>>>>>> 393929b3c6507b0be568335e02ce19e45373b4b3
 #
 #-I$(GSLINC)
 LINKFLAGS    =
 endif
 
 ##Libraries
+<<<<<<< HEAD
 <<<<<<< HEAD
 #LIBS       += $(ROOTLIBS) -lThread `/home/tim/Programs/fastjet-install/bin/fastjet-config --libs` -L/usr/local/lib -lboost_filesystem -lboost_system -lboost_program_options
 LIBS       += $(ROOTLIBS) -lTreePlayer -lThread `/home/tim/Programs/fastjet-install/bin/fastjet-config --libs` -L/usr/local/lib -lQjets -lboost_filesystem -lboost_system -lboost_program_options -lboost_regex -L/home/tim/Programs/fastjet-install/lib -L./lib
@@ -94,6 +128,17 @@ LIBS       += $(ROOTLIBS) -lThread `/home/tim/Programs/fastjet-install/bin/fastj
 ##Targets
 all : $(EXEDIR)/$(EXENAME)
 >>>>>>> master
+=======
+#LIBS       += $(ROOTLIBS) -lThread `/home/tim/Programs/fastjet-install/bin/fastjet-config --libs` -L/usr/local/lib -lboost_filesystem -lboost_system -lboost_program_options
+LIBS       += $(ROOTLIBS) -lTreePlayer -lThread `/home/tim/Programs/fastjet-install/bin/fastjet-config --libs` -L/usr/local/lib -lQjets -lboost_filesystem -lboost_system -lboost_program_options -lboost_regex -L/home/tim/Programs/fastjet-install/lib -L./lib
+
+
+##Targets
+
+FILES = build/Qjets.o build/QjetsPlugin.o
+
+all : lib/libQjets.a $(EXEDIR)/$(EXENAME)
+>>>>>>> 393929b3c6507b0be568335e02ce19e45373b4b3
 
 $(EXEDIR)/$(EXENAME) : $(OBJS)
 	$(CXX) -o $@ $(OBJS) $(LINKFLAGS) $(LIBS)
@@ -102,6 +147,9 @@ $(OBJDIR)/main.o : $(SRCDIR)/main.$(SRCEXT)
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> 393929b3c6507b0be568335e02ce19e45373b4b3
 
 $(OBJDIR)/Qjets.o : $(SRCDIRQJ)/Qjets.C
 	$(CXX) $(CXXFLAGS) -c $< -o $@
@@ -118,8 +166,11 @@ lib/libQjets.so: $(FILES) $(FILES:.cc=.o)
 	gcc $(SOFLAGS) -o $@ $(FILES)
 
 
+<<<<<<< HEAD
 =======
 >>>>>>> master
+=======
+>>>>>>> 393929b3c6507b0be568335e02ce19e45373b4b3
 clean   :
 	$(RM) $(GARBAGE)
 

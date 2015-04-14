@@ -2,6 +2,7 @@ import sys
 import subprocess
 import re
 <<<<<<< HEAD
+<<<<<<< HEAD
 
 # usage: python makeConfig.py list_of_algorithms baseconfig_file output_name version_number_in_output prefix_of_branches_file
 
@@ -12,19 +13,33 @@ version = sys.argv[4]
 branches_prefix = sys.argv[5]
 =======
 basecfg = sys.argv[2]
+=======
+
+# usage: python makeConfig.py list_of_algorithms baseconfig_file output_name version_number_in_output prefix_of_branches_file
+
+>>>>>>> 393929b3c6507b0be568335e02ce19e45373b4b3
 inputalgorithms = sys.argv[1]
+basecfg = sys.argv[2]
 name = sys.argv[3]
 version = sys.argv[4]
+<<<<<<< HEAD
 >>>>>>> master
+=======
+branches_prefix = sys.argv[5]
+>>>>>>> 393929b3c6507b0be568335e02ce19e45373b4b3
 
 algs = open(inputalgorithms)
 algorithms = []
 alg_prefix = {}
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 # get the prefix of the file, like AntiKtX
 =======
 >>>>>>> master
+=======
+# get the prefix of the file, like AntiKtX
+>>>>>>> 393929b3c6507b0be568335e02ce19e45373b4b3
 def stripPrefix(a):
     nums = re.findall(r'\d+', a)
     offset = 4 # remove the jet_ at the beginning
@@ -37,6 +52,9 @@ def stripPrefix(a):
 
 for a in algs:
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> 393929b3c6507b0be568335e02ce19e45373b4b3
     #algostrip, prefix = stripPrefix(a)
     # remove the jet_ at the beginning
     a = a.strip()
@@ -45,6 +63,7 @@ for a in algs:
     algorithms.append(a)
     #alg_prefix[algostrip.strip()] = prefix
     outname = 'config/'+name+'_'+version+'_'+a+'.cfg'
+<<<<<<< HEAD
     #print 'cp ' + basecfg + ' ' + outname
     subprocess.call('cp ' + basecfg + ' ' + outname,shell=True)
     repstr = 's/algorithm\ =/algorithm\ =\ '+str(a)+'/g'
@@ -58,6 +77,11 @@ for a in algs:
     subprocess.call('cp ' + basecfg + ' ' + outname,shell=True)
     repstr = 's/algorithm\ =/algorithm\ =\ '+str(a.strip())+'/g'
 >>>>>>> master
+=======
+    #print 'cp ' + basecfg + ' ' + outname
+    subprocess.call('cp ' + basecfg + ' ' + outname,shell=True)
+    repstr = 's/algorithm\ =/algorithm\ =\ '+str(a)+'/g'
+>>>>>>> 393929b3c6507b0be568335e02ce19e45373b4b3
     #print 'grep -rl algorithm ' + outname+' | xargs sed -i \''+repstr+'\''
     subprocess.call('grep -rl algorithm ' + outname+' | xargs sed -i \''+repstr+'\'', shell=True)
     fileid = '_'+name + '_'+version 
@@ -66,11 +90,15 @@ for a in algs:
     subprocess.call('grep -rl fileid ' + outname+' | xargs sed -i \''+ repfileid+'\'', shell=True)
     # add branches.txt and config file names to cfg
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> 393929b3c6507b0be568335e02ce19e45373b4b3
     if branches_prefix == '':
         br = name+'_'+a+'_branches.txt'
     else:
         br = branches_prefix+'_'+a+'_branches.txt'
     conf = name+'_'+a+'.config'
+<<<<<<< HEAD
     #print 'echo \'branches-file = '+br+ '\' >> '+outname
     subprocess.call('echo \'branches-file = branches/'+br+ '\' >> '+outname,shell = True)
 =======
@@ -121,3 +149,7 @@ for alg in algorithms:
     f2.close()
 
 >>>>>>> master
+=======
+    #print 'echo \'branches-file = '+br+ '\' >> '+outname
+    subprocess.call('echo \'branches-file = branches/'+br+ '\' >> '+outname,shell = True)
+>>>>>>> 393929b3c6507b0be568335e02ce19e45373b4b3
