@@ -58,6 +58,7 @@ jet_CamKt12Truth_QW
 jet_CamKt12LCTopo_QW
 jet_CamKt12LCTopoSplitFilteredMu100SmallR30YCut4_QW
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 jet_CamKt12Truth_PullMag
 jet_CamKt12LCTopo_PullMag
@@ -78,6 +79,8 @@ jet_CamKt12Truth_Pull_C11
 jet_CamKt12LCTopo_Pull_C11
 jet_CamKt12LCTopoSplitFilteredMu100SmallR30YCut4_Pull_C11
 >>>>>>> master
+=======
+>>>>>>> 393929b3c6507b0be568335e02ce19e45373b4b3
 jet_CamKt12Truth_constit_index
 jet_CamKt12LCTopo_constit_index
 jet_CamKt12LCTopoSplitFilteredMu100SmallR30YCut4_constit_index

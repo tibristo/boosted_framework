@@ -48,7 +48,12 @@ The output file of all the events that are kept will be in a folder AlgorithmNam
 There is still a lot of error checking that needs to be put in place so that things don't just crash.
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 Making config files:
 python makeConfig.py optimisationalgs/lily_algorithms_v2.txt nc27_filteredbase.cfg nc27_fast v1
 =======
 >>>>>>> master
+=======
+Making config files:
+python makeConfig.py optimisationalgs/lily_algorithms_v2.txt nc27_filteredbase.cfg nc27_fast v1
+>>>>>>> 393929b3c6507b0be568335e02ce19e45373b4b3
