@@ -23,8 +23,6 @@ OBJDIR   	= build
 EXEDIR  	= bin
 SRCS    	:= src/main.cpp #$(shell find $(SRCDIR) -name '*.$(SRCEXT)')
 OBJS    	:= build/main.o #$(patsubst $(SRCDIR)/%.$(SRCEXT),$(OBJDIR)/%.o,$(SRCS))
-<<<<<<< HEAD
-<<<<<<< HEAD
 OBJS+=build/Qjets.o build/QjetsPlugin.o
 
 SRCS+=/Disk/ecdf-nfs-ppe/atlas/users/tibristo/boosted_framework/Exotics/Qjets/Qjets.C
@@ -39,27 +37,6 @@ INCDIR+=-I/Home/s1214155/usr/local/include
 
 #add qjetsplugin
 INCDIR+=-I/Disk/ecdf-nfs-ppe/atlas/users/tibristo/boosted_framework/Exotics/Qjets/
-=======
-=======
-OBJS+=build/Qjets.o build/QjetsPlugin.o
->>>>>>> 393929b3c6507b0be568335e02ce19e45373b4b3
-
-SRCS+=/Disk/ecdf-nfs-ppe/atlas/users/tibristo/boosted_framework/Exotics/Qjets/Qjets.C
-SRCS+=/Disk/ecdf-nfs-ppe/atlas/users/tibristo/boosted_framework/Exotics/Qjets/QjetsPlugin.C
-SRCDIRQJ = /Disk/ecdf-nfs-ppe/atlas/users/tibristo/boosted_framework/Exotics/Qjets
-
-
-GARBAGE  = $(OBJDIR)/*.o $(EXEDIR)/$(EXENAME)
-INCDIR+=-I/Disk/ecdf-nfs-ppe/atlas/users/tibristo/fastjet-install/include
-INCDIR+=-I/usr/local/include
-INCDIR+=-I/Home/s1214155/usr/local/include
-<<<<<<< HEAD
->>>>>>> master
-=======
-
-#add qjetsplugin
-INCDIR+=-I/Disk/ecdf-nfs-ppe/atlas/users/tibristo/boosted_framework/Exotics/Qjets/
->>>>>>> 393929b3c6507b0be568335e02ce19e45373b4b3
 #################
 ##Dependencies
 # Linux
@@ -72,23 +49,13 @@ endif
 # OS X
 ifeq "$(UNAME)" "Darwin"
 RANLIB       = ranlib
-<<<<<<< HEAD
-<<<<<<< HEAD
 CXXFLAGS    += -I$(INCDIR) $(ROOTCFLAGS) `/Disk/ecdf-nfs-ppe/atlas/users/tibristo/fastjet-install/bin/fastjet-config --cxxflags` 
-=======
-CXXFLAGS    += -I$(INCDIR) $(ROOTCFLAGS) `/Disk/speyside8/lhcb/atlas/tibristo/fastjet-install/bin/fastjet-config --cxxflags` 
->>>>>>> master
-=======
-CXXFLAGS    += -I$(INCDIR) $(ROOTCFLAGS) `/Disk/ecdf-nfs-ppe/atlas/users/tibristo/fastjet-install/bin/fastjet-config --cxxflags` 
->>>>>>> 393929b3c6507b0be568335e02ce19e45373b4b3
 #
 #-I$(GSLINC)
 LINKFLAGS    =
 endif
 
 ##Libraries
-<<<<<<< HEAD
-<<<<<<< HEAD
 LIBS       += $(ROOTLIBS) -lTreePlayer -lThread `/Disk/ecdf-nfs-ppe/atlas/users/tibristo/fastjet-install/bin/fastjet-config --libs` -L/usr/local/lib -L/Home/s1214155/usr/local/lib -lQjets -lboost_filesystem -lboost_system -lboost_program_options -lboost_regex -L/Disk/ecdf-nfs-ppe/atlas/users/tibristo/fastjet-install/lib -L./lib
 
 ##Targets
@@ -97,22 +64,6 @@ FILES = build/Qjets.o build/QjetsPlugin.o
 
 all : lib/libQjets.a $(EXEDIR)/$(EXENAME)
 
-=======
-LIBS       += $(ROOTLIBS) -lThread `/Disk/speyside8/lhcb/atlas/tibristo/fastjet-install/bin/fastjet-config --libs` -L/usr/local/lib -L/Home/s1214155/usr/local/lib -lboost_filesystem -lboost_system -lboost_program_options -L/Disk/speyside8/lhcb/atlas/tibristo/fastjet-install/lib
-
-##Targets
-all : $(EXEDIR)/$(EXENAME)
->>>>>>> master
-=======
-LIBS       += $(ROOTLIBS) -lTreePlayer -lThread `/Disk/ecdf-nfs-ppe/atlas/users/tibristo/fastjet-install/bin/fastjet-config --libs` -L/usr/local/lib -L/Home/s1214155/usr/local/lib -lQjets -lboost_filesystem -lboost_system -lboost_program_options -lboost_regex -L/Disk/ecdf-nfs-ppe/atlas/users/tibristo/fastjet-install/lib -L./lib
-
-##Targets
-
-FILES = build/Qjets.o build/QjetsPlugin.o
-
-all : lib/libQjets.a $(EXEDIR)/$(EXENAME)
-
->>>>>>> 393929b3c6507b0be568335e02ce19e45373b4b3
 
 $(EXEDIR)/$(EXENAME) : $(OBJS)
 	$(CXX) -o $@ $(OBJS) $(LINKFLAGS) $(LIBS)
@@ -120,10 +71,6 @@ $(EXEDIR)/$(EXENAME) : $(OBJS)
 $(OBJDIR)/main.o : $(SRCDIR)/main.$(SRCEXT)
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
->>>>>>> 393929b3c6507b0be568335e02ce19e45373b4b3
 $(OBJDIR)/Qjets.o : $(SRCDIRQJ)/Qjets.C
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
@@ -140,11 +87,6 @@ lib/libQjets.so: $(FILES) $(FILES:.cc=.o)
 
 
 
-<<<<<<< HEAD
-=======
->>>>>>> master
-=======
->>>>>>> 393929b3c6507b0be568335e02ce19e45373b4b3
 clean   :
 	$(RM) $(GARBAGE)
 
