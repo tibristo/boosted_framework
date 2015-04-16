@@ -431,131 +431,6 @@ vector<TLorentzVector> Recluster(vector<TLorentzVector> small_jets, double PTcut
 
 
 /*
- * Create a ROC curve for signal and background histograms.  This is stored in a TGraph which is passed by reference.
- *
- * @param type 1 is signal vs bkg rej and 2 is the inverse of this.
- * @param S Input signal histogram.
- * @param B Input background histogram.
- * @param curve Reference to TGraph.  This will store the ROC.
- * @param name Name of ROC.
- * @param draw Flag indicating if the ROC should be drawn and saved to file.
- */
-void makeROC(int type, TH1F *&S, TH1F *&B, TGraph &curve, TString name, bool draw){
-
-  //Need S and B to have the same number of bins!
-  //TH1D *curve = new TH1D("","",M,0,1); where M is however fine you want the ROC curve binning to be.
-  //ROC(S,B,curve);
-
-  const int n = S->GetNbinsX();
-  vector<double> s;
-  vector<double> b;
-  vector<double> r;
-  vector<double> serr;
-  vector<double> berr;
-
-  //cout<<"Getting init ROC"<<endl;
-  for (int i=0;i<n;i++){
-    s.push_back(S->GetBinContent(i+1));
-    b.push_back(B->GetBinContent(i+1));
-    serr.push_back(S->GetBinError(i+1));
-    berr.push_back(B->GetBinError(i+1));
-    if (B->GetBinContent(i+1)>0){
-      r.push_back(S->GetBinContent(i+1)/B->GetBinContent(i+1));
-    }
-    else{
-      r.push_back(-1);
-    }
-  }
-
-  //sort by ascending order
-  float temp_s=1;
-  float temp_b=1;
-  float temp_r=1;
-  float temp_serr=1;
-  float temp_berr=1;
-  int sizes = s.size();
-  for(int isort=sizes; isort>1; isort=isort-1){
-    for(int i=0; i<isort-1; i++){
-      if( r.at(i)<r.at(i+1) ){
-	temp_s  = s.at(i);
-	temp_b  = b.at(i);
-	temp_serr  = serr.at(i);
-	temp_berr  = berr.at(i);
-	temp_r  = r.at(i);
-
-	s.at(i) = s.at(i+1);
-	b.at(i) = b.at(i+1);
-	serr.at(i) = serr.at(i+1);
-	berr.at(i) = berr.at(i+1);
-	r.at(i) = r.at(i+1);
-
-	s.at(i+1) = temp_s;
-	b.at(i+1) = temp_b;
-	serr.at(i+1) = temp_serr;
-	berr.at(i+1) = temp_berr;
-	r.at(i+1) = temp_r;
-      }
-    }
-  }
-
-  double totalB = B->Integral();
-  double totalS = S->Integral();
-
-  //put into graph
-  //cout<<"NPoints: "<<n<<endl;
-  TGraph gr(n);
-  TGraph gr_up(n);
-  TGraph gr_do(n);
-  ofstream log;
-  log.open(name+".txt");
-  for (int i=0; i<n; i++){
-    double myS = 0.;
-    double myB = 0.;
-    double mySerr = 0.;
-    double myBerr = 0.;
-    for (int j=0; j<i; j++){
-      myS += s.at(j)/totalS;
-      myB += b.at(j)/totalB;
-
-      mySerr += pow(pow(mySerr, 2.0) + pow((serr.at(j)/totalS), 2.0), 0.5);
-      myBerr += pow(pow(myBerr, 2.0) + pow((berr.at(j)/totalB), 2.0), 0.5);
-
-    }
-    if(type==1){
-      log << myS << " , " << myB << endl;
-      gr.SetPoint(i, myS, (1-myB));
-      gr_up.SetPoint(i, myS+mySerr, (1-(myB-myBerr)));
-      gr_do.SetPoint(i, myS-mySerr, (1-(myB+myBerr)));
-    }
-    if(type==2){
-      if(myB==1)
-	gr.SetPoint(i, myS, 100000);
-      else{
-	gr.SetPoint(i, myS, 1/(1-myB));
-      }
-    }
-  }
-  log.close();
-  //curve=gr;
-
-
-  if (draw==true)
-    {
-      TCanvas *c1 = new TCanvas();
-      gr.Draw("");
-      c1->SaveAs(name+".png");
-      delete c1;
-    }
-  //curve_up=gr_up;
-  //curve_do=gr_do;
-
-  return;
-
-} //makeROC
-
-
-
-/*
  * Create an ntuple storing variables related to the grooming algorithm being run.  Some selections are run here too - event selection, 
  * jet and lepton selection, pT cuts.
  *
@@ -615,7 +490,12 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
       // set up a stringstream to use for file names that can easily have integers added to it
       std::stringstream ss;
       ss << algorithmName << "_" << pTbins[j];
-      
+
+      // count events after different cuts
+      int groomedJetCount = 0;
+      int truthBosonCount = 0;
+      int truthJetCount = 0;
+      int massCount = 0;
 
       // loop through background and signal
       for (int k = 0; k < 2; k++)
@@ -689,8 +569,7 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
 	  //set all of the branches for the output tree for the jets	  
 	  setJetsBranches(inputTChain[tchainIdx], algorithmName, algorithm, current_branchmap); 
 
-	  // output file to store cluster info
-	  ofstream clusterfile(string("clusterfile"+bkg+".csv"));
+
 	  // output file
 	  TFile * outfile = new TFile(std::string(algorithm+fileid_global+"/"+ss_fname.str()).c_str(),"RECREATE");   
 	  // output tree
@@ -710,10 +589,6 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
 	  // Setting up this with a high limit of 3.5 TeV so we don't miss anything.  Lots of bins - 200, so we can
 	  // do a lot of tuning of the scale factor regions later on!
 	  pt_reweight = new TH1F(std::string("pt_reweight"+bkg).c_str(),std::string("pt_reweight_"+bkg).c_str(), 200, 0, 3500);
-	  cluster_vs_truthpt = new TH2F("ClusterVsTruthJetPt","ClusterVsTruthJetPt",40, 100, 1000, 40 ,0 , 1000);
-	  cluster_vs_truthpt->GetXaxis()->SetTitle("Truth pT (GeV)");
-	  cluster_vs_truthpt->GetYaxis()->SetTitle("Leading cluster pT (GeV)");
-	  
 	  // set up the number of events in total
 	  NEvents = entries;
 	  // we keep track of the weighted (by mc_event_weight) number of events too
@@ -723,6 +598,10 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
 	  
 	  // counter for how many events pass selection
 	  passed_counter = 0;
+	  groomedJetCount = 0;
+	  truthBosonCount = 0;
+	  truthJetCount = 0;
+	  massCount = 0;
 
 	  // mass variable
 	  double mass = 0;
@@ -825,6 +704,8 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
 	      if (chosenLeadGroomedIndex < 0)
 		continue;
 
+	      groomedJetCount ++;
+
 	      bool passedTruthBoson = signal ? false : true;
 	      // truth boson matching done on the leading truth jet (signal only) to check if it is a Z or W boson.
 	      int truthBosonIndex = -1;
@@ -836,8 +717,9 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
 		  int count = 0;
 		  for (int jet_i = 0; jet_i < (*var_truthboson_eta_vec).size(); jet_i++)
 		    {
-		      // delta R matching of truth jet with truth boson
-		      if (truthBosonIndex<0 && DeltaR((*var_eta_vec[jetType::GROOMED])[chosenLeadGroomedIndex],(*var_phi_vec[jetType::GROOMED])[chosenLeadGroomedIndex],(*var_truthboson_eta_vec)[jet_i],(*var_truthboson_phi_vec)[jet_i])<(0.75*radius))
+
+		      // delta R matching of groomed jet with truth boson
+		      if (DeltaR((*var_eta_vec[jetType::GROOMED])[chosenLeadGroomedIndex],(*var_phi_vec[jetType::GROOMED])[chosenLeadGroomedIndex],(*var_truthboson_eta_vec)[jet_i],(*var_truthboson_phi_vec)[jet_i])<(0.75*radius))
 			{
 
 			  // if there is a Z boson within this radius, regardless of whether or not there is also a W, we veto the event
@@ -875,10 +757,12 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
 	      if (truthBosonMatching && !passedTruthBoson)
 		continue;
 
+	      truthBosonCount ++;
 	      // find truth jets /////groomed jets
 	      // 18/03/2015: this was previously used to find the groomed jet matching with the TRUTH jet.  This order has been reversed
 	      // if truth match on topo jets was done, leave as is, otherwise use 0
 	      chosenLeadTruthJetIndex = -99;//algorithmType.find("truthmatch") != std::string::npos ? chosenLeadTruthJetIndex : 0;
+	      float tr_pt = -999;
 	      for (int jet_i=0; jet_i<(*var_pt_vec[jetType::TRUTH]).size(); jet_i++)
 		{
 		  // emfrac is not always available
@@ -887,29 +771,40 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
 		  emfractmp = (*var_emfrac_vec[jetType::GROOMED])[jet_i];*/
 		  // truth match on dR with some eta and emfrac cuts
 		  // is the dR < 0.75 ot 0.9???
-		  if (/*chosenLeadGroomedIndex<0*/chosenLeadTruthJetIndex < 0 && DeltaR((*var_eta_vec[jetType::TRUTH])[jet_i],(*var_phi_vec[jetType::TRUTH])[jet_i],(*var_eta_vec[jetType::GROOMED])[chosenLeadGroomedIndex],(*var_phi_vec[jetType::GROOMED])[chosenLeadGroomedIndex])<(0.75*radius))// && emfractmp<0.99 && fabs((*var_eta_vec[jetType::GROOMED])[])<1.2)
+		  if (DeltaR((*var_eta_vec[jetType::TRUTH])[jet_i],(*var_phi_vec[jetType::TRUTH])[jet_i],(*var_eta_vec[jetType::GROOMED])[chosenLeadGroomedIndex],(*var_phi_vec[jetType::GROOMED])[chosenLeadGroomedIndex])<(0.75*radius))// && emfractmp<0.99 && fabs((*var_eta_vec[jetType::GROOMED])[])<1.2)
 		    {
 
 		      //chosenLeadGroomedIndex=jet_i;
-		      chosenLeadTruthJetIndex=jet_i;
-		      continue;
+		      if (tr_pt < (*var_pt_vec[jetType::TRUTH])[jet_i])
+			{
+			  tr_pt = (*var_pt_vec[jetType::TRUTH])[jet_i];
+			  chosenLeadTruthJetIndex=jet_i;
+			}
 
 		    }     
 		} // end loop over var_pt_vec[jetType::GROOMED]
 	      
 
-
-
-	      //if (chosenLeadGroomedIndex == -99) // failed selection
 	      if (chosenLeadTruthJetIndex < 0) // failed selection
 		{
 		  continue;	      
 		}
-	      
-	      // set output values
-	      //leadGroomedIndex = chosenLeadGroomedIndex;
-	      //leadTruthIndex = chosenLeadTruthJetIndex;
-	      //leadTopoIndex = chosenLeadTopoJetIndex;
+
+	      truthJetCount++;
+
+	      // find the leading ca12 truth jet
+	      int leadingCA12TruthIndex = -1;
+	      float ca12max = -1;
+	      int c = 0;
+	      for (vector<float>::iterator it = (*var_ca12_pt_vec).begin(); it != (*var_ca12_pt_vec).end() ; it++)	      
+		{
+		  if ((*it) > ca12max)
+		    {
+		      ca12max = (*it);
+		      leadingCA12TruthIndex = c;
+		    }
+		  c++;
+		}
 
 	      // set the mass to the leading groomed jet
 	      mass = (*var_m_vec[2])[chosenLeadGroomedIndex]/1000.0 ;
@@ -920,6 +815,9 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
 		{
 		  continue;
 		}
+
+	      massCount++;
+
 	      // set the mass of the two leptons and leading groomed jet
 	      if (hvtllqq)
 		setLLJMass(chosenLeadGroomedIndex);
@@ -1043,18 +941,6 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
 		  calculateECF(groomedclusters, jetType::GROOMED, 1);
 		  calculateECF(groomedclusters, jetType::GROOMED, 2);
 
-		  //EEC:C1 - exp 2, beta 1 for truth and groomed
-		  /*var_EEC_C2_1[jetType::TRUTH] = calculateEEC(jetType::TRUTH, 1, 2);
-		  var_EEC_C2_1[jetType::GROOMED] = calculateEEC(jetType::GROOMED, 1, 2);
-		  //EEC:C2 - exp 2, beta 2 for truth and groomed
-		  var_EEC_C2_2[jetType::TRUTH] = calculateEEC(jetType::TRUTH, 2, 2);
-		  var_EEC_C2_2[jetType::GROOMED] = calculateEEC(jetType::GROOMED, 2, 2);
-		  //EEC:D1 - exp 3, beta 1 for truth and groomed
-		  var_EEC_D2_1[jetType::TRUTH] = calculateEEC(jetType::TRUTH, 1, 3);
-		  var_EEC_D2_1[jetType::GROOMED] = calculateEEC(jetType::GROOMED, 1, 3);
-		  //EEC:D2 - exp3, beta 2 for truth and groomed
-		  var_EEC_D2_2[jetType::TRUTH] = calculateEEC(jetType::TRUTH, 2, 3);
-		  var_EEC_D2_2[jetType::GROOMED] = calculateEEC(jetType::GROOMED, 2, 3);*/
 		  } // calcEEC
 	      // if we have the ECF variables the calculations for EEC are much simpler
 	      else if (preCalcEEC)
@@ -1074,7 +960,7 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
 		}
 
 	      // make sure all of the other output variables have their values set
-	      setOutputVariables(chosenLeadTruthJetIndex, chosenLeadTopoJetIndex, chosenLeadGroomedIndex, lead_subjet, algorithmName , prefix);
+	      setOutputVariables(chosenLeadTruthJetIndex, chosenLeadTopoJetIndex, chosenLeadGroomedIndex, leadingCA12TruthIndex, lead_subjet, algorithmName , prefix);
 	      
 	      // count how many entries have passed selection
 	      passed_counter += 1;
@@ -1090,7 +976,7 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
 	  // calculate the overall reweight with a new histogram!
 	  outTree->GetCurrentFile()->Write();
 	  // write histograms to file
-	  cluster_vs_truthpt->Write();
+
 	  pt_reweight->Write();
 	  pt_reweight_arr[tchainIdx] = (TH1F*)pt_reweight->Clone();
 	  // stupid clone method needs this so that it doesn't delete this histo when closing the file
@@ -1109,7 +995,16 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
 	  for (std::map<long,float>::iterator it = NEvents_weighted.begin(); it!= NEvents_weighted.end(); it++)
 	    ev_out << it->first << "," << NEvents_weighted[it->first] << std::endl;
 	  ev_out.close();
-	  clusterfile.close();
+
+	  std::stringstream ssCount; // store the name of the output file and include the i and j indices!
+	  ssCount << algorithm << fileid_global << "/" << ss.str() << "_" << bkg2 << ".EventCount";
+	  ofstream ev_count(ssCount.str());
+	  ev_count << "groomedJetCount: " << groomedJetCount << endl;
+	  ev_count << "truthBosonCount: " << truthBosonCount << endl;
+	  ev_count << "truthJetCount: " << truthJetCount << endl;
+	  ev_count << "massCount: " << massCount << endl;
+	  ev_count << "passed_counter: " << passed_counter << endl;
+	  ev_count.close();
 	  delete outfile;
 
 	} // end loop of datatype
@@ -1231,6 +1126,11 @@ vector<std::pair<std::string,bool> > getListOfJetBranches(std::string &algorithm
   branchmap["nVertices"] = true;
   branchmap["averageIntPerXing"] = true;
   branchmap["mc_event_weight"] = true;
+  // 16/04/2015 Adding this in because even though they are not used for selection, they are used for the binning when finding the taggers.
+  branchmap["jet_CamKt12Truth_pt"] = true;
+  branchmap["jet_CamKt12Truth_eta"] = true;
+  branchmap["jet_CamKt12Truth_phi"] = true;
+  branchmap["jet_CamKt12Truth_m"] = true;
   if (xAOD)
     {
       branchmap["actualIntPerXing"] = true;
@@ -1871,6 +1771,17 @@ void setJetsBranches(TChain * tree, std::string &groomalgo,  std::string & groom
     }
 
 
+
+  // set the ca12 truth jets
+  if(!setVector(tree,brancharray, var_ca12_pt_vec, "jet_CamKt12Truth_pt"))
+    floatvec(var_ca12_pt_vec);
+  if(!setVector(tree,brancharray, var_ca12_m_vec, "jet_CamKt12Truth_m"))
+    floatvec(var_ca12_m_vec);
+  if(!setVector(tree,brancharray, var_ca12_eta_vec, "jet_CamKt12Truth_eta"))
+    floatvec(var_ca12_eta_vec);
+  if(!setVector(tree,brancharray, var_ca12_phi_vec, "jet_CamKt12Truth_phi"))
+    floatvec(var_ca12_phi_vec);
+
   // loop through the truth, toppo and groomed jets and set up the branches for the different variables
   for (int i = 0; i < jetType::MAX; i++) // truth, topo, groomed
     {
@@ -2178,6 +2089,11 @@ void initVectors()
   var_truthboson_eta_vec = 0;
   var_truthboson_phi_vec = 0;
   var_truthboson_ID_vec = 0;
+  // truth ca12
+  var_ca12_pt_vec = 0;
+  var_ca12_m_vec = 0;
+  var_ca12_eta_vec = 0;
+  var_ca12_phi_vec = 0;
 
   var_YFilt_vec = 0;
   var_massFraction_vec = 0;
@@ -2266,7 +2182,7 @@ void setLeptonVectors()
  * @param groomalgo The abbreviated name of the algorithm.
  * @param samplePrefix If it has "LC" in the name of the algorithm
  */
-void setOutputVariables( int jet_idx_truth, int jet_idx_topo, int jet_idx_groomed, int subjet_idx, std::string & groomalgo, std::string &  samplePrefix)
+void setOutputVariables( int jet_idx_truth, int jet_idx_topo, int jet_idx_groomed, int jet_idx_ca12, int subjet_idx, std::string & groomalgo, std::string &  samplePrefix)
 {
   // set to 0 for now
   int jet_idx = 0;
@@ -2317,6 +2233,12 @@ void setOutputVariables( int jet_idx_truth, int jet_idx_topo, int jet_idx_groome
       var_xs = xs[mc_channel_number];
     }
 
+
+  // set the ca12 truth jets
+  var_ca12_pt = (*var_ca12_pt_vec)[jet_idx_ca12];
+  var_ca12_m = (*var_ca12_m_vec)[jet_idx_ca12];
+  var_ca12_phi = (*var_ca12_phi_vec)[jet_idx_ca12];
+  var_ca12_eta = (*var_ca12_eta_vec)[jet_idx_ca12];
 
   // loop through the different types of jets and set the output variables
   for (int x = 0; x < jetType::MAX ; x++)
@@ -2494,6 +2416,12 @@ void clearOutputVariables()
   response_EEC_C2_2 = 0;
   response_EEC_D2_1 = 0;
   response_EEC_D2_2 = 0;
+
+  var_ca12_pt = 0;
+  var_ca12_m = 0;
+  var_ca12_phi = 0;
+  var_ca12_eta = 0;
+
   
   electrons.clear();
   muons.clear();

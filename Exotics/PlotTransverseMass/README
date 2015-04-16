@@ -12,11 +12,7 @@ also has some settings that are not used in this setup, but were used for plotte
 sketchy piece of string splitting code that wouldn't work without it.  I have since moved to boost, but I haven't replaced that part yet.
 
 There are lots of ways to run the code.  Generally you will do something like:
-./bin/PlotsMunichWorkshop bkgfile.root sigfile.root algorithmtype
-where algorithm type is all, trimmed, filtered, pruned ( reclustered isn't set up yet)
-
-This can also be done like this:
-./bin/PlotsMunichWorkshop --background-file=bkgfile.root --signal-file=sigfile.root --algorithm=algorithmtype
+./bin/PlotsMunichWorkshop --config=configFile
 
 Other options *:
 --subjets	This is whether or not you want to run over the subjets as well

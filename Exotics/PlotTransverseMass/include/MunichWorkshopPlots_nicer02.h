@@ -84,7 +84,7 @@ std::string returnJetType(std::string & samplePrefix, std::string & groomalgo, b
 std::string returnSubJetType(std::string & samplePrefix, std::string & groomalgo, bool addLC);
 void clearVectors();
 void clearOutputVariables();
-void setOutputVariables(int idx1, int idx2, int idx3, int subidx, std::string & groomalgo, std::string & groomIdx);
+void setOutputVariables(int idx1, int idx2, int idx3, int idxca, int subidx, std::string & groomalgo, std::string & groomIdx);
 void setOutputBranches(TTree* tree, std::string & algorithm, std::string & groomIdx);
 void resetOutputVariables();
 void setAddress(TChain * tree, std::string  name, std::vector<Float_t> * var_vec);
@@ -403,6 +403,10 @@ std::vector<std::vector<float> *> var_ECF1_2_vec;
 std::vector<std::vector<float> *> var_ECF2_2_vec;
 std::vector<std::vector<float> *> var_ECF3_2_vec;
 std::vector<std::vector<float> *> var_Mu12_vec;
+std::vector<float> * var_ca12_pt_vec;
+std::vector<float> * var_ca12_phi_vec;
+std::vector<float> * var_ca12_eta_vec;
+std::vector<float> * var_ca12_m_vec;
 std::vector<float> * var_YFilt_vec;
 
 // reading in truth boson info when running on xAOD
@@ -471,6 +475,10 @@ std::vector<float> var_PlanarFlow;
 std::vector<float> var_Angularity;
 std::vector<float> var_Tau21;
 std::vector<float> var_Mu12;
+Float_t var_ca12_pt;
+Float_t var_ca12_eta;
+Float_t var_ca12_phi;
+Float_t var_ca12_m;
 Float_t var_YFilt; // only for groomed
 
 // leptons out
