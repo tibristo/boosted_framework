@@ -407,9 +407,14 @@ std::vector<float> * var_ca12_pt_vec;
 std::vector<float> * var_ca12_phi_vec;
 std::vector<float> * var_ca12_eta_vec;
 std::vector<float> * var_ca12_m_vec;
+std::vector<float> * var_ca12topo_pt_vec;
+std::vector<float> * var_ca12topo_phi_vec;
+std::vector<float> * var_ca12topo_eta_vec;
+std::vector<float> * var_ca12topo_m_vec;
 std::vector<float> * var_YFilt_vec;
 
 // reading in truth boson info when running on xAOD
+std::vector<float> * var_truthboson_pt_vec;
 std::vector<float> * var_truthboson_eta_vec;
 std::vector<float> * var_truthboson_phi_vec;
 std::vector<int> * var_truthboson_ID_vec;
@@ -422,7 +427,7 @@ std::vector<float> * var_cl_phi_vec;
 
 // extra variables to read in
 
-
+std::vector<int> * vxp_nTracks;
 Float_t var_massFraction_vec;
 Float_t var_ktycut2_vec;
 
@@ -479,6 +484,10 @@ Float_t var_ca12_pt;
 Float_t var_ca12_eta;
 Float_t var_ca12_phi;
 Float_t var_ca12_m;
+Float_t var_ca12topo_pt;
+Float_t var_ca12topo_eta;
+Float_t var_ca12topo_phi;
+Float_t var_ca12topo_m;
 Float_t var_YFilt; // only for groomed
 
 // leptons out
@@ -584,3 +593,4 @@ Float_t response_EEC_C2_2;
 Float_t response_EEC_D2_1; 
 Float_t response_EEC_D2_2; 
 
+Int_t vxp_nTracks_out;

@@ -644,6 +644,14 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
        		  continue;
 		}
 	      
+	       // check that we have at least 2 tracks in the event if we're using xaods
+	       // TODO implement this for other samples, not just xaod
+	       if (xAOD)
+		 {
+		   if (vxp_nTracks->at(0) <= 2)
+		     continue;
+		 }
+	       
 	       // if we're doing a truth matching algorithm then don't apply pt range cuts on truth - it will be done on groomed
 	      if (algorithmType.find("truthmatch") == std::string::npos) // check the pt is in the correct bin
 		{
@@ -719,7 +727,7 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
 		    {
 
 		      // delta R matching of groomed jet with truth boson
-		      if (DeltaR((*var_eta_vec[jetType::GROOMED])[chosenLeadGroomedIndex],(*var_phi_vec[jetType::GROOMED])[chosenLeadGroomedIndex],(*var_truthboson_eta_vec)[jet_i],(*var_truthboson_phi_vec)[jet_i])<(0.75*radius))
+		      if (DeltaR((*var_eta_vec[jetType::GROOMED])[chosenLeadGroomedIndex],(*var_phi_vec[jetType::GROOMED])[chosenLeadGroomedIndex],(*var_truthboson_eta_vec)[jet_i],(*var_truthboson_phi_vec)[jet_i])<(0.75*radius) && (*var_truthboson_pt_vec)[jet_i] > 5*1000.0 && fabs((*var_truthboson_eta_vec)[jet_i]) < 6)
 			{
 
 			  // if there is a Z boson within this radius, regardless of whether or not there is also a W, we veto the event
@@ -803,9 +811,15 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
 		      ca12max = (*it);
 		      leadingCA12TruthIndex = c;
 		    }
-		  c++;
+		  c++; // awww yeah
 		}
 
+	      // check that the leading ca12truth has pT > 50 GeV and within |eta| < 1.2
+	      if ((*var_ca12_pt_vec)[leadingCA12TruthIndex] <= 50*1000.0 || fabs((*var_ca12_eta_vec)[leadingCA12TruthIndex]) >= 1.2)
+		continue;
+	     
+		  
+	      
 	      // set the mass to the leading groomed jet
 	      mass = (*var_m_vec[2])[chosenLeadGroomedIndex]/1000.0 ;
 	      if (mass < 0.0) // not sure why this happens, but it seems to happen
@@ -1114,6 +1128,7 @@ vector<std::pair<std::string,bool> > getListOfJetBranches(std::string &algorithm
   if (truthBosonMatching)
     {
       std::cout << "Adding truth boson variables" << std::endl;
+      branchmap["truthBoson_pt"] = true;
       branchmap["truthBoson_eta"] = true;
       branchmap["truthBoson_phi"] = true;
       branchmap["truthBoson_ID"] = true;
@@ -1123,6 +1138,7 @@ vector<std::pair<std::string,bool> > getListOfJetBranches(std::string &algorithm
   branchmap["RunNumber"] = true;
   branchmap["mc_channel_number"] = true;
   branchmap["vxp_n"] = true;
+  branchmap["vxp_nTracks"] = true;
   branchmap["nVertices"] = true;
   branchmap["averageIntPerXing"] = true;
   branchmap["mc_event_weight"] = true;
@@ -1689,6 +1705,8 @@ void setJetsBranches(TChain * tree, std::string &groomalgo,  std::string & groom
     tree->SetBranchAddress("nVertices", &nvtxIn);
   if (brancharray.find("vxp_n")  != brancharray.end() && branchmap["vxp_n"])
     tree->SetBranchAddress("vxp_n", &nvtxIn);
+  if (brancharray.find("vxp_nTracks")  != brancharray.end() && branchmap["vxp_nTracks"])
+    tree->SetBranchAddress("vxp_nTracks", &vxp_nTracks);
   if (brancharray.find("averageIntPerXing") != brancharray.end() && branchmap["averageIntPerXing"])
     {
       if (xAOD)
@@ -1781,6 +1799,15 @@ void setJetsBranches(TChain * tree, std::string &groomalgo,  std::string & groom
     floatvec(var_ca12_eta_vec);
   if(!setVector(tree,brancharray, var_ca12_phi_vec, "jet_CamKt12Truth_phi"))
     floatvec(var_ca12_phi_vec);
+  // set the ca12 topo jets
+  if(!setVector(tree,brancharray, var_ca12topo_pt_vec, "jet_CamKt12LCTopo_pt"))
+    floatvec(var_ca12topo_pt_vec);
+  if(!setVector(tree,brancharray, var_ca12topo_m_vec, "jet_CamKt12LCTopo_m"))
+    floatvec(var_ca12topo_m_vec);
+  if(!setVector(tree,brancharray, var_ca12topo_eta_vec, "jet_CamKt12LCTopo_eta"))
+    floatvec(var_ca12topo_eta_vec);
+  if(!setVector(tree,brancharray, var_ca12topo_phi_vec, "jet_CamKt12LCTopo_phi"))
+    floatvec(var_ca12topo_phi_vec);
 
   // loop through the truth, toppo and groomed jets and set up the branches for the different variables
   for (int i = 0; i < jetType::MAX; i++) // truth, topo, groomed
@@ -1893,6 +1920,8 @@ void setJetsBranches(TChain * tree, std::string &groomalgo,  std::string & groom
   // setup the truth boson branches - note this is only done on the xAODs
   //if (truthBosonMatching)
   //{
+      if (!setVector(tree,brancharray, var_truthboson_pt_vec, std::string("truthBoson_pt")))
+	floatvec(var_truthboson_pt_vec);
       if (!setVector(tree,brancharray, var_truthboson_eta_vec, std::string("truthBoson_eta")))
 	floatvec(var_truthboson_eta_vec);
       if (!setVector(tree,brancharray, var_truthboson_phi_vec, std::string("truthBoson_phi")))
@@ -2086,6 +2115,7 @@ void initVectors()
     }  
 
   // truth bosons
+  var_truthboson_pt_vec = 0;
   var_truthboson_eta_vec = 0;
   var_truthboson_phi_vec = 0;
   var_truthboson_ID_vec = 0;
@@ -2094,6 +2124,10 @@ void initVectors()
   var_ca12_m_vec = 0;
   var_ca12_eta_vec = 0;
   var_ca12_phi_vec = 0;
+  var_ca12topo_pt_vec = 0;
+  var_ca12topo_m_vec = 0;
+  var_ca12topo_eta_vec = 0;
+  var_ca12topo_phi_vec = 0;
 
   var_YFilt_vec = 0;
   var_massFraction_vec = 0;
@@ -2191,6 +2225,7 @@ void setOutputVariables( int jet_idx_truth, int jet_idx_topo, int jet_idx_groome
   if (xAOD)
     {
       mc_event_weight_out = mc_event_weight_xaod->at(0);// remove ->at(0) when running on D3PD
+      vxp_nTracks_out = vxp_nTracks->at(0);
       avgIntpXingOut = avgIntpXingIn_xaod;
       actualIntPerXingOut = actualIntPerXingIn;
       evt_kfactor_out = evt_kfactor;
@@ -2239,6 +2274,11 @@ void setOutputVariables( int jet_idx_truth, int jet_idx_topo, int jet_idx_groome
   var_ca12_m = (*var_ca12_m_vec)[jet_idx_ca12];
   var_ca12_phi = (*var_ca12_phi_vec)[jet_idx_ca12];
   var_ca12_eta = (*var_ca12_eta_vec)[jet_idx_ca12];
+  // set the ca12 topo jets
+  var_ca12topo_pt = (*var_ca12topo_pt_vec)[jet_idx_ca12];
+  var_ca12topo_m = (*var_ca12topo_m_vec)[jet_idx_ca12];
+  var_ca12topo_phi = (*var_ca12topo_phi_vec)[jet_idx_ca12];
+  var_ca12topo_eta = (*var_ca12topo_eta_vec)[jet_idx_ca12];
 
   // loop through the different types of jets and set the output variables
   for (int x = 0; x < jetType::MAX ; x++)
@@ -2421,6 +2461,10 @@ void clearOutputVariables()
   var_ca12_m = 0;
   var_ca12_phi = 0;
   var_ca12_eta = 0;
+  var_ca12topo_pt = 0;
+  var_ca12topo_m = 0;
+  var_ca12topo_phi = 0;
+  var_ca12topo_eta = 0;
 
   
   electrons.clear();
@@ -2542,8 +2586,20 @@ void setOutputBranches(TTree * tree, std::string & groomalgo, std::string & groo
   tree->Branch("mc_event_weight",&mc_event_weight_out,"mc_event_weight/F");
   tree->Branch("mc_channel_number", &mc_channel_number_out,"mc_channel_number/I");
   tree->Branch("vxp_n", &nvtxOut, "vxp_n/I");
+  tree->Branch("vxp_nTracks", &vxp_nTracks_out, "vxp_nTracks/I");
   tree->Branch("averageIntPerXing",&avgIntpXingOut,"averageIntPerXing/F");
   tree->Branch("scale1fb",&scale1fbOut, "scale1fb/F");
+
+  // add the ca12 truth jets
+  tree->Branch("jet_CamKt12Truth_pt",&var_ca12_pt, "jet_CamKt12Truth_pt/F");
+  tree->Branch("jet_CamKt12Truth_m",&var_ca12_m, "jet_CamKt12Truth_m/F");
+  tree->Branch("jet_CamKt12Truth_phi",&var_ca12_phi, "jet_CamKt12Truth_phi/F");
+  tree->Branch("jet_CamKt12Truth_eta",&var_ca12_eta, "jet_CamKt12Truth_eta/F");
+  // add the ca12 topo jets
+  tree->Branch("jet_CamKt12LCTopo_pt",&var_ca12topo_pt, "jet_CamKt12LCTopo_pt/F");
+  tree->Branch("jet_CamKt12LCTopo_m",&var_ca12topo_m, "jet_CamKt12LCTopo_m/F");
+  tree->Branch("jet_CamKt12LCTopo_phi",&var_ca12topo_phi, "jet_CamKt12LCTopo_phi/F");
+  tree->Branch("jet_CamKt12LCTopo_eta",&var_ca12topo_eta, "jet_CamKt12LCTopo_eta/F");
 
   if (xAOD)
     {
