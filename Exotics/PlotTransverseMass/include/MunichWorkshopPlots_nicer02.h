@@ -84,7 +84,7 @@ std::string returnJetType(std::string & samplePrefix, std::string & groomalgo, b
 std::string returnSubJetType(std::string & samplePrefix, std::string & groomalgo, bool addLC);
 void clearVectors();
 void clearOutputVariables();
-void setOutputVariables(int idx1, int idx2, int idx3, int idxca, int subidx, std::string & groomalgo, std::string & groomIdx);
+void setOutputVariables(int idx1, int idx2, int idx3, int idxca, int idxcatopo, int subidx, std::string & groomalgo, std::string & groomIdx);
 void setOutputBranches(TTree* tree, std::string & algorithm, std::string & groomIdx);
 void resetOutputVariables();
 void setAddress(TChain * tree, std::string  name, std::vector<Float_t> * var_vec);
@@ -257,7 +257,9 @@ Float_t mc_event_weight_out = 1.0;
 UInt_t mc_channel_number  = 0;
 UInt_t mc_channel_number_out  = 0;
 UInt_t runNumberOut = 0;
+UInt_t EventNumberOut = 0;
 UInt_t runNumberIn = 0;
+UInt_t EventNumber = 0;
 Float_t avgIntpXingOut = 0;
 
 // Change this to Float_t for D3PD, UInt_t for xaod
