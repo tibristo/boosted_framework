@@ -201,7 +201,7 @@ TString pTbins[nPtBins];
 const int nFineBins=12;
 TString finePtBins[nFineBins];
 std::vector<pair<float,float> > ptrange;
-
+const float ptweightBins[25] = {200,250,300,350,400,450,500,600,700,800,900,1000,1100,1200,1300,1400,1500,1600,1800,2000,2200,2400,2600,2800,3000};
 
 
 // defines
@@ -224,7 +224,7 @@ bool calcSoftDrop = false;
 bool calcEEC = false;
 bool preCalcEEC = false;
 bool calcClusters = false;
-bool calcTauWTA21 = false;
+bool calcTauWTA21 = true;
 bool recluster = false;
 bool calcYFilt = false;
 bool truthBosonMatching = false;
@@ -242,7 +242,6 @@ int nqjets = 25;
 TChain *inputTChain[2];
 
 // histograms
-TH1F * pt_reweight = 0;
 TH1F * pt_reweight_arr[2];
 TH2F * cluster_vs_truthpt = 0;
 

@@ -240,8 +240,8 @@ int main( int argc, char * argv[] ) {
   vector<string> inputSigFiles = vm["signal-file"].as<vector<string> > ();
 
   // shuffle the file order to increase efficiency when running multiple instances of this at once
-  std::random_shuffle(inputBkgFiles.begin(), inputBkgFiles.end());
-  std::random_shuffle(inputSigFiles.begin(), inputSigFiles.end());
+  //std::random_shuffle(inputBkgFiles.begin(), inputBkgFiles.end());
+  //std::random_shuffle(inputSigFiles.begin(), inputSigFiles.end());
 
 
   std::string alg_in = vm["algorithm"].as<string>();
@@ -563,7 +563,6 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
 	  for (std::vector<std::pair<std::string, bool > >::iterator it = branches.begin(); it != branches.end(); it++)
 	    {
 	      UInt_t * found = new UInt_t(1);// = 0;
-	      //*found = 1;
 	      // if the branch is not in this sample just skip it
 	      if (current_branchmap.find((*it).first) == current_branchmap.end())
 		continue;
@@ -580,7 +579,6 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
 	      // otherwise add it to the ttree cache
 	      else if ((*it).second == 1)
 		{
-		  //std::cout << (*it).first << std::endl;
 		  // add branches we are using to branch cache
 		  inputTChain[tchainIdx]->AddBranchToCache((*it).first.c_str());
 		}
@@ -610,7 +608,7 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
 
 	  // Setting up this with a high limit of 3.5 TeV so we don't miss anything.  Lots of bins - 200, so we can
 	  // do a lot of tuning of the scale factor regions later on!
-	  pt_reweight = new TH1F(std::string("pt_reweight"+bkg).c_str(),std::string("pt_reweight_"+bkg).c_str(), 200, 0, 3500);
+	  TH1F * pt_reweight = new TH1F(std::string("pt_reweight"+bkg).c_str(),std::string("pt_reweight_"+bkg).c_str(), 25-1, ptweightBins);
 	  // set up the number of events in total
 	  NEvents = entries;
 	  // we keep track of the weighted (by mc_event_weight) number of events too
@@ -631,8 +629,8 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
 	  double mass = 0;
 	  for (long n = 0; n < entries; n++)
 	    {
-	      if (n > 50000)
-		continue;
+	      //if (n > 50000)
+	      //continue;
 	      // get next event
 	      inputTChain[tchainIdx]->GetEntry(n);
 
@@ -660,19 +658,21 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
 		    NEvents_weighted[mc_channel_number] = mc_event_weight_d3pd; // remove ->at(0) when running on D3PD
 		}
 
+
+	      // check that we have at least 2 tracks in the event if we're using xaods
+	      // TODO implement this for other samples, not just xaod
+
+	      if (xAOD)
+		{
+		  if (vxp_nTracks->at(0) < 2)
+		    continue;
+		}
+	      nTracksCount++;
+
 	      // initial values for the leading jet indices
 	      int chosenLeadTruthJetIndex=-99;
 	      int chosenLeadTopoJetIndex=-99;
 	      
-	       // check that we have at least 2 tracks in the event if we're using xaods
-	       // TODO implement this for other samples, not just xaod
-	       if (xAOD)
-		 {
-		   if (vxp_nTracks->at(0) < 2)
-		     continue;
-		 }
-	       nTracksCount++;
-	       
 	      // find the leading ca12 truth jet
 	      int leadingCA12TruthIndex = -1;
 	      float ca12max = -1;
@@ -688,8 +688,9 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
 		}
 
 	      // check that the leading ca12truth has pT > 50 GeV and within |eta| < 1.2
-	      if ((*var_ca12_pt_vec)[leadingCA12TruthIndex] <= 50*1000.0 || fabs((*var_ca12_eta_vec)[leadingCA12TruthIndex]) >= 1.2)
+	      if ((*var_ca12_pt_vec)[leadingCA12TruthIndex] <= 50*1000.0 || fabs((*var_ca12_eta_vec)[leadingCA12TruthIndex]) > 1.2)
 	      	continue;
+
 	      ca12jetCount++;
 
 	      // find the leading ca12lctopo jet
@@ -707,15 +708,32 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
 		  c++; // awww yeah
 		} 
 	      
+	      // try to match the (ungroomed) leading ca12 truth and leading ca12 reco
+	      // if they match then we can use this event for pt reweighting
 	      
-
-
-	       // if we're doing a truth matching algorithm then don't apply pt range cuts on truth - it will be done on groomed
-	       /*if (algorithmType.find("truthmatch") == std::string::npos) // check the pt is in the correct bin
+	      if (leadingCA12TopoIndex != -1 && DeltaR(var_ca12_eta_vec->at(leadingCA12TruthIndex), var_ca12_phi_vec->at(leadingCA12TruthIndex), var_ca12topo_eta_vec->at(leadingCA12TopoIndex), var_ca12topo_phi_vec->at(leadingCA12TopoIndex)) < (0.75*1.2) && fabs(var_ca12topo_eta_vec->at(leadingCA12TopoIndex)) < 4.5) 
 		{
-		  if ((*var_pt_vec[jetType::TRUTH])[0]/1000.0 < ptrange[j].first || (*var_pt_vec[jetType::TRUTH])[0]/1000.0 > ptrange[j].second)
-		    continue;
-		    }*/
+		  // fill pt reweighting histogram with leading truth jet
+		  // apply the xs weight and the mc event weight.
+		  float rw_weight = 1.0;
+		  if (!signal)
+		    {
+		      //if (xAOD)
+			rw_weight = (evt_xsec/1000.0) * mc_event_weight_xaod->at(0) * evt_filtereff * 1.0/evt_nEvts;
+			//else
+			//rw_weight = xs[mc_channel_number] * mc_event_weight_d3pd * filt;
+		    }
+		  pt_reweight->Fill(var_ca12_pt_vec->at(leadingCA12TruthIndex)/1000.0, rw_weight);
+		  /*
+		  dumpfile << "EventNumber: " << EventNumber << endl;
+		  dumpfile << "Leading truth pt: " << var_ca12_pt_vec->at(leadingCA12TruthIndex) << endl;
+		  dumpfile << "Leading truth eta: " << var_ca12_eta_vec->at(leadingCA12TruthIndex) << endl;
+		  dumpfile << "Leading truth phi: " << var_ca12_phi_vec->at(leadingCA12TruthIndex) << endl;
+		  dumpfile << "Leading truth m: " << var_ca12_m_vec->at(leadingCA12TruthIndex) << endl;
+
+		  dumpfile << "*******************" << endl;*/
+		}
+
 
 	      // apply extra lepton selections if running the hvtllqq selection
 	      if (hvtllqq)
@@ -740,37 +758,28 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
 	      // if truth match on topo jets was done, leave as is, otherwise use 0
 	      //chosenLeadTruthJetIndex = algorithmType.find("truthmatch") != std::string::npos ? chosenLeadTruthJetIndex : 0;
 	      int chosenLeadGroomedIndex=-99;
-	      if (EventNumber == 25280)
-		cout << "finding groomed jet" << endl;
 	      // This used to be a method for finding the leading truth jet, but now we are changing to find the leading groomed jet.
 	      float maxpt = 0;
 	      int count = 0;
-	      float minTruth = 100000;
 	      for (vector<float>::iterator it = (*var_pt_vec[jetType::GROOMED]).begin(); it != (*var_pt_vec[jetType::GROOMED]).end() ; it++)
 		{
 		  if ((*it)>maxpt)// && dr < 0.75*radius)// && dr < minTruth)
 		    {
-
 		      float emfractmp = 0.5;
 		      //if (!xAOD)//emfrac)
 			  //	emfractmp = (*var_emfrac_vec[jetType::GROOMED])[count];
 		      if (emfractmp < 0.9 && fabs((*var_eta_vec[jetType::GROOMED])[count])<1.2)
 			{
 			  chosenLeadGroomedIndex = count;
-			  //minTruth = dr;
 			  maxpt = (*it);
 			}
 		    }
 		  count+=1;
 		}
 	      
-	      
-	      
 	      // veto the event if we have no good jets.
 	      if (chosenLeadGroomedIndex < 0)
 		continue;
-	      if (EventNumber == 25280)
-		cout << "found leading groomed jet" << endl;
 
 	      groomedJetCount ++;
 
@@ -786,19 +795,6 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
 		  for (int jet_i = 0; jet_i < (*var_truthboson_eta_vec).size(); jet_i++)
 		    {
 		      // delta R matching of groomed jet with truth boson
-		      if (EventNumber == 25280)
-			{
-			  std::cout << "jet pt: " << (*var_pt_vec[jetType::GROOMED])[chosenLeadGroomedIndex] << endl;
-			  std::cout << "jet eta: "<< (*var_eta_vec[jetType::GROOMED])[chosenLeadGroomedIndex] << endl;
-			  std::cout << "jet phi: " << (*var_phi_vec[jetType::GROOMED])[chosenLeadGroomedIndex] << endl;
-			  std::cout << "jet m: " << (*var_m_vec[jetType::GROOMED])[chosenLeadGroomedIndex]<< endl;
-			  std::cout << "boson pt: " << (*var_truthboson_pt_vec)[jet_i] << endl;
-			  std::cout << "boson eta: " << (*var_truthboson_eta_vec)[jet_i] << endl;
-			  std::cout << "boson phi: " << (*var_truthboson_phi_vec)[jet_i] << endl;
-			  std::cout << "boson id: " << (*var_truthboson_ID_vec)[jet_i]<< endl;
-			  std::cout << "delta r : " << DeltaR((*var_eta_vec[jetType::GROOMED])[chosenLeadGroomedIndex],(*var_phi_vec[jetType::GROOMED])[chosenLeadGroomedIndex],(*var_truthboson_eta_vec)[jet_i],(*var_truthboson_phi_vec)[jet_i]) << endl;
-			  
-			}
 		      if (DeltaR((*var_eta_vec[jetType::GROOMED])[chosenLeadGroomedIndex],(*var_phi_vec[jetType::GROOMED])[chosenLeadGroomedIndex],(*var_truthboson_eta_vec)[jet_i],(*var_truthboson_phi_vec)[jet_i])<(0.75*radius) && (*var_truthboson_pt_vec)[jet_i] > 5*1000.0 && fabs((*var_truthboson_eta_vec)[jet_i]) < 6)
 			{
 
@@ -839,9 +835,6 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
 	      if (truthBosonMatching && !passedTruthBoson)
 		continue;
 
-	      if (EventNumber == 25280)
-		cout << "passed truth boson matching" << endl;
-
 	      truthBosonCount ++;
 	      // find truth jets /////groomed jets
 	      // 18/03/2015: this was previously used to find the groomed jet matching with the TRUTH jet.  This order has been reversed
@@ -856,13 +849,8 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
 		  if (dr<(0.75*radius) && fabs((*var_eta_vec[jetType::TRUTH])[jet_i])<4.5)// && tr_pt < (*var_pt_vec[jetType::TRUTH])[jet_i])dr < closestTruth && 
 		    {
 		      closestTruth = dr;
-		      //chosenLeadGroomedIndex=jet_i;
-		      //if (
-		      //{
 		      tr_pt = (*var_pt_vec[jetType::TRUTH])[jet_i];
 		      chosenLeadTruthJetIndex=jet_i;
-		      //}
-
 		    }     
 		} // end loop over var_pt_vec[jetType::GROOMED]
 	      
@@ -871,9 +859,6 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
 		{
 		  continue;	      
 		}
-
-	      if (EventNumber == 25280)
-		cout << "passed truth groomed matching" << endl;
 
 	      truthJetCount++;
 
@@ -884,34 +869,6 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
 		continue;
 
 
-	      // try to match the (ungroomed) leading ca12 truth and leading ca12 reco
-	      //std::cout << leadingCA12TopoIndex << endl;
-	      if (DeltaR(var_ca12_eta_vec->at(leadingCA12TruthIndex), var_ca12_phi_vec->at(leadingCA12TruthIndex), var_ca12topo_eta_vec->at(leadingCA12TopoIndex), var_ca12topo_phi_vec->at(leadingCA12TopoIndex)) > 0.75*1.2) continue;
-	      bool print = false;
-	      //if (var_ca12_pt_vec->at(leadingCA12TruthIndex) > 300*1000)
-	      //{
-	      //for (int ca = 0; ca < var_ca12_pt_vec->size(); ca++)
-	      //    {
-	      //      if (ca!= leadingCA12TruthIndex && var_ca12_pt_vec->at(ca) < 300*1000 && var_ca12_pt_vec->at(ca) > 200*1000)
-			print = true;
-			//    }
-		  if (!print) continue;
-
-		  dumpfile << "EventNumber: " << EventNumber << endl;
-		  dumpfile << "Leading truth pt: " << var_ca12_pt_vec->at(leadingCA12TruthIndex) << endl;
-		  dumpfile << "Leading truth eta: " << var_ca12_eta_vec->at(leadingCA12TruthIndex) << endl;
-		  dumpfile << "Leading truth phi: " << var_ca12_phi_vec->at(leadingCA12TruthIndex) << endl;
-		  dumpfile << "Leading truth m: " << var_ca12_m_vec->at(leadingCA12TruthIndex) << endl;
-		  dumpfile << "total ca12 jets" << endl;
-		  for (int ca = 0; ca < var_ca12_pt_vec->size(); ca++)
-		    {
-		      dumpfile << "truth pt: " << var_ca12_pt_vec->at(ca) << endl;
-		      dumpfile << "truth eta: " << var_ca12_eta_vec->at(ca) << endl;
-		      dumpfile << "truth phi: " << var_ca12_phi_vec->at(ca) << endl;
-		      dumpfile << "truth m: " << var_ca12_m_vec->at(ca) << endl;
-		    }
-		  dumpfile << "*******************" << endl;
-		  //}
 
 	      // if we are not applying a mass window we do not apply any mass cuts
 	      if (applyMassWindow && (mass > mass_max && mass < mass_min))
@@ -979,31 +936,33 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
 		}
 
 	      // tau21 for truth, topo and groomed
-	      var_Tau21[0]=(*var_Tau2_vec[0])[chosenLeadTruthJetIndex]/(*var_Tau1_vec[0])[chosenLeadTruthJetIndex];
+	      var_Tau21[jetType::TRUTH]=(*var_Tau2_vec[jetType::TRUTH])[chosenLeadTruthJetIndex]/(*var_Tau1_vec[jetType::TRUTH])[chosenLeadTruthJetIndex];
 	      var_Tau21[1]=(*var_Tau2_vec[1])[chosenLeadTopoJetIndex]/(*var_Tau1_vec[1])[chosenLeadTopoJetIndex];
-	      var_Tau21[2]=(*var_Tau2_vec[2])[chosenLeadGroomedIndex]/(*var_Tau1_vec[2])[chosenLeadGroomedIndex];
+	      var_Tau21[jetType::GROOMED]=(*var_Tau2_vec[jetType::GROOMED])[chosenLeadGroomedIndex]/(*var_Tau1_vec[jetType::GROOMED])[chosenLeadGroomedIndex];
 	      
 	    
 	      // set up tauwta variables and zcut12
 	      if (calcTauWTA21)//useBranch(string("TauWTA2TauWTA1"),true) && useBranch(string("TauWTA2"), true) && useBranch(string("TauWTA1"), true) )
 		{
 		  // tauwta21 for truth, topo and groomed
-		  // veto events which have buggy values
-		  if ((*var_TauWTA1_vec[0])[chosenLeadTruthJetIndex] > 0 && (*var_TauWTA2_vec[0])[chosenLeadTruthJetIndex] > 0)
-		    var_TauWTA2TauWTA1[0]=(*var_TauWTA2_vec[0])[chosenLeadTruthJetIndex]/(*var_TauWTA1_vec[0])[chosenLeadTruthJetIndex];
+		  if ((*var_TauWTA1_vec[jetType::TRUTH])[chosenLeadTruthJetIndex] != 0)// && (*var_TauWTA2_vec[0])[chosenLeadTruthJetIndex] > 0)
+		    var_TauWTA2TauWTA1[jetType::TRUTH]=(*var_TauWTA2_vec[jetType::TRUTH])[chosenLeadTruthJetIndex]/(*var_TauWTA1_vec[jetType::TRUTH])[chosenLeadTruthJetIndex];
 		  else
-		    var_TauWTA2TauWTA1[0]=-999;
-		  if ((*var_TauWTA1_vec[2])[chosenLeadGroomedIndex] > 0 && (*var_TauWTA2_vec[2])[chosenLeadGroomedIndex] > 0)
-		    var_TauWTA2TauWTA1[2]=(*var_TauWTA2_vec[2])[chosenLeadGroomedIndex]/(*var_TauWTA1_vec[2])[chosenLeadGroomedIndex];
+		    var_TauWTA2TauWTA1[jetType::TRUTH]=0;
+
+		  if ((*var_TauWTA1_vec[jetType::GROOMED])[chosenLeadGroomedIndex] != 0)// && (*var_TauWTA2_vec[2])[chosenLeadGroomedIndex] > 0)
+		    var_TauWTA2TauWTA1[jetType::GROOMED]=(*var_TauWTA2_vec[jetType::GROOMED])[chosenLeadGroomedIndex]/(*var_TauWTA1_vec[jetType::GROOMED])[chosenLeadGroomedIndex];
 		  else
-		    var_TauWTA2TauWTA1[2]=-999;
+		    var_TauWTA2TauWTA1[jetType::GROOMED]=0;
+
 		  if (chosenLeadTopoJetIndex == -99)
 		    var_TauWTA2TauWTA1[1]=-99;
-		  else if ((*var_TauWTA1_vec[1])[chosenLeadTopoJetIndex] > 0 && (*var_TauWTA2_vec[1])[chosenLeadTopoJetIndex] > 0)
+		  else if ((*var_TauWTA1_vec[1])[chosenLeadTopoJetIndex] != 0)// && (*var_TauWTA2_vec[1])[chosenLeadTopoJetIndex] > 0)
 		    var_TauWTA2TauWTA1[1]=(*var_TauWTA2_vec[1])[chosenLeadTopoJetIndex]/(*var_TauWTA1_vec[1])[chosenLeadTopoJetIndex];
 		  else
-		    var_TauWTA2TauWTA1[1]=-999;
-		  response_TauWTA2TauWTA1 = var_TauWTA2TauWTA1[2]/var_TauWTA2TauWTA1[2];
+		    var_TauWTA2TauWTA1[1]=0;
+
+		  response_TauWTA2TauWTA1 = var_TauWTA2TauWTA1[jetType::GROOMED]/var_TauWTA2TauWTA1[jetType::TRUTH];
 		}
 		
 
@@ -1075,8 +1034,7 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
 
 	      // fill variables in output tree
 	      outTree->Fill();	      
-	      // fill pt reweighting histogram with leading truth jet
-	      pt_reweight->Fill((*var_pt_vec[jetType::TRUTH])[chosenLeadTruthJetIndex]/1000.0);
+
 
 	    } // end loop over nentries
 
@@ -1120,14 +1078,14 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
 	  evNumFile.close();
 	  chNumFile.close();
 	  dumpfile.close();
-
+	  
+	  
 	  delete outfile;
+	  pt_reweight = 0;
+	  delete pt_reweight;
 
 	} // end loop of datatype
 
-      // create the reweighting file
-      //std::string fname = algorithm+fileid_global+"/" + ss.str() + ".ptweights";
-      //createPtReweightFile(pt_reweight_arr[sampleType::BACKGROUND], pt_reweight_arr[sampleType::SIGNAL], fname);
     } // end loop over pt bins
 
 } // makeMassWindowFile()
@@ -1289,15 +1247,12 @@ vector<std::pair<std::string,bool> > getListOfJetBranches(std::string &algorithm
       trim(name); // remove whitespace
       if (branchmap.find(name) != branchmap.end() ) // add this to the branches if found in branchmap
 	{
-	  branches.push_back(make_pair(name, true));
-	  
+	  branches.push_back(make_pair(name, true));	  
 	}
       else
 	{
 	  branches.push_back(make_pair(name, false));
 	}
-
-
     }
   
   return branches;
@@ -1410,10 +1365,6 @@ bool useBranch(std::string const& br, bool partialmatch)
  */
 void addInfoBranches(TTree * tree)
 {
-  //tree->Branch("leadTruthIndex",&leadTruthIndex, "leadTruthIndex/I");
-  //tree->Branch("leadTopoIndex",&leadTopoIndex, "leadTopoIndex/I");
-  //tree->Branch("leadGroomedIndex",&leadGroomedIndex, "leadGroomedIndex/I");
-
   tree->Branch("normalisation",&normalisation, "normalisation/F");
   tree->Branch("NEvents",&NEvents,"NEvents/I");
   tree->Branch("RunNumber",&runNumberOut, "RunNumber/I");
@@ -1421,7 +1372,6 @@ void addInfoBranches(TTree * tree)
   tree->Branch("k_factor", &var_k_factor, "k_factor/F");
   tree->Branch("filter_eff", &var_filter_eff, "filter_eff/F");
   tree->Branch("xs", &var_xs, "xs/F");
-
 }// addInfoBranches
 
 /*
@@ -1833,13 +1783,9 @@ void setJetsBranches(TChain * tree, std::string &groomalgo,  std::string & groom
     {
       tree->SetBranchAddress("evt_scale1fb",&scale1fb);
       tree->SetBranchAddress("evt_kfactor",&evt_kfactor);
-      //if (brancharray.find("evt_filtereff") != brancharray.end() && branchmap["evt_filtereff"])
       tree->SetBranchAddress("evt_filtereff",&evt_filtereff);
-      //if (brancharray.find("evt_nEvts") != brancharray.end() && branchmap["evt_nEvts"])
       tree->SetBranchAddress("evt_nEvts",&evt_nEvts);
-      //if (brancharray.find("evt_sumWeights") != brancharray.end() && branchmap["evt_sumWeights"])
       tree->SetBranchAddress("evt_sumWeights",&evt_sumWeights);
-      //if (brancharray.find("evt_xsec") != brancharray.end() && branchmap["evt_xsec"])
       tree->SetBranchAddress("evt_xsec",&evt_xsec);
     }
 
@@ -1851,51 +1797,46 @@ void setJetsBranches(TChain * tree, std::string &groomalgo,  std::string & groom
     {
       if (!setVector(tree, brancharray, var_electrons_vec, std::string("electrons")))
 	{
-	  //var_electrons_vec = tlvvec();
 	  tlvvec(var_electrons_vec);
 	}
       if (!setVector(tree, brancharray, var_electronPt_vec, std::string("el_pt")))
 	{
 	  floatvec(var_electronPt_vec);
-	  //var_electronPt_vec = floatvec();
 	}
       if (!setVector(tree, brancharray, var_electronEta_vec, "el_eta"))
 	floatvec(var_electronEta_vec);
-	//var_electronEta_vec = floatvec();
+
       if (!setVector(tree, brancharray, var_electronPhi_vec, "el_phi"))
 	floatvec(var_electronPhi_vec);
-      //var_electronPhi_vec = floatvec();
+
       if (!setVector(tree, brancharray, var_el_ptcone20_vec, "el_ptcone20"))
 	floatvec(var_el_ptcone20_vec);
-	//var_el_ptcone20_vec = floatvec();
+
       if (!setVector(tree, brancharray, var_el_etcone20_vec, "el_etcone20"))
 	floatvec(var_el_etcone20_vec);
-      //var_el_etcone20_vec = floatvec();
+
       
       if (!setVector(tree, brancharray, var_muons_vec, "muons"))
 	tlvvec(var_muons_vec);
-	//var_muons_vec = tlvvec();
+
       
       if (!setVector(tree, brancharray, var_muonPt_vec, "mu_pt"))
 	floatvec(var_muonPt_vec);
-      //var_muonPt_vec = floatvec();
+
       if (!setVector(tree, brancharray, var_muonEta_vec, "mu_eta"))
 	floatvec(var_muonEta_vec);
-      //var_muonEta_vec = floatvec();
+
       if (!setVector(tree, brancharray, var_muonPhi_vec, "mu_phi"))
 	floatvec(var_muonPhi_vec);
-      //var_muonPhi_vec = floatvec();
+
       if (!setVector(tree, brancharray, var_mu_ptcone20_vec, "mu_ptcone20"))
 	floatvec(var_mu_ptcone20_vec);
-      //var_mu_ptcone20_vec = floatvec();
+
       if (!setVector(tree, brancharray, var_mu_etcone20_vec, "mu_etcone20"))
 	floatvec(var_mu_etcone20_vec);
-      //var_mu_etcone20_vec = floatvec();
+
       if (!setVector(tree, brancharray, var_mu_charge_vec, "mu_charge"))
 	floatvec(var_mu_charge_vec);
-      //var_mu_charge_vec = floatvec();
-
-
     }
 
 
@@ -2042,66 +1983,60 @@ void setJetsBranches(TChain * tree, std::string &groomalgo,  std::string & groom
 
   
       // there is only yfilt stored for groomed jets
-  std::string jetstring = returnJetType(samplePrefix, groomalgo, addLC,2); //set to groomed
-  if (!setVector(tree, brancharray, var_YFilt_vec, std::string(jetstring+"YFilt") ))
-    floatvec(var_YFilt_vec);
-
-
-
-
-  // set up cluster variables
-  // if a branch is missing set up dummy values
-  if (brancharray.find(std::string("cl_lc_n")) != brancharray.end() && useBranch(string("cl_lc_n")))
-    tree->SetBranchAddress(std::string("cl_lc_n").c_str(), &var_cl_n );
-  else
-    {
-      std::cout << "branch not found: cl_lc_n" << std::endl;
-      var_cl_n = -99;
-    }
-  if (!setVector(tree, brancharray, var_cl_pt_vec, std::string("cl_lc_pt")))
-    floatvec(var_cl_pt_vec);
-    //var_cl_pt_vec = floatvec();
-  if (!setVector(tree, brancharray, var_cl_eta_vec, std::string("cl_lc_eta")))
-    floatvec(var_cl_eta_vec);
-  //var_cl_eta_vec = floatvec();
-  if (!setVector(tree, brancharray, var_cl_phi_vec, std::string("cl_lc_phi")))
-    floatvec(var_cl_phi_vec);
-  //var_cl_phi_vec = floatvec();
-
-  std::string jetString = returnJetType( samplePrefix, groomalgo, addLC, 2); //set to truth/ topo/ groomed
-
-  if (subjetspre) // if the sample has the pre-calculated subjet variables
-    {
-      if(brancharray.find(std::string(jetString+"config_massFraction"))  != brancharray.end() )
-	tree->SetBranchAddress(std::string(jetString+"config_massFraction").c_str(),&var_massFraction_vec);  
+      std::string jetstring = returnJetType(samplePrefix, groomalgo, addLC,2); //set to groomed
+      if (!setVector(tree, brancharray, var_YFilt_vec, std::string(jetstring+"YFilt") ))
+	floatvec(var_YFilt_vec);
+      
+      // set up cluster variables
+      // if a branch is missing set up dummy values
+      if (brancharray.find(std::string("cl_lc_n")) != brancharray.end() && useBranch(string("cl_lc_n")))
+	tree->SetBranchAddress(std::string("cl_lc_n").c_str(), &var_cl_n );
       else
 	{
-	  std::cout << "branch not found: " << std::string(jetString+"config_massFraction/Mu12") << std::endl;
-	  var_massFraction_vec = -99;
+	  std::cout << "branch not found: cl_lc_n" << std::endl;
+	  var_cl_n = -99;
 	}
-      if(brancharray.find(std::string(jetString+"config_ktycut2"))  != brancharray.end())
-	tree->SetBranchAddress(std::string(jetString+"config_ktycut2").c_str(),&var_ktycut2_vec);
-      else
+      if (!setVector(tree, brancharray, var_cl_pt_vec, std::string("cl_lc_pt")))
+	floatvec(var_cl_pt_vec);
+      if (!setVector(tree, brancharray, var_cl_eta_vec, std::string("cl_lc_eta")))
+	floatvec(var_cl_eta_vec);
+      if (!setVector(tree, brancharray, var_cl_phi_vec, std::string("cl_lc_phi")))
+	floatvec(var_cl_phi_vec);
+
+      std::string jetString = returnJetType( samplePrefix, groomalgo, addLC, 2); //set to truth/ topo/ groomed
+      
+      if (subjetspre) // if the sample has the pre-calculated subjet variables
 	{
-	  std::cout << "branch not found: " << std::string(jetString+"config_ktycut2") << std::endl;
-	  var_ktycut2_vec = -99;
+	  if(brancharray.find(std::string(jetString+"config_massFraction"))  != brancharray.end() )
+	    tree->SetBranchAddress(std::string(jetString+"config_massFraction").c_str(),&var_massFraction_vec);  
+	  else
+	    {
+	      std::cout << "branch not found: " << std::string(jetString+"config_massFraction/Mu12") << std::endl;
+	      var_massFraction_vec = -99;
+	    }
+	  if(brancharray.find(std::string(jetString+"config_ktycut2"))  != brancharray.end())
+	    tree->SetBranchAddress(std::string(jetString+"config_ktycut2").c_str(),&var_ktycut2_vec);
+	  else
+	    {
+	      std::cout << "branch not found: " << std::string(jetString+"config_ktycut2") << std::endl;
+	      var_ktycut2_vec = -99;
+	    }
 	}
-    }
-
-  if (!subjetscalc) // if the sample has the subjet branches available to create massdrop and yt
-    return;
-
-  std::string subjetType = returnSubJetType(samplePrefix, groomIdx, addLC);
-
-  // set the branch status and address for the branch name that has the subjets for the grooming algorithm
-  tree->SetBranchStatus(std::string(algorithms.subjetIndex[groomIdx]).c_str(),1);
-  tree->SetBranchAddress(std::string(algorithms.subjetIndex[groomIdx]).c_str(),&subjet_index);
-
-  if(brancharray.find(std::string(algorithms.subjetIndex[groomIdx])) == brancharray.end()) {
-    std::cout << "subjet branch is not here, change the config file otherwise segfaults will come for ye" << std::endl;
-    exit(EXIT_FAILURE);
-    return;
-  }
+      
+      if (!subjetscalc) // if the sample has the subjet branches available to create massdrop and yt
+	return;
+      
+      std::string subjetType = returnSubJetType(samplePrefix, groomIdx, addLC);
+      
+      // set the branch status and address for the branch name that has the subjets for the grooming algorithm
+      tree->SetBranchStatus(std::string(algorithms.subjetIndex[groomIdx]).c_str(),1);
+      tree->SetBranchAddress(std::string(algorithms.subjetIndex[groomIdx]).c_str(),&subjet_index);
+      
+      if(brancharray.find(std::string(algorithms.subjetIndex[groomIdx])) == brancharray.end()) {
+	std::cout << "subjet branch is not here, change the config file otherwise segfaults will come for ye" << std::endl;
+	exit(EXIT_FAILURE);
+	return;
+      }
 
   // subjet kinematics
   tree->SetBranchAddress(std::string(subjetType+"E").c_str(),&var_subjets_E_vec);
@@ -2385,11 +2320,15 @@ void setOutputVariables( int jet_idx_truth, int jet_idx_topo, int jet_idx_groome
   var_ca12_m = (*var_ca12_m_vec)[jet_idx_ca12];
   var_ca12_phi = (*var_ca12_phi_vec)[jet_idx_ca12];
   var_ca12_eta = (*var_ca12_eta_vec)[jet_idx_ca12];
-  // set the ca12 topo jets
-  var_ca12topo_pt = (*var_ca12topo_pt_vec)[jet_idx_ca12topo];
-  var_ca12topo_m = (*var_ca12topo_m_vec)[jet_idx_ca12topo];
-  var_ca12topo_phi = (*var_ca12topo_phi_vec)[jet_idx_ca12topo];
-  var_ca12topo_eta = (*var_ca12topo_eta_vec)[jet_idx_ca12topo];
+  // set the ca12 topo jets. sometimes the event can have 0 topo jets, so 
+  // we need to check for this.
+  if (jet_idx_ca12topo != -1)
+    {
+      var_ca12topo_pt = (*var_ca12topo_pt_vec)[jet_idx_ca12topo];
+      var_ca12topo_m = (*var_ca12topo_m_vec)[jet_idx_ca12topo];
+      var_ca12topo_phi = (*var_ca12topo_phi_vec)[jet_idx_ca12topo];
+      var_ca12topo_eta = (*var_ca12topo_eta_vec)[jet_idx_ca12topo];
+    }
 
   // loop through the different types of jets and set the output variables
   for (int x = 0; x < jetType::MAX ; x++)
@@ -3733,8 +3672,7 @@ void vecintvec(vector< vector<int> > *& tmp)
 {
   vector<int> vec;
   vec.push_back(-999);
-  //vector<vector<int> > * 
-    tmp = new vector<vector<int> > ();
+  tmp = new vector<vector<int> > ();
   tmp->push_back(vec);
   //return tmp;
 } //vecintvec
