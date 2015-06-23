@@ -1,0 +1,66 @@
+sample:
+  #file: /home/hep/golling/lpd7/scratch_space/mc12_8TeV_JZX_Zprime_perfntuple.root
+  #file: /afs/cern.ch/user/m/malanfer/private/AGILEPack_Projects/SamplePreparation/MyReweigh/testing_r5400.root
+  file: /Disk/ecdf-nfs-ppe/atlas/users/tibristo/nnbosontagging/folds/AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_matchedL_ranged_v2_1000_1500_nomw_mergedtest_cv_000.root
+  tree: outputTree
+  #selection: (CONF_sample==1)&&(fjet_pt>550000)&&(fjet_pt<1100000)&&(fjet_eta<1.2)&&(fjet_eta>-1.2)&&(fjet_Tau2>-10)&&(fjet_Tau3>-10)
+  step: 1
+#weights: mcevt_weight
+weight: weight
+weightfiles: false
+signal: "$W'$"
+background: QCD
+title: >
+  W Tagging Efficiency vs. Rejection
+benchmarks:
+  scans:
+    eec_d2_2: 
+      name: 'eec_d2_1'
+      color: red
+#  taggers:
+#    tagger_VI_roc_weighted: 
+#      name: 'Tagger IV'
+#      color: black
+taggers:
+#  /afs/cern.ch/user/m/malanfer/private/AGILEPack_Projects/AGILEPack_test/output_r5400_reweighed__2D_etapt.yaml:
+   /Disk/ecdf-nfs-ppe/atlas/users/tibristo/nnbosontagging/tim-output-noweight_v2.yaml:
+    name: 'AGILEWTagger'
+    color: blue 
+#  /afs/cern.ch/user/m/malanfer/private/AGILEPack_Projects/AGILEPack_test/output_r5400_reweighed_pT.yaml:
+#    name: 'AGILETopTagger $\mu$=40 $p_{T}$ reweigh'
+#    color: green
+#  /afs/cern.ch/user/m/malanfer/private/AGILEPack_Projects/AGILEPack_test/output_r5400_reweighed_XSEC.yaml:
+#    name: 'AGILETopTagger $\mu$=40'
+#    color: black
+#  /afs/cern.ch/user/m/malanfer/private/AGILEPack_Projects/AGILEPack_test/AGILEPack_output_r5406.yaml:
+#    name: 'AGILETopTagger $\mu$=40 $\pm$ 10'
+#    color: red
+#  /afs/cern.ch/user/m/malanfer/private/AGILEPack_Projects/AGILEPack_test/AGILEPack_output_r5406_plus.yaml:
+#    name: 'AGILETopTagger $\mu$=40 $\pm$ 10 incl. ActiveArea_pX'
+#    color: orange
+#  /home/hep/golling/lpd7/AGILETopTaggertop~fjet_Tau1_flat+fjet_Tau2_flat+fjet_Tau3_flat+fjet_SPLIT23_flat+Tau32+Tau21.yaml: 
+#    name: 'AGILETopTagger, Hi+Lo variables, pretraining.'
+#    color: red
+#  /home/hep/golling/lpd7/AGILEPack/AGILETopTaggertop~fjet_Tau1_flat+fjet_Tau2_flat+fjet_Tau3_flat+fjet_SPLIT23_flat.yaml: 
+#    name: 'AGILETopTagger, Lo variables, pretraining.'
+#    color: green
+#  /home/hep/golling/lpd7/AGILEPack/AAGILETopTaggertop~Tau32+Tau21+fjet_SPLIT23_flat.yaml:
+#    name: 'AGILETopTagger, Hi variables, pretraining.'
+#    color: magenta
+#  /home/hep/golling/lpd7/AGILEPack/AGILETopTagger_no_pretrain_top~fjet_Tau1_flat+fjet_Tau2_flat+fjet_Tau3_flat+fjet_SPLIT23_flat+Tau32+Tau21.yaml: 
+#    name: 'AGILETopTagger, Hi+Lo variables, no pretraining.'
+#    color: gold
+#  /home/hep/golling/lpd7/AGILEPack/AGILETopTagger_no_pretrain_top~fjet_Tau1_flat+fjet_Tau2_flat+fjet_Tau3_flat+fjet_SPLIT23_flat.yaml: 
+#    name: 'AGILETopTagger, Lo variables, no pretraining.'
+#    color: aqua
+#  /home/hep/golling/lpd7/AGILEPack/AGILETopTagger_no_pretrain_top~Tau32+Tau21+fjet_SPLIT23_flat.yaml:
+#    name: 'AGILETopTagger, Hi variables, no pretraining.'
+#    color: orange
+
+
+
+
+
+
+
+

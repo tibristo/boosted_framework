@@ -1,0 +1,340 @@
+import numpy as np
+import math
+import matplotlib
+matplotlib.use('PDF')
+import matplotlib.pyplot as plt
+import matplotlib.tri as tri
+from matplotlib.mlab import griddata
+from matplotlib import rc
+import numpy.ma as ma
+from sklearn.metrics import roc_curve, auc
+from ROOT import TH1F, TH2D, TCanvas, TFile, TNamed
+from root_numpy import fill_hist
+
+def data_load(filename):
+    data = np.genfromtxt(filename, delimiter = ',', names = True)
+    return data
+
+def pt_plot(data, pt_label = 'pt', weighted = None, log = False, bins = 100, logcount = False):
+	fig = plt.figure(figsize=(11.69, 8.27), dpi=100) 
+	ax = plt.subplot(1,1,1)
+	if log:
+		ax.set_xscale('log')
+	pt = (data[pt_label]) / 1000
+	bins = np.linspace(np.min(pt), np.max(pt), bins)
+	if log:
+		plt.xlabel(r"$\log(p_T)$ in GeV", fontsize=20)
+	else:
+		plt.xlabel(r"$p_T$ in GeV", fontsize=20)
+	plt.ylabel(r"Count", fontsize=20)
+	plt.title(r"Distribution of Jet $p_T$")
+	plt.xlim(np.min(pt), np.max(pt))
+	if weighted is None:
+		plt.hist(pt[data['label'] == 1], histtype='step', log = logcount, bins = bins, color = 'red', label = r"$W'$ jets")
+		plt.hist(pt[data['label'] == 0], histtype='step', log = logcount, bins = bins, color = 'blue', label = "JZxW Jets")
+	else:
+		plt.hist(pt[data['label'] == 1], histtype='step', log = logcount, bins = bins, color = 'red', label = r"$W'$ jets", weights=weighted[data['label'] == 1])
+		plt.hist(pt[data['label'] == 0], histtype='step', log = logcount, bins = bins, color = 'blue', label = "JZxW Jets", weights=weighted[data['label'] == 0])
+	
+	plt.legend(loc = 1)
+	plt.show()
+	return fig
+
+
+def sb_plot(data, signal = 'label', label = 'pt', disc = None, weighted = None, log = False, bins = 100, logcount = False):
+	fig = plt.figure(figsize=(11.69, 8.27), dpi=100) 
+	ax = plt.subplot(1,1,1)
+	if disc is None:
+		pt = data[label]
+	else:
+		pt = disc
+	if log:
+		ax.set_xscale('log')
+	bins = np.linspace(np.min(pt), np.max(pt), bins)
+	if log:
+		plt.xlabel(r"$\log$"+ str(label), fontsize=20)
+	else:
+		plt.xlabel(r"" + str(label), fontsize=20)
+
+	plt.ylabel(r"Count", fontsize=20)
+	plt.title(r"Distribution of Jet " + label)
+	
+	plt.xlim(np.min(pt), np.max(pt))
+	if weighted is None:
+		plt.hist(pt[data[signal] == 1], histtype='step', log = logcount, bins = bins, color = 'red', label = r"Signal = " + str(signal))
+		plt.hist(pt[data[signal] == 0], histtype='step', log = logcount, bins = bins, color = 'blue', label = "Background")
+	else:
+		plt.hist(pt[data[signal] == 1], histtype='step', log = logcount, bins = bins, color = 'red', label = r"Signal = " + str(signal), weights=weighted[data[signal] == 1])
+		plt.hist(pt[data[signal] == 0], histtype='step', log = logcount, bins = bins, color = 'blue', label = "Background", weights=weighted[data[signal] == 0])
+	
+	plt.legend(loc = 1)
+	plt.show()
+	return fig
+
+
+def pre_process(data):
+	#data = data[data['fjet_pt']/1000 < 1100]
+	#data = data[data['fjet_pt']/1000 > 550]
+	#data = data[np.abs(data['fjet_eta']) < 1.2 ]
+	#data = data[data['fjet_Tau2'] > -10]
+	#data = data[data['fjet_Tau3'] > -10]
+	return data
+
+def general_roc(data, discriminant, bins = 2000, inverse=False, name=""):
+	top = data[:]['label']
+        
+	qcd_total = np.sum(top == 0)
+	top_total = np.sum(top == 1)
+
+	bincount = bins
+
+	top_ind = data[:]['label'] == 1
+	qcd_ind = data[:]['label'] == 0
+        
+	discriminant_bins = np.linspace(np.min(discriminant), np.max(discriminant), bins)
+
+	sig, b1 = np.histogram(discriminant[top_ind], discriminant_bins)
+        #fig = plt.figure(figsize=(11.69, 8.27), dpi=100)
+        
+        plt.hist(discriminant[top_ind], alpha=0.5, bins=discriminant_bins, label='signal', normed=1)
+        plt.hist(discriminant[qcd_ind], alpha=0.5, bins=discriminant_bins, label='bkg', normed=1)
+        plt.legend(loc='upper right')
+        plt.title('discriminants')
+        #plt.show()
+        hist_bkg = TH1F("Background Discriminant","Discriminant",bins, np.min(discriminant), np.max(discriminant))
+        hist_sig = TH1F("Signal Discriminant","Discriminant",bins, np.min(discriminant), np.max(discriminant))
+        fill_hist(hist_bkg,discriminant[qcd_ind])
+        hist_bkg.Scale(1/hist_bkg.Integral())
+        fill_hist(hist_sig,discriminant[top_ind])
+        hist_sig.Scale(1/hist_sig.Integral())
+
+        hist_sig.SetLineColor(4)
+        hist_bkg.SetLineColor(2)
+        #hist_sig.SetFillColorAlpha(4, 0.5);
+        hist_sig.SetFillStyle(3004)
+        #hist_bkg.SetFillColorAlpha(2, 0.5);
+        hist_bkg.SetFillStyle(3005)
+        plt.savefig('discriminants'+name+'.png')
+        plt.clf()
+        
+
+	bkd, b1 = np.histogram(discriminant[qcd_ind], discriminant_bins)
+	t_efficiency = np.add.accumulate(sig[::-1]) / float(top_total)
+	qcd_rejection = 1-(np.add.accumulate(bkd[::-1]) / float(qcd_total))
+        if inverse:
+            qcd_rejection = 1/qcd_rejection
+
+	#return t_efficiency, qcd_rejection
+        labels_w = data[:]['label']
+
+        #scores = np.append(discriminant[top_ind],discriminant[qcd_ind])
+        #print scores.shape
+        
+        fpr,tpr,_ = roc_curve(labels_w,discriminant)
+        #roc_auc = auc(fpr,tpr)
+        return tpr, fpr, hist_sig, hist_bkg#, roc_auc
+
+
+
+def general_roc_weighted(data, discriminant, weights, bins = 2000, inverse=False, name=""):
+	top = data[:]['label']
+
+	# qcd_total = np.sum(top == 0)
+	# top_total = np.sum(top == 1)
+	bincount = bins
+
+	top_ind = data[:]['label'] == 1
+	qcd_ind = data[:]['label'] == 0
+	qcd_total = np.sum(weights[qcd_ind])
+	top_total = np.sum(weights[top_ind])
+	discriminant_bins = np.linspace(np.min(discriminant), np.max(discriminant), bins)
+        '''
+        plt.hist(discriminant[top_ind], alpha=0.5, bins=discriminant_bins, label='signal',weights=weights[top_ind])
+        plt.hist(discriminant[qcd_ind], alpha=0.5, bins=discriminant_bins, label='bkg',weights=weights[qcd_ind])
+        plt.legend(loc='upper right')
+        plt.title('discriminants_weighted')
+        #plt.show()
+
+        plt.savefig('discriminants_weighted'+name+'.png')
+        plt.clf()
+        '''
+	sig, b1 = np.histogram(discriminant[top_ind], discriminant_bins, weights = weights[top_ind])
+	bkd, b1 = np.histogram(discriminant[qcd_ind], discriminant_bins, weights = weights[qcd_ind])
+
+        hist_bkg = TH1F("Background Discriminant","Discriminant",bins, np.min(discriminant), np.max(discriminant))
+        hist_sig = TH1F("Signal Discriminant","Discriminant",bins, np.min(discriminant), np.max(discriminant))
+        fill_hist(hist_bkg,discriminant[qcd_ind])
+        hist_bkg.Scale(1/hist_bkg.Integral())
+        fill_hist(hist_sig,discriminant[top_ind])
+        hist_sig.Scale(1/hist_sig.Integral())
+
+        hist_sig.SetLineColor(4)
+        hist_bkg.SetLineColor(2)
+        #hist_sig.SetFillColorAlpha(4, 0.5);
+        hist_sig.SetFillStyle(3004)
+        #hist_bkg.SetFillColorAlpha(2, 0.5);
+        hist_bkg.SetFillStyle(3005)
+	t_efficiency = np.add.accumulate(sig[::-1]) / float(top_total)
+	qcd_rejection = 1-(np.add.accumulate(bkd[::-1]) / float(qcd_total))
+        if inverse:
+            qcd_rejection = 1/qcd_rejection
+
+	#return t_efficiency, qcd_rejection
+        fpr,tpr,_ = roc_curve(top, discriminant)        
+        #roc_auc = auc(fpr,tpr)
+        return tpr, fpr, hist_sig, hist_bkg#, roc_auc
+
+
+
+def tagger_VI_roc(data, bins = 2000):
+	top = data[:]['label']
+
+	qcd_total = np.sum(top == 0)
+	top_total = np.sum(top == 1)
+
+	discriminant = data['fjet_Tau3'] / data['fjet_Tau2']
+
+	bincount = bins
+
+	top_ind = data[:]['label'] == 1
+	qcd_ind = data[:]['label'] == 0
+
+	d12_cut = ((data['fjet_SPLIT12'] > 40000))
+	t21_cut = (data['fjet_Tau2'] / data['fjet_Tau1'] > 0.4) & (data['fjet_Tau2'] / data['fjet_Tau1'] < 0.9)
+	discriminant_bins = np.linspace(np.min(discriminant[d12_cut & t21_cut]), np.max(discriminant[d12_cut & t21_cut]), bins)
+
+	sig, b1 = np.histogram(discriminant[top_ind & d12_cut & t21_cut], discriminant_bins)
+	bkd, b1 = np.histogram(discriminant[qcd_ind & d12_cut & t21_cut], discriminant_bins)
+
+	t_efficiency = np.add.accumulate(sig) / float(top_total)
+	qcd_rejection = 1 / (np.add.accumulate(bkd) / float(qcd_total))
+
+	return t_efficiency, qcd_rejection
+
+def tagger_VI_roc_weighted(data, weights, bins = 2000):
+	top = data[:]['label']
+
+	# qcd_total = np.sum(top == 0)
+	# top_total = np.sum(top == 1)
+
+	discriminant = data['fjet_Tau3'] / data['fjet_Tau2']
+
+	bincount = bins
+
+	top_ind = data[:]['label'] == 1
+	qcd_ind = data[:]['label'] == 0
+
+	qcd_total = np.sum(weights[qcd_ind])
+	top_total = np.sum(weights[top_ind])
+
+	d12_cut = ((data['fjet_SPLIT12'] > 40000))
+	t21_cut = (data['fjet_Tau2'] / data['fjet_Tau1'] > 0.4) & (data['fjet_Tau2'] / data['fjet_Tau1'] < 0.9)
+	discriminant_bins = np.linspace(np.min(discriminant[d12_cut & t21_cut]), np.max(discriminant[d12_cut & t21_cut]), bins)
+
+	sig, b1 = np.histogram(discriminant[top_ind & d12_cut & t21_cut], discriminant_bins, weights = weights[top_ind & d12_cut & t21_cut])
+	bkd, b1 = np.histogram(discriminant[qcd_ind & d12_cut & t21_cut], discriminant_bins, weights = weights[qcd_ind & d12_cut & t21_cut])
+
+	t_efficiency = np.add.accumulate(sig) / float(top_total)
+	qcd_rejection = 1 / (np.add.accumulate(bkd) / float(qcd_total))
+
+	return t_efficiency, qcd_rejection
+
+
+
+
+def ROC_plotter(taggerdict, min_eff = 0, max_eff = 1, linewidth = 1.4, pp = False, signal = "$W'", background = "JZ3-7", title = "W Tagging Efficiency vs. Rejection", logscale = True, save_arr = False, inputfile = ''):
+	fig = plt.figure(figsize=(11.69, 8.27), dpi=100)
+	ax = fig.add_subplot(111)
+	plt.xlim(min_eff,max_eff)
+	plt.grid(b = True, which = 'minor')
+	plt.grid(b = True, which = 'major')
+	max_ = 0
+        roc_auc = 0
+        rejpow = -1
+        tagger_roc_auc = -1
+        tagger_rejpow = -1
+
+	for tagger, data in taggerdict.iteritems():
+		sel = (data['efficiency'] >= min_eff) & (data['efficiency'] <= max_eff)
+		if np.max(data['rejection'][sel]) > max_:
+			max_ = np.max(data['rejection'][sel])
+		if save_arr:
+			ar = np.zeros((data['rejection'][sel].shape[0], 2))
+			ar[:, 0] = data['efficiency'][sel]
+			ar[:, 1] = data['rejection'][sel]
+			np.savetxt(tagger+'_save.csv', ar, delimiter=',')
+                #plt.title()
+                #plt.plot(data['efficiency'][sel])
+                #plt.savefig(fig)
+                #plt.plot(data['rejection'][sel])
+                #plt.savefig(fig)
+		plt.plot(data['efficiency'][sel], 1-data['rejection'][sel], '-', label = r''+tagger, color = data['color'], linewidth=linewidth)
+                # find the entry in rejection matrix that corresponds to 50% efficiency
+                idx = (np.abs(data['efficiency'][sel]-0.5)).argmin()
+                fpr_05 = data['rejection'][sel][idx]
+                rej = 1-fpr_05
+                if rej != 1:
+                    rejpow = 1/(1-rej)
+                else:
+                    rejpow = -1
+                #print 'auc_score ' + roc_auc_score(data['efficiency'][sel], data['rejection'][sel])
+                print tagger
+                roc_auc = auc(data['rejection'][sel],data['efficiency'][sel])
+                print 'roc_auc ' + str(roc_auc)
+                print 'rejection power: ' + str(rejpow)
+                if data['optimise'] == True:
+                    tagger_roc_auc = roc_auc
+                    tagger_rejpow = rejpow
+                    hist = TH2D(tagger, tagger, 100, 0, 1, 100, 0, 1)
+                    
+                    matrix = np.vstack((data['efficiency'][sel],1-data['rejection'][sel])).T
+                    fill_hist(hist, matrix)
+                    fo = TFile.Open('ROC/AGILE_'+inputfile.replace('.pdf','')+'.root','RECREATE')
+                    hist.Write()
+                    rej_str = 'rejection_power_'+str(rejpow)
+                    rej_n = TNamed(rej_str,rej_str)
+                    rej_n.Write()
+                    if not data['hist_sig'] is None:
+                        data['hist_sig'].Write()
+                        data['hist_bkg'].Write()
+                        c = TCanvas()
+                        data['hist_sig'].Draw('hist')
+                        data['hist_bkg'].Draw('histsame')
+                        c.Write()
+                    fo.Close()
+                #print 'AUC ' + str(np.trapz(1-data['rejection'][sel], data['efficiency'][sel]))
+
+
+	ax = plt.subplot(1,1,1)
+	for item in ([ax.title, ax.xaxis.label, ax.yaxis.label] + ax.get_xticklabels() + ax.get_yticklabels()):
+		item.set_fontsize(20)
+	
+	if logscale == True:	
+		plt.ylim(1,10 ** 3)
+		ax.set_yscale('log')
+	ax.set_xlabel(r'$\epsilon_{t}$, W efficiency (' + signal + ')')
+	ax.set_ylabel(r"QCD ("+ background + ") rejection")
+
+	plt.legend()
+	plt.title(r''+title + ': ' + str(rejpow))
+	if pp:
+		pp.savefig(fig)
+                return tagger_rejpow
+	else:
+		plt.show()
+		return tagger_rejpow, fig
+
+
+def add_tagger(name, color, tagger_pair, dictref, opt=False):
+    if len(tagger_pair) == 2:
+	dictref.update({name : {'efficiency' : tagger_pair[0], 'rejection' : tagger_pair[1], 'color' : color, 'optimise': opt, 'hist_sig':None, 'hist_bkg': None}})
+    else:
+        dictref.update({name : {'efficiency' : tagger_pair[0], 'rejection' : tagger_pair[1], 'color' : color, 'optimise': opt, 'hist_sig':tagger_pair[2], 'hist_bkg': tagger_pair[3]}})
+
+
+
+
+
+
+
+

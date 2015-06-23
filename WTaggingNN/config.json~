@@ -1,0 +1,38 @@
+{
+    "language"        : "PYTHON",
+    "main-file"       : "opt.py",
+    "experiment-name" : "agilepack-experiment",
+    "variables" : {
+        "uepochs" : {
+            "type" : "INT",
+            "size" : 5,
+            "min"  : 20,
+            "max"  : 100
+        },
+        "sepochs" : {
+            "type" : "INT",
+            "size" : 5,
+            "min"  : 40,
+            "max"  : 140
+        },
+        "momentum" : {
+            "type" : "FLOAT",
+            "size" : 0.01,
+            "min"  : 0.7,
+            "max"  : 0.85
+        }
+        "regularize" : {
+            "type" : "FLOAT",
+            "size" : 0.001,
+            "min"  : 0.0001,
+            "max"  : 0.01
+        }
+        "learning" : {
+            "type" : "FLOAT",
+            "size" : 0.001,
+            "min"  : 0.001,
+            "max"  : 0.02
+        }
+    }
+}
+

@@ -1,0 +1,5 @@
+# Ignore all of the generated configxxx.yaml files
+config*yaml
+*pdf
+*csv
+*png
