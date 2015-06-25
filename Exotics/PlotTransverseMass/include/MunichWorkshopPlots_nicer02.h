@@ -229,6 +229,7 @@ bool recluster = false;
 bool calcYFilt = false;
 bool truthBosonMatching = false;
 bool beta2available = false;
+bool addResponse = false;
 
 bool xAODJets = false;
 //bool xAODemfrac = false;
@@ -465,6 +466,8 @@ std::vector<float> * var_subjets_m_vec;
 std::vector<float> * var_subjets_eta_vec;
 std::vector<float> * var_subjets_phi_vec;
 
+// subjet clusters
+
 // variables that we write out to the outfile
 // store one value each for truth, topo, groomed - use a vector
 std::vector<float> var_E;
@@ -534,6 +537,25 @@ std::vector<Float_t> var_EEC_C2_1;
 std::vector<Float_t> var_EEC_C2_2;
 std::vector<Float_t> var_EEC_D2_1;
 std::vector<Float_t> var_EEC_D2_2;
+
+
+// read in clusters from xAODs
+std::vector<std::vector<TLorentzVector> > * var_clusters_truth_vec;
+std::vector<std::vector<TLorentzVector> > * var_subjets_truth_vec;
+std::vector<std::vector<TLorentzVector> > * var_clusters_groomed_vec;
+std::vector<std::vector<TLorentzVector> > * var_subjets_groomed_vec;
+std::vector<std::vector<TLorentzVector> > * var_clusters_ca12_vec;
+std::vector<std::vector<TLorentzVector> > * var_subjets_ca12_vec;
+
+// store clusters
+std::vector<TLorentzVector> clusters_truth;
+std::vector<TLorentzVector> subjets_truth;
+std::vector<TLorentzVector> clusters_topo;
+std::vector<TLorentzVector> subjets_topo;
+std::vector<TLorentzVector> clusters_groomed;
+std::vector<TLorentzVector> subjets_groomed;
+std::vector<TLorentzVector> clusters_ca12;
+std::vector<TLorentzVector> subjets_ca12;
 
 // store the weights for the samples
 Float_t var_k_factor;

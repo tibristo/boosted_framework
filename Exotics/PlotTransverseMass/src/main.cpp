@@ -113,6 +113,7 @@ int main( int argc, char * argv[] ) {
       ("xAOD", po::value<bool>(&xAOD)->default_value(false),"Set if running on xAOD, otherwise D3PD is assumed.  This affects the way the mc_event_weight and avgIntPerXing variables are read, and if set incorrectly segfaults will occur.")
       ("truthBosonMatching", po::value<bool>(&truthBosonMatching)->default_value(false),"Set if running on xAOD.  This matches jets to their parent particles - W or Z.  This is needed since no emfrac variable exists in the xAODs.")
       ("ecf-beta2", po::value<bool>(&beta2available)->default_value(false),"Set if running on xAOD and the ECF (beta2) values are available. Not all xAODs have this variable.")
+      ("response", po::value<bool>(&addResponse)->default_value(false),"Add response variables for the branches.")
       
       ;
         
@@ -2003,6 +2004,28 @@ void setJetsBranches(TChain * tree, std::string &groomalgo,  std::string & groom
       if (!setVector(tree, brancharray, var_cl_phi_vec, std::string("cl_lc_phi")))
 	floatvec(var_cl_phi_vec);
 
+      // cluster tlvs
+      // it is probably possible to do this as is done for the electron and muon tlvs, but
+      // I consistently run into issues with vector<TLV>, so I am setting it up this way as it is
+      // easier to read and easier to debug.
+      // TODO: 25 June 2015.  Finish adding in the implementation of the clusters and subjets!
+      if (clusterTLVs)
+	{
+	  if (!setVector(tree, brancharray, var_clusters_truth_vec, std::string()))
+	    tlvvec(var_clusters_truth_vec);
+	  if (!setVector(tree, brancharray, var_subjets_truth_vec, std::string()))
+	    tlvvec(var_subjets_truth_vec);
+	  if (!setVector(tree, brancharray, var_clusters_groomed_vec, std::string()))
+	    tlvvec(var_clusters_groomed_vec);
+	  if (!setVector(tree, brancharray, var_subjets_groomed_vec, std::string()))
+	    tlvvec(var_subjets_groomed_vec);
+	  if (!setVector(tree, brancharray, var_clusters_ca12_vec, std::string()))
+	    tlvvec(var_clusters_ca12_vec);
+	  if (!setVector(tree, brancharray, var_subjets_ca12_vec, std::string()))
+	    tlvvec(var_subjets_ca12_vec);
+	}
+
+
       std::string jetString = returnJetType( samplePrefix, groomalgo, addLC, 2); //set to truth/ topo/ groomed
       
       if (subjetspre) // if the sample has the pre-calculated subjet variables
@@ -2402,8 +2425,8 @@ void setOutputVariables( int jet_idx_truth, int jet_idx_topo, int jet_idx_groome
       var_YFilt=sqrt(calcyfilt);
 
     }
- 
-  calculateResponseValues();
+  if (addResponse)
+    calculateResponseValues();
 
   // only store this for groomed jets
   if (subjetscalc)
@@ -2661,7 +2684,7 @@ void setOutputBranches(TTree * tree, std::string & groomalgo, std::string & groo
       tree->Branch("actualIntPerXing",&actualIntPerXingOut,"actualIntPerXing/F");
     }
 
-  bool addResponse = true;
+  //bool addResponse = true;
 
   for (int i = 0; i < jetType::MAX; i++) // truth, topo, groomed
     {
