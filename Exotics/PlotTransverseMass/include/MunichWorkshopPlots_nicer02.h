@@ -80,7 +80,7 @@ void addSubJets(TTree * tree, std::string & algorithm, std::string & groomIdx);
 vector<std::pair<std::string,bool> > getListOfJetBranches(std::string & algorithm, std::unordered_map<std::string, bool> & brancharray);
 void initVectors();
 std::pair<int,int> getTwoLeadingSubjets(std::vector<int> & indices, std::vector<float> *& subjets);
-std::string returnJetType(std::string & samplePrefix, std::string & groomalgo, bool addLC, int idx);
+std::string returnJetType(std::string & samplePrefix, std::string & groomalgo, bool addLC, int idx, bool underscore = true);
 std::string returnSubJetType(std::string & samplePrefix, std::string & groomalgo, bool addLC);
 void clearVectors();
 void clearOutputVariables();
@@ -122,6 +122,7 @@ typedef void (*SignalHandlerPointer)(int);
 
 // return dummy vectors
 void tlvvec(vector<TLorentzVector> *& tmp);
+void tlvvecvec(vector<vector<TLorentzVector> > *& tmp);
 void floatvec(vector<float> * & tmp);
 void intvec(vector<int> * & tmp);
 void vecintvec(vector< vector<int> > *& tmp);
@@ -230,6 +231,7 @@ bool calcYFilt = false;
 bool truthBosonMatching = false;
 bool beta2available = false;
 bool addResponse = false;
+bool clusterTLV = false;
 
 bool xAODJets = false;
 //bool xAODemfrac = false;
@@ -548,14 +550,12 @@ std::vector<std::vector<TLorentzVector> > * var_clusters_ca12_vec;
 std::vector<std::vector<TLorentzVector> > * var_subjets_ca12_vec;
 
 // store clusters
-std::vector<TLorentzVector> clusters_truth;
-std::vector<TLorentzVector> subjets_truth;
-std::vector<TLorentzVector> clusters_topo;
-std::vector<TLorentzVector> subjets_topo;
-std::vector<TLorentzVector> clusters_groomed;
-std::vector<TLorentzVector> subjets_groomed;
-std::vector<TLorentzVector> clusters_ca12;
-std::vector<TLorentzVector> subjets_ca12;
+std::vector<TLorentzVector> var_clusters_truth;
+std::vector<TLorentzVector> var_subjets_truth;
+std::vector<TLorentzVector> var_clusters_groomed;
+std::vector<TLorentzVector> var_subjets_groomed;
+std::vector<TLorentzVector> var_clusters_ca12;
+std::vector<TLorentzVector> var_subjets_ca12;
 
 // store the weights for the samples
 Float_t var_k_factor;

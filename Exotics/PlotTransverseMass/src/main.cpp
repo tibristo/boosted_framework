@@ -114,6 +114,7 @@ int main( int argc, char * argv[] ) {
       ("truthBosonMatching", po::value<bool>(&truthBosonMatching)->default_value(false),"Set if running on xAOD.  This matches jets to their parent particles - W or Z.  This is needed since no emfrac variable exists in the xAODs.")
       ("ecf-beta2", po::value<bool>(&beta2available)->default_value(false),"Set if running on xAOD and the ECF (beta2) values are available. Not all xAODs have this variable.")
       ("response", po::value<bool>(&addResponse)->default_value(false),"Add response variables for the branches.")
+      ("clusterTLV", po::value<bool>(&clusterTLV)->default_value(false),"Add the cluster TLVs for the xAOD samples.")
       
       ;
         
@@ -266,11 +267,6 @@ int main( int argc, char * argv[] ) {
   // create a lower case version of the algorithm name
   std::transform(alg_in.begin(), alg_in.end(), alg_in.begin(), ::tolower);
   std::cout << alg_in_orig << std::endl;
-
-  int nArg = 1; // TODO: this will need to be changed when moving from a system where only one algorithm is run at once
-
-  // right now the idea of filteridx, Xidx is not fully complete... The code as it stands runs on one type of algorithm at once, but 
-  // I would like it to run on a number of types.  This is why this is here.  It used to do this in fact, before switching stuff around
 
   // check if we have a configuration for this algorithm
   if (algorithms.AlgoNames.find(alg_in_orig) == algorithms.AlgoNames.end())
@@ -630,8 +626,8 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
 	  double mass = 0;
 	  for (long n = 0; n < entries; n++)
 	    {
-	      //if (n > 50000)
-	      //continue;
+	      if (n > 50000)
+		continue;
 	      // get next event
 	      inputTChain[tchainIdx]->GetEntry(n);
 
@@ -1269,8 +1265,9 @@ vector<std::pair<std::string,bool> > getListOfJetBranches(std::string &algorithm
  * @param groomalgo The shortened version of the grooming algorithm, excluding the prefix.
  * @param addLC If "LC" needs to be added to the name.
  * @param i The index of the type of jet - jetType::TRUTH/GROOMED/TOPO.
+ * @param underscore Add an underscore to the end of the branch name. Default is false.
  */
-std::string returnJetType(std::string & samplePrefix, std::string & groomalgo, bool addLC, int i)
+std::string returnJetType(std::string & samplePrefix, std::string & groomalgo, bool addLC, int i, bool underscore)
 {
   std::string jet = "";
   std::string xaod = "";
@@ -1285,20 +1282,22 @@ std::string returnJetType(std::string & samplePrefix, std::string & groomalgo, b
     case jetType::TRUTH: // truth
       replace(trAlgo, "Topo", "Truth");
       //jet="jet_CamKt12Truth"+xaod+"_";
-      jet = "jet_"+samplePrefix+trAlgo+"_";
+      jet = "jet_"+samplePrefix+trAlgo;
       break;
     case jetType::TOPO: // topo
       if (addLC)
-	jet = "jet_" + samplePrefix + "LCTopo"+xaod+"_";
+	jet = "jet_" + samplePrefix + "LCTopo"+xaod;
       else
-	jet = "jet_" + samplePrefix + "Topo"+xaod+"_";
+	jet = "jet_" + samplePrefix + "Topo"+xaod;
       break;
     default: // groomed
       if (addLC)
-	jet = "jet_" + samplePrefix +"LC" + groomalgo+"_";
+	jet = "jet_" + samplePrefix +"LC" + groomalgo;
       else
-	jet = "jet_" + samplePrefix + groomalgo + "_"; 	  
+	jet = "jet_" + samplePrefix + groomalgo; 	  
     }
+  if (underscore)
+    jet = jet+"_";
   return jet;
 } // returnJetType
 
@@ -1375,6 +1374,29 @@ void addInfoBranches(TTree * tree)
   tree->Branch("xs", &var_xs, "xs/F");
 }// addInfoBranches
 
+/*
+ * Set up the branch address for a vector<vector<TLorentzVector>>.
+ *
+ * @param tree Reference to a TChain pointer.  This is the input TTree.
+ * @param list Reference map<string,int> that contains a list of all branches in the tree.
+ * @param vec Reference to a vector<TLV> pointer which will be used to read in from the file.
+ * @param branch The name of the branch we are setting the address for.  This is not passed as reference because of how it is set up. Really it could be a const string &.
+ * @return bool indicating if the branch was successfully set
+ */
+bool setVector(TChain *& tree, std::unordered_map<std::string, bool> & list, vector< vector<TLorentzVector> > *& vec, string branch)//const char * branch)
+{
+  // first check to see if the branch is actually in the tree, then check to see if we are interested in using it
+  if (list.find(branch) != list.end() && useBranch(branch))
+    tree->SetBranchAddress(branch.c_str(), &vec);
+  else
+    {
+      std::cout << "missing branch " << branch << ", might cause unexpected behaviour, removing from branchmap" << std::endl;
+      // erase it to avoid issues
+      branchmap.erase(branch);
+      return false;
+    }
+  return true;
+}
 /*
  * Set up the branch address for a vector<TLorentzVector>.
  *
@@ -2009,20 +2031,20 @@ void setJetsBranches(TChain * tree, std::string &groomalgo,  std::string & groom
       // I consistently run into issues with vector<TLV>, so I am setting it up this way as it is
       // easier to read and easier to debug.
       // TODO: 25 June 2015.  Finish adding in the implementation of the clusters and subjets!
-      if (clusterTLVs)
+      if (clusterTLV)
 	{
-	  if (!setVector(tree, brancharray, var_clusters_truth_vec, std::string()))
-	    tlvvec(var_clusters_truth_vec);
-	  if (!setVector(tree, brancharray, var_subjets_truth_vec, std::string()))
-	    tlvvec(var_subjets_truth_vec);
-	  if (!setVector(tree, brancharray, var_clusters_groomed_vec, std::string()))
-	    tlvvec(var_clusters_groomed_vec);
-	  if (!setVector(tree, brancharray, var_subjets_groomed_vec, std::string()))
-	    tlvvec(var_subjets_groomed_vec);
-	  if (!setVector(tree, brancharray, var_clusters_ca12_vec, std::string()))
-	    tlvvec(var_clusters_ca12_vec);
-	  if (!setVector(tree, brancharray, var_subjets_ca12_vec, std::string()))
-	    tlvvec(var_subjets_ca12_vec);
+	  if (!setVector(tree, brancharray, var_clusters_truth_vec, std::string(returnJetType(samplePrefix, groomalgo, addLC,jetType::TRUTH, false)+"Jets_Clusters")))
+	    tlvvecvec(var_clusters_truth_vec);
+	  if (!setVector(tree, brancharray, var_subjets_truth_vec, std::string(returnJetType(samplePrefix, groomalgo, addLC,jetType::TRUTH, false)+"Jets_Kt2Subjets")))
+	    tlvvecvec(var_subjets_truth_vec);
+	  if (!setVector(tree, brancharray, var_clusters_groomed_vec, std::string(returnJetType(samplePrefix, groomalgo, addLC,jetType::GROOMED, false)+"Jets_Clusters")))
+	    tlvvecvec(var_clusters_groomed_vec);
+	  if (!setVector(tree, brancharray, var_subjets_groomed_vec, std::string(returnJetType(samplePrefix, groomalgo, addLC,jetType::GROOMED, false)+"Jets_Kt2Subjets")))
+	    tlvvecvec(var_subjets_groomed_vec);
+	  if (!setVector(tree, brancharray, var_clusters_ca12_vec, std::string("jet_CamKt12TruthJets_Clusters")))
+	    tlvvecvec(var_clusters_ca12_vec);
+	  if (!setVector(tree, brancharray, var_subjets_ca12_vec, std::string("jet_CamKt12TruthJets_Kt2Subjets")))
+	    tlvvecvec(var_subjets_ca12_vec);
 	}
 
 
@@ -2428,6 +2450,18 @@ void setOutputVariables( int jet_idx_truth, int jet_idx_topo, int jet_idx_groome
   if (addResponse)
     calculateResponseValues();
 
+  // store cluster info
+  if (clusterTLV)
+    {
+      var_clusters_truth = (*var_clusters_truth_vec)[jet_idx_truth];
+      var_clusters_groomed = (*var_clusters_groomed_vec)[jet_idx_groomed];
+      var_clusters_ca12 = (*var_clusters_ca12_vec)[jet_idx_ca12];
+      var_subjets_truth = (*var_subjets_truth_vec)[jet_idx_truth];
+      var_subjets_groomed = (*var_subjets_groomed_vec)[jet_idx_groomed];
+      var_subjets_ca12 = (*var_subjets_ca12_vec)[jet_idx_ca12];
+    }
+
+
   // only store this for groomed jets
   if (subjetscalc)
     {
@@ -2581,6 +2615,13 @@ void clearOutputVariables()
   var_ptcone20.clear();
   var_etcone20.clear();
   var_charge.clear();
+
+  var_clusters_truth.clear();
+  var_clusters_groomed.clear();
+  var_clusters_ca12.clear();
+  var_subjets_truth.clear();
+  var_subjets_groomed.clear();
+  var_subjets_ca12.clear();
   
 
 } // clearOutputVariables
@@ -2597,6 +2638,16 @@ void resetOutputVariables()
   var_ptcone20.push_back(-999);
   var_etcone20.push_back(-999);
   var_charge.push_back(-999);
+
+  if (clusterTLV)
+    {
+      var_clusters_truth.push_back(TLorentzVector());
+      var_clusters_groomed.push_back(TLorentzVector());
+      var_clusters_ca12.push_back(TLorentzVector());
+      var_subjets_truth.push_back(TLorentzVector());
+      var_subjets_groomed.push_back(TLorentzVector());
+      var_subjets_ca12.push_back(TLorentzVector());
+    }
   
   for (int i = 0; i < jetType::MAX; i++)
     {
@@ -2973,6 +3024,17 @@ void setOutputBranches(TTree * tree, std::string & groomalgo, std::string & groo
 	}
 
     }
+
+  if (clusterTLV)
+    {
+      tree->Branch(std::string(returnJetType(samplePrefix, groomalgo, addLC,jetType::TRUTH, false)+"Jets_Clusters").c_str(), &var_clusters_truth);
+      tree->Branch(std::string(returnJetType(samplePrefix, groomalgo, addLC,jetType::TRUTH, false)+"Jets_Kt2Subjets").c_str(), &var_subjets_truth);
+      tree->Branch(std::string(returnJetType(samplePrefix, groomalgo, addLC,jetType::GROOMED, false)+"Jets_Clusters").c_str(), &var_clusters_groomed);
+      tree->Branch(std::string(returnJetType(samplePrefix, groomalgo, addLC,jetType::GROOMED, false)+"Jets_Kt2Subjets").c_str(), &var_subjets_groomed);
+      tree->Branch("jet_CamKt12TruthJets_Clusters", &var_clusters_ca12);
+      tree->Branch("jet_CamKt12TruthJets_Kt2Subjets", &var_subjets_ca12);
+    }
+
 
   string jetstring = returnJetType(samplePrefix, groomalgo, addLC, jetType::GROOMED);
   // this only exists for the groomed jets
@@ -3684,6 +3746,21 @@ void tlvvec(vector<TLorentzVector> *& tmp)
   tmp = new vector<TLorentzVector>();
   TLorentzVector tlv (0.,0.,0.,0.);
   tmp->push_back(tlv);
+  //return tmp;
+} //tlvvec
+
+/*
+ * create a vector of vectors of tlv and add a variable to it so it is not empty
+ */
+//vector<TLorentzVector> * tlvvec()
+void tlvvecvec(vector< vector<TLorentzVector> > *& tmp)
+{
+  //vector<TLorentzVector> * 
+  tmp = new vector<vector<TLorentzVector> >();
+  TLorentzVector tlv (0.,0.,0.,0.);
+  vector<TLorentzVector> tmpv;
+  tmpv.push_back(tlv);
+  tmp->push_back(tmpv);
   //return tmp;
 } //tlvvec
 
