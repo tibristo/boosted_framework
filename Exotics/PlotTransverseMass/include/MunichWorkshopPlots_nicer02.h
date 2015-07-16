@@ -116,6 +116,7 @@ void printTLV(vector<TLorentzVector> & tlv);
 std::unordered_map<std::string,bool> createBranchMap(TObjArray *& arr);
 void SignalHandlerMapAccess(int signal);
 void calculateResponseValues();
+void setCa12Vectors();
 
 // typedef for the exception when accessing a missing element from a map
 typedef void (*SignalHandlerPointer)(int);
@@ -232,6 +233,7 @@ bool truthBosonMatching = false;
 bool beta2available = false;
 bool addResponse = false;
 bool clusterTLV = false;
+bool ca12TLV = false;
 
 bool xAODJets = false;
 //bool xAODemfrac = false;
@@ -407,10 +409,14 @@ std::vector<std::vector<float> *> var_ECF1_2_vec;
 std::vector<std::vector<float> *> var_ECF2_2_vec;
 std::vector<std::vector<float> *> var_ECF3_2_vec;
 std::vector<std::vector<float> *> var_Mu12_vec;
+
+
+std::vector<TLorentzVector> * var_ca12_tlv_vec;
 std::vector<float> * var_ca12_pt_vec;
 std::vector<float> * var_ca12_phi_vec;
 std::vector<float> * var_ca12_eta_vec;
 std::vector<float> * var_ca12_m_vec;
+std::vector<TLorentzVector> * var_ca12topo_tlv_vec;
 std::vector<float> * var_ca12topo_pt_vec;
 std::vector<float> * var_ca12topo_phi_vec;
 std::vector<float> * var_ca12topo_eta_vec;

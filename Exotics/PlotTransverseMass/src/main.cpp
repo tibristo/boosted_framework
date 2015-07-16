@@ -626,8 +626,8 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
 	  double mass = 0;
 	  for (long n = 0; n < entries; n++)
 	    {
-	      if (n > 50000)
-		continue;
+	      //if (n > 50000)
+	      //continue;
 	      // get next event
 	      inputTChain[tchainIdx]->GetEntry(n);
 
@@ -670,6 +670,11 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
 	      int chosenLeadTruthJetIndex=-99;
 	      int chosenLeadTopoJetIndex=-99;
 	      
+	      // if the individual ca12 kinematic variables do not exist they need to be set from the TLV of jets
+	      if (ca12TLV)
+		setCa12Vectors();
+
+
 	      // find the leading ca12 truth jet
 	      int leadingCA12TruthIndex = -1;
 	      float ca12max = -1;
@@ -1201,10 +1206,12 @@ vector<std::pair<std::string,bool> > getListOfJetBranches(std::string &algorithm
   branchmap["averageIntPerXing"] = true;
   branchmap["mc_event_weight"] = true;
   // 16/04/2015 Adding this in because even though they are not used for selection, they are used for the binning when finding the taggers.
+  branchmap["CamKt12TruthJets"] = true; // this is a tlv that is used in some of the xAODs instead of pt, eta, phi, m
   branchmap["jet_CamKt12Truth_pt"] = true;
   branchmap["jet_CamKt12Truth_eta"] = true;
   branchmap["jet_CamKt12Truth_phi"] = true;
   branchmap["jet_CamKt12Truth_m"] = true;
+  branchmap["CamKt12TruthJets"] = true; // this is a tlv that is used in some of the xAODs
   branchmap["jet_CamKt12LCTopo_pt"] = true;
   branchmap["jet_CamKt12LCTopo_eta"] = true;
   branchmap["jet_CamKt12LCTopo_phi"] = true;
@@ -1865,22 +1872,36 @@ void setJetsBranches(TChain * tree, std::string &groomalgo,  std::string & groom
 
 
   // set the ca12 truth jets
-  if(!setVector(tree,brancharray, var_ca12_pt_vec, "jet_CamKt12Truth_pt"))
+  // first check if the individual variables for pt, m, eta, phi exist, otherwise look for the TLV of ca12 jets.
+  if (brancharray.find("jet_CamKt12Truth_pt") == brancharray.end())// && useBranch("jet_CamKt12Truth_pt"))
+    {
+      if (brancharray.find("CamKt12TruthJets") != brancharray.end())
+	{
+	  branchmap["CamKt12TruthJets"] = true;
+	  branchmap["CamKt12LCTopoJets"] = true;
+	  ca12TLV = true;
+	  if (!setVector(tree, brancharray, var_ca12_tlv_vec, "CamKt12TruthJets"))
+	    tlvvec(var_ca12_tlv_vec);
+	  if (!setVector(tree, brancharray, var_ca12topo_tlv_vec, "CamKt12LCTopoJets"))
+	    tlvvec(var_ca12topo_tlv_vec);
+	}
+    }
+  if(ca12TLV || !setVector(tree,brancharray, var_ca12_pt_vec, "jet_CamKt12Truth_pt"))
     floatvec(var_ca12_pt_vec);
-  if(!setVector(tree,brancharray, var_ca12_m_vec, "jet_CamKt12Truth_m"))
+  if(ca12TLV || !setVector(tree,brancharray, var_ca12_m_vec, "jet_CamKt12Truth_m"))
     floatvec(var_ca12_m_vec);
-  if(!setVector(tree,brancharray, var_ca12_eta_vec, "jet_CamKt12Truth_eta"))
+  if(ca12TLV || !setVector(tree,brancharray, var_ca12_eta_vec, "jet_CamKt12Truth_eta"))
     floatvec(var_ca12_eta_vec);
-  if(!setVector(tree,brancharray, var_ca12_phi_vec, "jet_CamKt12Truth_phi"))
+  if(ca12TLV || !setVector(tree,brancharray, var_ca12_phi_vec, "jet_CamKt12Truth_phi"))
     floatvec(var_ca12_phi_vec);
   // set the ca12 topo jets
-  if(!setVector(tree,brancharray, var_ca12topo_pt_vec, "jet_CamKt12LCTopo_pt"))
+  if(ca12TLV || !setVector(tree,brancharray, var_ca12topo_pt_vec, "jet_CamKt12LCTopo_pt"))
     floatvec(var_ca12topo_pt_vec);
-  if(!setVector(tree,brancharray, var_ca12topo_m_vec, "jet_CamKt12LCTopo_m"))
+  if(ca12TLV || !setVector(tree,brancharray, var_ca12topo_m_vec, "jet_CamKt12LCTopo_m"))
     floatvec(var_ca12topo_m_vec);
-  if(!setVector(tree,brancharray, var_ca12topo_eta_vec, "jet_CamKt12LCTopo_eta"))
+  if(ca12TLV || !setVector(tree,brancharray, var_ca12topo_eta_vec, "jet_CamKt12LCTopo_eta"))
     floatvec(var_ca12topo_eta_vec);
-  if(!setVector(tree,brancharray, var_ca12topo_phi_vec, "jet_CamKt12LCTopo_phi"))
+  if(ca12TLV || !setVector(tree,brancharray, var_ca12topo_phi_vec, "jet_CamKt12LCTopo_phi"))
     floatvec(var_ca12topo_phi_vec);
 
   // loop through the truth, toppo and groomed jets and set up the branches for the different variables
@@ -2030,7 +2051,6 @@ void setJetsBranches(TChain * tree, std::string &groomalgo,  std::string & groom
       // it is probably possible to do this as is done for the electron and muon tlvs, but
       // I consistently run into issues with vector<TLV>, so I am setting it up this way as it is
       // easier to read and easier to debug.
-      // TODO: 25 June 2015.  Finish adding in the implementation of the clusters and subjets!
       if (clusterTLV)
 	{
 	  if (!setVector(tree, brancharray, var_clusters_truth_vec, std::string(returnJetType(samplePrefix, groomalgo, addLC,jetType::TRUTH, false)+"Jets_Clusters")))
@@ -2093,6 +2113,39 @@ void setJetsBranches(TChain * tree, std::string &groomalgo,  std::string & groom
 }//setJetsBranches
 
 
+/*
+ * Set the values for the ca12 pt, eta, phi and m from the ca12 tlv.  Done for both lctopo and truth.
+ */
+
+void setCa12Vectors()
+{
+  // loop through all of the truth jets
+  var_ca12_pt_vec->clear();// = new vector<float>();
+  var_ca12_eta_vec->clear();// = new vector<float>();
+  var_ca12_phi_vec->clear();// = new vector<float>();
+  var_ca12_m_vec->clear();// = new vector<float>();
+  for (std::vector<TLorentzVector>::iterator it = var_ca12_tlv_vec->begin(); it != var_ca12_tlv_vec->end(); it++)
+    {
+      var_ca12_pt_vec->push_back((*it).Pt());
+      var_ca12_phi_vec->push_back((*it).Phi());
+      var_ca12_eta_vec->push_back((*it).Eta());
+      var_ca12_m_vec->push_back((*it).M());
+    }
+
+  // loop through all of the lctopo jets
+  var_ca12topo_pt_vec->clear();// = new vector<float>();
+  var_ca12topo_eta_vec->clear();// = new vector<float>();
+  var_ca12topo_phi_vec->clear();// = new vector<float>();
+  var_ca12topo_m_vec->clear();// = new vector<float>();
+  for (std::vector<TLorentzVector>::iterator it = var_ca12topo_tlv_vec->begin(); it != var_ca12topo_tlv_vec->end(); it++)
+    {
+      var_ca12topo_pt_vec->push_back((*it).Pt());
+      var_ca12topo_phi_vec->push_back((*it).Phi());
+      var_ca12topo_eta_vec->push_back((*it).Eta());
+      var_ca12topo_m_vec->push_back((*it).M());
+    }
+  
+}
 
 /*
  * Add the sub-jet branches to the output file.
@@ -2218,6 +2271,10 @@ void initVectors()
   var_ca12topo_m_vec = 0;
   var_ca12topo_eta_vec = 0;
   var_ca12topo_phi_vec = 0;
+
+  // ca12 tlv
+  var_ca12_tlv_vec = 0;
+  var_ca12topo_tlv_vec = 0;
 
   var_YFilt_vec = 0;
   var_massFraction_vec = 0;
