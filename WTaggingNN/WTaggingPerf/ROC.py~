@@ -8,8 +8,9 @@ from matplotlib.mlab import griddata
 from matplotlib import rc
 import numpy.ma as ma
 from sklearn.metrics import roc_curve, auc
-from ROOT import TH1F, TH2D, TCanvas, TFile
+from ROOT import TH1F, TH2D, TCanvas, TFile, TNamed
 from root_numpy import fill_hist
+import functions as fn
 
 def data_load(filename):
     data = np.genfromtxt(filename, delimiter = ',', names = True)
@@ -94,7 +95,6 @@ def general_roc(data, discriminant, bins = 2000, inverse=False, name=""):
 	discriminant_bins = np.linspace(np.min(discriminant), np.max(discriminant), bins)
 
 	sig, b1 = np.histogram(discriminant[top_ind], discriminant_bins)
-        #fig = plt.figure(figsize=(11.69, 8.27), dpi=100)
         
         plt.hist(discriminant[top_ind], alpha=0.5, bins=discriminant_bins, label='signal', normed=1)
         plt.hist(discriminant[qcd_ind], alpha=0.5, bins=discriminant_bins, label='bkg', normed=1)
@@ -126,9 +126,6 @@ def general_roc(data, discriminant, bins = 2000, inverse=False, name=""):
 
 	#return t_efficiency, qcd_rejection
         labels_w = data[:]['label']
-
-        #scores = np.append(discriminant[top_ind],discriminant[qcd_ind])
-        #print scores.shape
         
         fpr,tpr,_ = roc_curve(labels_w,discriminant)
         #roc_auc = auc(fpr,tpr)
@@ -174,6 +171,7 @@ def general_roc_weighted(data, discriminant, weights, bins = 2000, inverse=False
         hist_sig.SetFillStyle(3004)
         #hist_bkg.SetFillColorAlpha(2, 0.5);
         hist_bkg.SetFillStyle(3005)
+        fn.RocCurve_SingleSided(hist_sig, hist_bkg, 1, 1, '')
 	t_efficiency = np.add.accumulate(sig[::-1]) / float(top_total)
 	qcd_rejection = 1-(np.add.accumulate(bkd[::-1]) / float(qcd_total))
         if inverse:
@@ -263,11 +261,7 @@ def ROC_plotter(taggerdict, min_eff = 0, max_eff = 1, linewidth = 1.4, pp = Fals
 			ar[:, 0] = data['efficiency'][sel]
 			ar[:, 1] = data['rejection'][sel]
 			np.savetxt(tagger+'_save.csv', ar, delimiter=',')
-                #plt.title()
-                #plt.plot(data['efficiency'][sel])
-                #plt.savefig(fig)
-                #plt.plot(data['rejection'][sel])
-                #plt.savefig(fig)
+
 		plt.plot(data['efficiency'][sel], 1-data['rejection'][sel], '-', label = r''+tagger, color = data['color'], linewidth=linewidth)
                 # find the entry in rejection matrix that corresponds to 50% efficiency
                 idx = (np.abs(data['efficiency'][sel]-0.5)).argmin()
@@ -291,6 +285,9 @@ def ROC_plotter(taggerdict, min_eff = 0, max_eff = 1, linewidth = 1.4, pp = Fals
                     fill_hist(hist, matrix)
                     fo = TFile.Open('ROC/AGILE_'+inputfile.replace('.pdf','')+'.root','RECREATE')
                     hist.Write()
+                    rej_str = 'rejection_power_'+str(rejpow)
+                    rej_n = TNamed(rej_str,rej_str)
+                    rej_n.Write()
                     if not data['hist_sig'] is None:
                         data['hist_sig'].Write()
                         data['hist_bkg'].Write()

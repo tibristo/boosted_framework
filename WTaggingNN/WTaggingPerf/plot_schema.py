@@ -68,11 +68,6 @@ def generate_taggers(schema):
 			net = apy.NeuralNet()
 			net.load(taggerfile)
 			predictions = net.predict(data)[0]
-			print net.predict(data)
-			print predictions
-			print predictions.astype(np.float).max()
-			print predictions.astype(np.float).min()
-			print predictions['label_predicted']
 			opt = 'false'
 			if specifications.has_key('optimise'):
 				opt = specifications['optimise']

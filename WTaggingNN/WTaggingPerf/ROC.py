@@ -10,6 +10,7 @@ import numpy.ma as ma
 from sklearn.metrics import roc_curve, auc
 from ROOT import TH1F, TH2D, TCanvas, TFile, TNamed
 from root_numpy import fill_hist
+import functions as fn
 
 def data_load(filename):
     data = np.genfromtxt(filename, delimiter = ',', names = True)
@@ -94,7 +95,6 @@ def general_roc(data, discriminant, bins = 2000, inverse=False, name=""):
 	discriminant_bins = np.linspace(np.min(discriminant), np.max(discriminant), bins)
 
 	sig, b1 = np.histogram(discriminant[top_ind], discriminant_bins)
-        #fig = plt.figure(figsize=(11.69, 8.27), dpi=100)
         
         plt.hist(discriminant[top_ind], alpha=0.5, bins=discriminant_bins, label='signal', normed=1)
         plt.hist(discriminant[qcd_ind], alpha=0.5, bins=discriminant_bins, label='bkg', normed=1)
@@ -104,9 +104,11 @@ def general_roc(data, discriminant, bins = 2000, inverse=False, name=""):
         hist_bkg = TH1F("Background Discriminant","Discriminant",bins, np.min(discriminant), np.max(discriminant))
         hist_sig = TH1F("Signal Discriminant","Discriminant",bins, np.min(discriminant), np.max(discriminant))
         fill_hist(hist_bkg,discriminant[qcd_ind])
-        hist_bkg.Scale(1/hist_bkg.Integral())
+        if hist_bkg.Integral() != 0:
+            hist_bkg.Scale(1/hist_bkg.Integral())
         fill_hist(hist_sig,discriminant[top_ind])
-        hist_sig.Scale(1/hist_sig.Integral())
+        if hist_sig.Integral() != 0:
+            hist_sig.Scale(1/hist_sig.Integral())
 
         hist_sig.SetLineColor(4)
         hist_bkg.SetLineColor(2)
@@ -118,22 +120,32 @@ def general_roc(data, discriminant, bins = 2000, inverse=False, name=""):
         plt.clf()
         
 
-	bkd, b1 = np.histogram(discriminant[qcd_ind], discriminant_bins)
-	t_efficiency = np.add.accumulate(sig[::-1]) / float(top_total)
-	qcd_rejection = 1-(np.add.accumulate(bkd[::-1]) / float(qcd_total))
-        if inverse:
-            qcd_rejection = 1/qcd_rejection
+        # find the median so that the correct ROC curve cut side is chosen.
+        sig_median = np.median(discriminant[top_ind])
+        bkg_median = np.median(discriminant[qcd_ind])
+        if sig_median > bkg_median:
+            roc_graph = fn.RocCurve_SingleSided(hist_sig, hist_bkg, 1, 1, 'R')
+        else:
+            roc_graph = fn.RocCurve_SingleSided(hist_sig, hist_bkg, 1, 1, 'L')
+
+        # the efficiency and rejection are dependent on the direction in which
+        # we calculate the ROC curve.  So now we need to find these values by hand.
+        # this is easy to do as this is all stored in the tgrpah that gets returned from
+        # the fn.RocCurve_SingleSided() method
+        sig_eff, bkg_rej = fn.getEfficiencies(roc_graph)
+	#bkd, b1 = np.histogram(discriminant[qcd_ind], discriminant_bins)
+	#t_efficiency = np.add.accumulate(sig[::-1]) / float(top_total)
+	#qcd_rejection = 1-(np.add.accumulate(bkd[::-1]) / float(qcd_total))
+        #if inverse:
+        #    qcd_rejection = 1/qcd_rejection
 
 	#return t_efficiency, qcd_rejection
-        labels_w = data[:]['label']
-
-        #scores = np.append(discriminant[top_ind],discriminant[qcd_ind])
-        #print scores.shape
+        #labels_w = data[:]['label']
         
-        fpr,tpr,_ = roc_curve(labels_w,discriminant)
+        #fpr,tpr,_ = roc_curve(labels_w,discriminant)
         #roc_auc = auc(fpr,tpr)
-        return tpr, fpr, hist_sig, hist_bkg#, roc_auc
-
+        #return tpr, fpr, hist_sig, hist_bkg#, roc_auc
+        return sig_eff, bkg_rej, hist_sig, hist_bkg, roc_graph
 
 
 def general_roc_weighted(data, discriminant, weights, bins = 2000, inverse=False, name=""):
@@ -164,9 +176,11 @@ def general_roc_weighted(data, discriminant, weights, bins = 2000, inverse=False
         hist_bkg = TH1F("Background Discriminant","Discriminant",bins, np.min(discriminant), np.max(discriminant))
         hist_sig = TH1F("Signal Discriminant","Discriminant",bins, np.min(discriminant), np.max(discriminant))
         fill_hist(hist_bkg,discriminant[qcd_ind])
-        hist_bkg.Scale(1/hist_bkg.Integral())
+        if hist_bkg.Integral() != 0:
+            hist_bkg.Scale(1/hist_bkg.Integral())
         fill_hist(hist_sig,discriminant[top_ind])
-        hist_sig.Scale(1/hist_sig.Integral())
+        if hist_sig.Integral() != 0:
+            hist_sig.Scale(1/hist_sig.Integral())
 
         hist_sig.SetLineColor(4)
         hist_bkg.SetLineColor(2)
@@ -174,15 +188,31 @@ def general_roc_weighted(data, discriminant, weights, bins = 2000, inverse=False
         hist_sig.SetFillStyle(3004)
         #hist_bkg.SetFillColorAlpha(2, 0.5);
         hist_bkg.SetFillStyle(3005)
-	t_efficiency = np.add.accumulate(sig[::-1]) / float(top_total)
-	qcd_rejection = 1-(np.add.accumulate(bkd[::-1]) / float(qcd_total))
-        if inverse:
-            qcd_rejection = 1/qcd_rejection
+
+        # find the median so that the correct ROC curve cut side is chosen.
+        sig_median = np.median(discriminant[top_ind])
+        bkg_median = np.median(discriminant[qcd_ind])
+        if sig_median > bkg_median:
+            roc_graph = fn.RocCurve_SingleSided(hist_sig, hist_bkg, 1, 1, 'R')
+        else:
+            roc_graph = fn.RocCurve_SingleSided(hist_sig, hist_bkg, 1, 1, 'L')
+
+        # the efficiency and rejection are dependent on the direction in which
+        # we calculate the ROC curve.  So now we need to find these values by hand.
+        # this is easy to do as this is all stored in the tgrpah that gets returned from
+        # the fn.RocCurve_SingleSided() method
+        sig_eff, bkg_rej = fn.getEfficiencies(roc_graph)
+            
+	#t_efficiency = np.add.accumulate(sig[::-1]) / float(top_total)
+	#qcd_rejection = 1-(np.add.accumulate(bkd[::-1]) / float(qcd_total))
+        #if inverse:
+        #    qcd_rejection = 1/qcd_rejection
 
 	#return t_efficiency, qcd_rejection
-        fpr,tpr,_ = roc_curve(top, discriminant)        
+        #fpr,tpr,_ = roc_curve(top, discriminant)        
         #roc_auc = auc(fpr,tpr)
-        return tpr, fpr, hist_sig, hist_bkg#, roc_auc
+        #return tpr, fpr, hist_sig, hist_bkg#, roc_auc
+        return sig_eff, bkg_rej, hist_sig, hist_bkg, roc_graph
 
 
 
@@ -263,16 +293,12 @@ def ROC_plotter(taggerdict, min_eff = 0, max_eff = 1, linewidth = 1.4, pp = Fals
 			ar[:, 0] = data['efficiency'][sel]
 			ar[:, 1] = data['rejection'][sel]
 			np.savetxt(tagger+'_save.csv', ar, delimiter=',')
-                #plt.title()
-                #plt.plot(data['efficiency'][sel])
-                #plt.savefig(fig)
-                #plt.plot(data['rejection'][sel])
-                #plt.savefig(fig)
+
 		plt.plot(data['efficiency'][sel], 1-data['rejection'][sel], '-', label = r''+tagger, color = data['color'], linewidth=linewidth)
                 # find the entry in rejection matrix that corresponds to 50% efficiency
                 idx = (np.abs(data['efficiency'][sel]-0.5)).argmin()
                 fpr_05 = data['rejection'][sel][idx]
-                rej = 1-fpr_05
+                rej = fpr_05#1-fpr_05
                 if rej != 1:
                     rejpow = 1/(1-rej)
                 else:
@@ -285,12 +311,13 @@ def ROC_plotter(taggerdict, min_eff = 0, max_eff = 1, linewidth = 1.4, pp = Fals
                 if data['optimise'] == True:
                     tagger_roc_auc = roc_auc
                     tagger_rejpow = rejpow
-                    hist = TH2D(tagger, tagger, 100, 0, 1, 100, 0, 1)
+                    #hist = TH2D(tagger, tagger, 100, 0, 1, 100, 0, 1)
                     
-                    matrix = np.vstack((data['efficiency'][sel],1-data['rejection'][sel])).T
-                    fill_hist(hist, matrix)
+                    #matrix = np.vstack((data['efficiency'][sel],1-data['rejection'][sel])).T
+                    #fill_hist(hist, matrix)
                     fo = TFile.Open('ROC/AGILE_'+inputfile.replace('.pdf','')+'.root','RECREATE')
-                    hist.Write()
+                    data['roc_curve'].Write()
+                    #hist.Write()
                     rej_str = 'rejection_power_'+str(rejpow)
                     rej_n = TNamed(rej_str,rej_str)
                     rej_n.Write()
@@ -329,7 +356,7 @@ def add_tagger(name, color, tagger_pair, dictref, opt=False):
     if len(tagger_pair) == 2:
 	dictref.update({name : {'efficiency' : tagger_pair[0], 'rejection' : tagger_pair[1], 'color' : color, 'optimise': opt, 'hist_sig':None, 'hist_bkg': None}})
     else:
-        dictref.update({name : {'efficiency' : tagger_pair[0], 'rejection' : tagger_pair[1], 'color' : color, 'optimise': opt, 'hist_sig':tagger_pair[2], 'hist_bkg': tagger_pair[3]}})
+        dictref.update({name : {'efficiency' : tagger_pair[0], 'rejection' : tagger_pair[1], 'color' : color, 'optimise': opt, 'hist_sig':tagger_pair[2], 'hist_bkg': tagger_pair[3], 'roc_curve':tagger_pair[4]}})
 
 
 
