@@ -2463,7 +2463,7 @@ void setOutputVariables( int jet_idx_truth, int jet_idx_topo, int jet_idx_groome
       var_Tau2[x]=(*var_Tau2_vec[x])[jet_idx];
 
  
-      var_SPLIT12[x]=(*var_SPLIT12_vec[x])[jet_idx];
+      var_SPLIT12[x]=(*var_SPLIT12_vec[x])[jet_idx]/1000.0;
 
       var_Dip12[x]=(*var_Dip12_vec[x])[jet_idx];
       var_PlanarFlow[x]=(*var_PlanarFlow_vec[x])[jet_idx];
