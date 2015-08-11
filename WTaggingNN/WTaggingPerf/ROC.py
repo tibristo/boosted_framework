@@ -8,9 +8,10 @@ from matplotlib.mlab import griddata
 from matplotlib import rc
 import numpy.ma as ma
 from sklearn.metrics import roc_curve, auc
-from ROOT import TH1F, TH2D, TCanvas, TFile, TNamed
+from ROOT import TH1F, TH2D, TCanvas, TFile, TNamed, gROOT
 from root_numpy import fill_hist
 import functions as fn
+gROOT.SetBatch(True)
 
 def data_load(filename):
     data = np.genfromtxt(filename, delimiter = ',', names = True)
@@ -82,13 +83,14 @@ def pre_process(data):
 	return data
 
 def general_roc(data, discriminant, bins = 2000, inverse=False, name=""):
+    
 	top = data[:]['label']
         
 	qcd_total = np.sum(top == 0)
 	top_total = np.sum(top == 1)
 
 	bincount = bins
-
+        
 	top_ind = data[:]['label'] == 1
 	qcd_ind = data[:]['label'] == 0
         
@@ -96,19 +98,25 @@ def general_roc(data, discriminant, bins = 2000, inverse=False, name=""):
 
 	sig, b1 = np.histogram(discriminant[top_ind], discriminant_bins)
         
-        plt.hist(discriminant[top_ind], alpha=0.5, bins=discriminant_bins, label='signal', normed=1)
-        plt.hist(discriminant[qcd_ind], alpha=0.5, bins=discriminant_bins, label='bkg', normed=1)
+        plt.clf()
+        plt.hist(discriminant[top_ind], alpha=0.5, bins=discriminant_bins, label='signal', normed=True)
+        plt.hist(discriminant[qcd_ind], alpha=0.5, bins=discriminant_bins, label='bkg', normed=True)
         plt.legend(loc='upper right')
         plt.title('discriminants')
         #plt.show()
         hist_bkg = TH1F("Background Discriminant","Discriminant",bins, np.min(discriminant), np.max(discriminant))
         hist_sig = TH1F("Signal Discriminant","Discriminant",bins, np.min(discriminant), np.max(discriminant))
         fill_hist(hist_bkg,discriminant[qcd_ind])
+
         if hist_bkg.Integral() != 0:
             hist_bkg.Scale(1/hist_bkg.Integral())
+        else:
+            print 'background integral is 0!!!'
         fill_hist(hist_sig,discriminant[top_ind])
         if hist_sig.Integral() != 0:
             hist_sig.Scale(1/hist_sig.Integral())
+        else:
+            print 'signal integral is 0!!!'
 
         hist_sig.SetLineColor(4)
         hist_bkg.SetLineColor(2)
@@ -116,7 +124,7 @@ def general_roc(data, discriminant, bins = 2000, inverse=False, name=""):
         hist_sig.SetFillStyle(3004)
         #hist_bkg.SetFillColorAlpha(2, 0.5);
         hist_bkg.SetFillStyle(3005)
-        plt.savefig('discriminants'+name+'.png')
+        plt.savefig('disc_plots/discriminants'+name+'.png')
         plt.clf()
         
 
@@ -128,11 +136,14 @@ def general_roc(data, discriminant, bins = 2000, inverse=False, name=""):
         else:
             roc_graph = fn.RocCurve_SingleSided(hist_sig, hist_bkg, 1, 1, 'L')
 
+
         # the efficiency and rejection are dependent on the direction in which
         # we calculate the ROC curve.  So now we need to find these values by hand.
         # this is easy to do as this is all stored in the tgrpah that gets returned from
         # the fn.RocCurve_SingleSided() method
         sig_eff, bkg_rej = fn.getEfficiencies(roc_graph)
+        #print 'sig_eff'
+        #print sig_eff
 	#bkd, b1 = np.histogram(discriminant[qcd_ind], discriminant_bins)
 	#t_efficiency = np.add.accumulate(sig[::-1]) / float(top_total)
 	#qcd_rejection = 1-(np.add.accumulate(bkd[::-1]) / float(qcd_total))
@@ -202,6 +213,7 @@ def general_roc_weighted(data, discriminant, weights, bins = 2000, inverse=False
         # this is easy to do as this is all stored in the tgrpah that gets returned from
         # the fn.RocCurve_SingleSided() method
         sig_eff, bkg_rej = fn.getEfficiencies(roc_graph)
+
             
 	#t_efficiency = np.add.accumulate(sig[::-1]) / float(top_total)
 	#qcd_rejection = 1-(np.add.accumulate(bkd[::-1]) / float(qcd_total))
@@ -278,6 +290,7 @@ def ROC_plotter(taggerdict, min_eff = 0, max_eff = 1, linewidth = 1.4, pp = Fals
 	plt.xlim(min_eff,max_eff)
 	plt.grid(b = True, which = 'minor')
 	plt.grid(b = True, which = 'major')
+        plt.clf()
 	max_ = 0
         roc_auc = 0
         rejpow = -1
@@ -286,6 +299,7 @@ def ROC_plotter(taggerdict, min_eff = 0, max_eff = 1, linewidth = 1.4, pp = Fals
 
 	for tagger, data in taggerdict.iteritems():
 		sel = (data['efficiency'] >= min_eff) & (data['efficiency'] <= max_eff)
+                #print data['efficiency'][sel]
 		if np.max(data['rejection'][sel]) > max_:
 			max_ = np.max(data['rejection'][sel])
 		if save_arr:
@@ -297,6 +311,7 @@ def ROC_plotter(taggerdict, min_eff = 0, max_eff = 1, linewidth = 1.4, pp = Fals
 		plt.plot(data['efficiency'][sel], 1-data['rejection'][sel], '-', label = r''+tagger, color = data['color'], linewidth=linewidth)
                 # find the entry in rejection matrix that corresponds to 50% efficiency
                 idx = (np.abs(data['efficiency'][sel]-0.5)).argmin()
+                #print 'index: ' + str(idx)
                 fpr_05 = data['rejection'][sel][idx]
                 rej = fpr_05#1-fpr_05
                 if rej != 1:
@@ -305,11 +320,13 @@ def ROC_plotter(taggerdict, min_eff = 0, max_eff = 1, linewidth = 1.4, pp = Fals
                     rejpow = -1
                 #print 'auc_score ' + roc_auc_score(data['efficiency'][sel], data['rejection'][sel])
                 print tagger
-                roc_auc = auc(data['rejection'][sel],data['efficiency'][sel])
-                print 'roc_auc ' + str(roc_auc)
+                #roc_auc = auc(data['rejection'][sel],data['efficiency'][sel])
+                #print 'roc_auc ' + str(roc_auc)
                 print 'rejection power: ' + str(rejpow)
-                if data['optimise'] == True:
-                    tagger_roc_auc = roc_auc
+                if True:
+                #if data['optimise'] == True:
+                    print 'setting rej power '
+                    #tagger_roc_auc = roc_auc
                     tagger_rejpow = rejpow
                     #hist = TH2D(tagger, tagger, 100, 0, 1, 100, 0, 1)
                     

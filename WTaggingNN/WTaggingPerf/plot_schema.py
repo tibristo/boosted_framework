@@ -57,7 +57,7 @@ def _get_data(schema):
 		print 'No matching Schema hash found. Loading from ROOT file.'
 		return _tree_to_array(schema, True)
 
-def generate_taggers(schema):
+def generate_taggers(schema, tagger_name='tagger'):
 	data = _get_data(schema)
 
 	taggers = {}
@@ -73,10 +73,10 @@ def generate_taggers(schema):
 				opt = specifications['optimise']
 			if schema.has_key('weightfiles') and schema['weightfiles'] == 'true':
 				add_tagger(specifications['name'], specifications['color'], 
-					   general_roc_weighted(data, predictions['label_predicted'], data[schema['weight']], 100, name='tagger'), taggers, opt)
+					   general_roc_weighted(data, predictions['label_predicted'], data[schema['weight']], 100, name=tagger_name), taggers, opt)
 			else:
 				add_tagger(specifications['name'], specifications['color'], 
-					   general_roc(data, predictions['label_predicted'], 100, name='tagger'), taggers, opt)#10000), taggers)
+					   general_roc(data, predictions['label_predicted'], 100, name=tagger_name), taggers, opt)#10000), taggers)
 
 
 	if schema.has_key('benchmarks'):
@@ -104,10 +104,10 @@ def plot_roc(dictionary, schema, name = None, min_eff = 0, max_eff = 1, logscale
 		savename = 'ROC_' + m.hexdigest() + '.pdf'
 	else:
 		savename = name
-	auc, roc = ROC_plotter(dictionary, min_eff = min_eff, max_eff = max_eff, linewidth=2.1, signal = schema['signal'], background = schema['background'], title = schema['title'], logscale = logscale, save_arr = save_arr, inputfile=savename)
+	rejection_power, roc = ROC_plotter(dictionary, min_eff = min_eff, max_eff = max_eff, linewidth=2.1, signal = schema['signal'], background = schema['background'], title = schema['title'], logscale = logscale, save_arr = save_arr, inputfile=savename)
 	
 	roc.savefig(savename)
-	return auc
+	return rejection_power
 
 
 
