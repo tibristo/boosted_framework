@@ -12,6 +12,7 @@ from ROOT import TH1F, TH2D, TCanvas, TFile, TNamed, gROOT
 from root_numpy import fill_hist
 import functions as fn
 gROOT.SetBatch(True)
+import os
 
 def data_load(filename):
     data = np.genfromtxt(filename, delimiter = ',', names = True)
@@ -332,7 +333,9 @@ def ROC_plotter(taggerdict, min_eff = 0, max_eff = 1, linewidth = 1.4, pp = Fals
                     
                     #matrix = np.vstack((data['efficiency'][sel],1-data['rejection'][sel])).T
                     #fill_hist(hist, matrix)
-                    fo = TFile.Open('ROC/AGILE_'+inputfile.replace('.pdf','')+'.root','RECREATE')
+                    if not os.path.exists('ROC_root'):
+                        os.makedirs('ROC_root')
+                    fo = TFile.Open('ROC_root/AGILE_'+inputfile.replace('.pdf','')+'.root','RECREATE')
                     data['roc_curve'].Write()
                     #hist.Write()
                     rej_str = 'rejection_power_'+str(rejpow)

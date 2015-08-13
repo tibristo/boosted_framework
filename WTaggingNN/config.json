@@ -7,13 +7,13 @@
             "type" : "INT",
             "size" : 1,
             "min"  : 20,
-            "max"  : 100
+            "max"  : 60
         },
         "sepochs" : {
             "type" : "INT",
             "size" : 1,
             "min"  : 40,
-            "max"  : 140
+            "max"  : 80
         },
         "momentum" : {
             "type" : "FLOAT",
@@ -30,8 +30,8 @@
         "log_learning" : {
             "type" : "FLOAT",
             "size" : 1,
-            "min"  : -10,
-            "max"  : 0
+            "min"  : -7,
+            "max"  : -2
         }
     }
 }

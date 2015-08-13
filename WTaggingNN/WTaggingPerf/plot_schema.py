@@ -101,7 +101,7 @@ def plot_roc(dictionary, schema, name = None, min_eff = 0, max_eff = 1, logscale
 	if name is None:
 		m = hashlib.sha1()
 		m.update(dictionary.__repr__())
-		savename = 'ROC_' + m.hexdigest() + '.pdf'
+		savename = 'ROC/ROC_' + m.hexdigest() + '.pdf'
 	else:
 		savename = name
 	rejection_power, roc = ROC_plotter(dictionary, min_eff = min_eff, max_eff = max_eff, linewidth=2.1, signal = schema['signal'], background = schema['background'], title = schema['title'], logscale = logscale, save_arr = save_arr, inputfile=savename)
