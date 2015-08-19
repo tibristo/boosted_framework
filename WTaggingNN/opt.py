@@ -32,14 +32,14 @@ def objective(filename_train, filename_test, tree, config, learning, momentum, r
         os.makedirs('/Disk/ecdf-nfs-ppe/atlas/users/tibristo/boosted_framework/WTaggingNN/output_config')
     save = '/Disk/ecdf-nfs-ppe/atlas/users/tibristo/boosted_framework/WTaggingNN/output_config/config-output-'+str(job_id)+'.yaml'
     args = ['/Disk/ecdf-nfs-ppe/atlas/users/tibristo/AGILEPack/AGILEPackTrainer','--file='+filename_train,'--tree='+tree,'--shuffle','--save='+str(save),'--config='+config,'--learning='+str(learning),'--momentum='+str(momentum),'--regularize='+str(regularize),'--uepochs='+str(uepochs),'--sepochs='+str(sepochs),'--batch=1',formula_out]
-    popen = subprocess.Popen(args, stdout=subprocess.PIPE)
-    lines_iter = iter(popen.stdout.readline,b"")
-    f_log = open('/Disk/ecdf-nfs-ppe/atlas/users/tibristo/db_logs/currentout.log','w')
-    for line in lines_iter:
-        f_log.write(line+'\n')
-        f_log.flush()
-        print line
-    f_log.close()
+    #popen = subprocess.Popen(args, stdout=subprocess.PIPE)
+    #lines_iter = iter(popen.stdout.readline,b"")
+    #f_log = open('/Disk/ecdf-nfs-ppe/atlas/users/tibristo/db_logs/currentout.log','w')
+    #for line in lines_iter:
+    #    f_log.write(line+'\n')
+    #    f_log.flush()
+    #    print line
+    #f_log.close()
     #popen.wait()
 
     outName = createOutYaml(save, job_id, filename_test)
@@ -49,8 +49,11 @@ def objective(filename_train, filename_test, tree, config, learning, momentum, r
     schema = yaml.load(f)
     
     taggers = ww.generate_taggers(schema)
+
+    # outName has the full path in it, so the string must be split on / first.
+    outName_spl = outName.split('/')[-1]
     
-    auc = ww.plot_roc(taggers, schema, 'ROC_plots_' + outName.replace('.yaml','') + '.pdf', save_arr = True, logscale=False)
+    auc = ww.plot_roc(taggers, schema, 'ROC_plots/ROC_plots_' + outName_spl.replace('.yaml','') + '.pdf', save_arr = True, logscale=False)
     # minimise this
     print auc
     return 1/auc
@@ -67,13 +70,13 @@ def main(job_id, params):
     #filename_test = filename+'persist/datatest_testroot_001.root'
     #filename_train = filename+'persist/datatrain_testroot_001.root'
 
-    filename_test=filename+'folds/AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_matchedM_loose_v2_500_1000_nomw_mergedtest_cv_001.root'
-    filename_train=filename+'folds/AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_matchedM_loose_v2_500_1000_nomw_mergedtrain_cv_001.root'
+    filename_test=filename+'folds/AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_matchedM_loose_v2_200_1000_mw_mergedtest_cv_001.root'
+    filename_train=filename+'folds/AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_matchedM_loose_v2_200_1000_mw_mergedtrain_cv_001.root'
     #filename_train = '/Disk/ecdf-nfs-ppe/atlas/users/tibristo/nnbosontagging/folds/AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_matchedL_ranged_v2_1000_1500_nomw_mergedtrain_cv_001.root'
     #filename_test = '/Disk/ecdf-nfs-ppe/atlas/users/tibristo/nnbosontagging/folds/AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_matchedL_ranged_v2_1000_1500_nomw_mergedtest_cv_001.root'
     #config = '/Disk/ecdf-nfs-ppe/atlas/users/tibristo/nnbosontagging/tim-config.yaml'
     config = '/Disk/ecdf-nfs-ppe/atlas/users/tibristo/boosted_framework/WTaggingNN/tim-config_full.yaml'
-    formula= 'label~*-thrustmin-thrustmaj-yfilt-angularity-foxwolfram20-tau21-pt-m-eta-phi-tauwta2-tauwta1-tau2-tau1-split12 | weight'
+    formula= 'label~*-thrustmin-thrustmaj-yfilt-angularity-foxwolfram20-tau21-pt-m-eta-phi-tauwta2-tauwta1-tau2-tau1| weight'
     #formula= 'label~*-ThrustMin-ThrustMaj-YFilt-Tau21-Dip12|weight'
     auc = objective(filename_train, filename_test, 'outputTree', config, exp(params['log_learning'][0]), params['momentum'][0], exp(params['log_regularize'][0]), params['uepochs'][0], params['sepochs'][0], formula, job_id)
     print 'Job_id %d' % job_id

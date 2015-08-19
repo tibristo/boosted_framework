@@ -10,28 +10,60 @@ from sklearn.cross_validation import ShuffleSplit, StratifiedKFold
 import os, sys, time
 import numpy.lib.recfunctions as nf
 from pprint import pprint
+import math
 from root_numpy import array2root
 
+def weightedMean(X, w):
+    sum_wx = 0.0
+    for i in range(len(X)):
+        sum_wx += w[i]*X[i]
+
+    sum_wx /= np.sum(w)
+    return sum_wx
+
+def weightedStd(X, w, u):
+    variance = 0.0
+    for i in range(len(X)):
+        variance += w[i]*(X[i]-u)**2
+    variance /= np.sum(w)
+
+    return math.sqrt(variance)
+
 #import cv_fold
-def persist_cv_splits(X, y, observers, n_cv_iter=5, test_size=0.25, name='data', prefix='folds/', suffix="_cv_%03d.root", random_state=None, scale=False):
+def persist_cv_splits(X, y, variables, observers, n_cv_iter=5, test_size=0.25, name='data', prefix='folds/', suffix="_cv_%03d.root", random_state=None, scale=False):
     """Materialize randomized train test splits of a dataset."""
     cv = StratifiedKFold(y,n_folds=n_cv_iter,shuffle=True)
     #cv = ShuffleSplit(X.shape[0], n_iter=n_cv_iter,
     #    test_size=test_size, random_state=random_state)
     cv_split_filenames = []
-    #scale the data
+    # normalise the weights, otherwise agilepack doesnt work
+    observers['weight'] = 1/np.sum(observers['weight'])
     
     for i, (train, test) in enumerate(cv):
         print ("iteration %03d" % i)
         # can't scale all the variables - we don't want to scale weights!
+        Xtrain_weighted = X[train]
+        Xtest_weighted = X[test]
         if scale:
-            scaler = StandardScaler()
-            #mean = X[train].mean()
-            #std = X[train].std()
-            #Xtrain = (X[train] - mean)/std
-            #Xtest = (X[test] - mean)/std
-            Xtrain = scaler.fit_transform(X[train])
-            Xtest = scaler.transform(X[test])
+            # the standardscaler does not seem to work on numpy structured arrays
+            # a quick fix, which is possibly the cleanest way, is to just loop through
+            # each variable and scale it manually.  I don't think this should differ from the StandardScaler()
+            # it is just more code.
+            Xtrain = X[train]#*observers['weight'][train]
+            Xtest = X[test]#*observers['weight'][test]
+
+            for v in variables:
+                mean = np.mean(X[v][train])
+                #weighted_mean = weightedMean(X[v][train], observers['weight'][train])
+                std = np.std(X[v][train])
+                #weighted_std = weightedStd(X[v][train], observers['weight'][train], weighted_mean)
+                Xtrain[v] = (Xtrain[v]-mean)/std
+                #Xtrain_weighted[v] = (Xtrain_weighted[v]-weighted_mean)/weighted_std
+                Xtest[v] = (Xtest[v]-mean)/std
+                #Xtest_weighted[v] = (Xtest_weighted[v]-weighted_mean)/weighted_std
+            #scaler = StandardScaler()
+            #Xtrain = scaler.fit_transform(X[train])
+            #Xtest = scaler.transform(X[test])
         else:
             Xtrain = X[train]
             Xtest = X[test]
@@ -41,6 +73,7 @@ def persist_cv_splits(X, y, observers, n_cv_iter=5, test_size=0.25, name='data',
         cv_split_train = os.path.abspath(cv_split_filename)
         cv_split_test = os.path.abspath(cv_split_filename.replace('train','test'))
 
+        # merge all of the training data, observers, labels and weights.
         cv_split_filenames.append([cv_split_train, cv_split_test])
         xtrain_o = [Xtrain,observers[train]]
         xtest_o = [Xtest,observers[test]]
@@ -53,6 +86,20 @@ def persist_cv_splits(X, y, observers, n_cv_iter=5, test_size=0.25, name='data',
         array2root(rectrain, cv_split_train, 'outputTree', 'recreate')
         rectest = nf.append_fields(merged_test, names='label', data=ytest, dtypes=np.int32,usemask=False)#, dtypes=int)#, usemask=False)
         array2root(rectest, cv_split_test, 'outputTree', 'recreate')
+
+        # now do the weighted ones
+        '''
+        xtrain_w = [Xtrain_weighted,observers[train]]
+        xtest_w = [Xtest_weighted,observers[test]]
+        merged_train_w = nf.merge_arrays(xtrain_w,flatten=True,usemask=True)
+        merged_test_w = nf.merge_arrays(xtest_w,flatten=True,usemask=True)
+        rectrain_w = nf.append_fields(merged_train_w, names='label', data=ytrain, dtypes=np.int32, usemask=False)#, dtypes=int)#, usemask=False)
+        #rec = nf.append_fields(X[train], 'label', y[train], usemask=False)
+        array2root(rectrain_w, cv_split_train.replace('train','train_w'), 'outputTree', 'recreate')
+        rectest_w = nf.append_fields(merged_test_w, names='label', data=ytest, dtypes=np.int32,usemask=False)#, dtypes=int)#, usemask=False)
+        array2root(rectest_w, cv_split_test.replace('test','test_w'), 'outputTree', 'recreate')
+        '''
+        
     return cv_split_filenames
 
 
@@ -70,7 +117,7 @@ def cross_validation(data,iterations, name='data'):
     #raw_input()
     #w = data['weight']
 
-    filenames = persist_cv_splits(X, y, observer_data, n_cv_iter=iterations, name=name, suffix="_cv_%03d.root", test_size=0.25, random_state=None, scale=False)
+    filenames = persist_cv_splits(X, y, variables, observer_data, n_cv_iter=iterations, name=name, suffix="_cv_%03d.root", test_size=0.25, random_state=None, scale=True)
     #all_parameters, all_tasks = grid_search(
      #   lb_view, model, filenames, params)
     return filenames
@@ -129,7 +176,7 @@ print os.getcwd()
 from collections import OrderedDict
 
 path = '/Disk/ecdf-nfs-ppe/atlas/users/tibristo/BosonTagging/csv/'
-algorithm = 'AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_matchedM_loose_v2_500_1000_nomw_merged'
+algorithm = 'AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_matchedM_loose_v2_200_1000_mw_merged'
 #name = sys.argv[1].replace('.csv','')
 #if name.find('/')!=-1:
 #    name = name[name.rfind('/')+1:]

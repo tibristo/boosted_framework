@@ -333,9 +333,12 @@ def ROC_plotter(taggerdict, min_eff = 0, max_eff = 1, linewidth = 1.4, pp = Fals
                     
                     #matrix = np.vstack((data['efficiency'][sel],1-data['rejection'][sel])).T
                     #fill_hist(hist, matrix)
+                    # remove any / from the file name
+                    inputfile_spl = inputfile.split('/')[-1]
                     if not os.path.exists('ROC_root'):
                         os.makedirs('ROC_root')
-                    fo = TFile.Open('ROC_root/AGILE_'+inputfile.replace('.pdf','')+'.root','RECREATE')
+                    fo = TFile.Open('ROC_root/AGILE_'+inputfile_spl.replace('.pdf','')+'.root','RECREATE')
+                    print 'inputfile: ' + inputfile
                     data['roc_curve'].Write()
                     #hist.Write()
                     rej_str = 'rejection_power_'+str(rejpow)
