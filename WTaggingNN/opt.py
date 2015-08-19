@@ -32,15 +32,15 @@ def objective(filename_train, filename_test, tree, config, learning, momentum, r
         os.makedirs('/Disk/ecdf-nfs-ppe/atlas/users/tibristo/boosted_framework/WTaggingNN/output_config')
     save = '/Disk/ecdf-nfs-ppe/atlas/users/tibristo/boosted_framework/WTaggingNN/output_config/config-output-'+str(job_id)+'.yaml'
     args = ['/Disk/ecdf-nfs-ppe/atlas/users/tibristo/AGILEPack/AGILEPackTrainer','--file='+filename_train,'--tree='+tree,'--shuffle','--save='+str(save),'--config='+config,'--learning='+str(learning),'--momentum='+str(momentum),'--regularize='+str(regularize),'--uepochs='+str(uepochs),'--sepochs='+str(sepochs),'--batch=1',formula_out]
-    #popen = subprocess.Popen(args, stdout=subprocess.PIPE)
-    #lines_iter = iter(popen.stdout.readline,b"")
+    popen = subprocess.Popen(args, stdout=subprocess.PIPE)
+    lines_iter = iter(popen.stdout.readline,b"")
     #f_log = open('/Disk/ecdf-nfs-ppe/atlas/users/tibristo/db_logs/currentout.log','w')
-    #for line in lines_iter:
+    for line in lines_iter:
     #    f_log.write(line+'\n')
     #    f_log.flush()
-    #    print line
+        print line
     #f_log.close()
-    #popen.wait()
+    popen.wait()
 
     outName = createOutYaml(save, job_id, filename_test)
     

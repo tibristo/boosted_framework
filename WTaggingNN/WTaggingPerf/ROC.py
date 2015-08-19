@@ -143,20 +143,7 @@ def general_roc(data, discriminant, bins = 2000, inverse=False, name=""):
         # this is easy to do as this is all stored in the tgrpah that gets returned from
         # the fn.RocCurve_SingleSided() method
         sig_eff, bkg_rej = fn.getEfficiencies(roc_graph)
-        #print 'sig_eff'
-        #print sig_eff
-	#bkd, b1 = np.histogram(discriminant[qcd_ind], discriminant_bins)
-	#t_efficiency = np.add.accumulate(sig[::-1]) / float(top_total)
-	#qcd_rejection = 1-(np.add.accumulate(bkd[::-1]) / float(qcd_total))
-        #if inverse:
-        #    qcd_rejection = 1/qcd_rejection
 
-	#return t_efficiency, qcd_rejection
-        #labels_w = data[:]['label']
-        
-        #fpr,tpr,_ = roc_curve(labels_w,discriminant)
-        #roc_auc = auc(fpr,tpr)
-        #return tpr, fpr, hist_sig, hist_bkg#, roc_auc
         return sig_eff, bkg_rej, hist_sig, hist_bkg, roc_graph
 
 
@@ -216,71 +203,8 @@ def general_roc_weighted(data, discriminant, weights, bins = 2000, inverse=False
         sig_eff, bkg_rej = fn.getEfficiencies(roc_graph)
 
             
-	#t_efficiency = np.add.accumulate(sig[::-1]) / float(top_total)
-	#qcd_rejection = 1-(np.add.accumulate(bkd[::-1]) / float(qcd_total))
-        #if inverse:
-        #    qcd_rejection = 1/qcd_rejection
 
-	#return t_efficiency, qcd_rejection
-        #fpr,tpr,_ = roc_curve(top, discriminant)        
-        #roc_auc = auc(fpr,tpr)
-        #return tpr, fpr, hist_sig, hist_bkg#, roc_auc
         return sig_eff, bkg_rej, hist_sig, hist_bkg, roc_graph
-
-
-
-def tagger_VI_roc(data, bins = 2000):
-	top = data[:]['label']
-
-	qcd_total = np.sum(top == 0)
-	top_total = np.sum(top == 1)
-
-	discriminant = data['fjet_Tau3'] / data['fjet_Tau2']
-
-	bincount = bins
-
-	top_ind = data[:]['label'] == 1
-	qcd_ind = data[:]['label'] == 0
-
-	d12_cut = ((data['fjet_SPLIT12'] > 40000))
-	t21_cut = (data['fjet_Tau2'] / data['fjet_Tau1'] > 0.4) & (data['fjet_Tau2'] / data['fjet_Tau1'] < 0.9)
-	discriminant_bins = np.linspace(np.min(discriminant[d12_cut & t21_cut]), np.max(discriminant[d12_cut & t21_cut]), bins)
-
-	sig, b1 = np.histogram(discriminant[top_ind & d12_cut & t21_cut], discriminant_bins)
-	bkd, b1 = np.histogram(discriminant[qcd_ind & d12_cut & t21_cut], discriminant_bins)
-
-	t_efficiency = np.add.accumulate(sig) / float(top_total)
-	qcd_rejection = 1 / (np.add.accumulate(bkd) / float(qcd_total))
-
-	return t_efficiency, qcd_rejection
-
-def tagger_VI_roc_weighted(data, weights, bins = 2000):
-	top = data[:]['label']
-
-	# qcd_total = np.sum(top == 0)
-	# top_total = np.sum(top == 1)
-
-	discriminant = data['fjet_Tau3'] / data['fjet_Tau2']
-
-	bincount = bins
-
-	top_ind = data[:]['label'] == 1
-	qcd_ind = data[:]['label'] == 0
-
-	qcd_total = np.sum(weights[qcd_ind])
-	top_total = np.sum(weights[top_ind])
-
-	d12_cut = ((data['fjet_SPLIT12'] > 40000))
-	t21_cut = (data['fjet_Tau2'] / data['fjet_Tau1'] > 0.4) & (data['fjet_Tau2'] / data['fjet_Tau1'] < 0.9)
-	discriminant_bins = np.linspace(np.min(discriminant[d12_cut & t21_cut]), np.max(discriminant[d12_cut & t21_cut]), bins)
-
-	sig, b1 = np.histogram(discriminant[top_ind & d12_cut & t21_cut], discriminant_bins, weights = weights[top_ind & d12_cut & t21_cut])
-	bkd, b1 = np.histogram(discriminant[qcd_ind & d12_cut & t21_cut], discriminant_bins, weights = weights[qcd_ind & d12_cut & t21_cut])
-
-	t_efficiency = np.add.accumulate(sig) / float(top_total)
-	qcd_rejection = 1 / (np.add.accumulate(bkd) / float(qcd_total))
-
-	return t_efficiency, qcd_rejection
 
 
 
@@ -309,12 +233,16 @@ def ROC_plotter(taggerdict, min_eff = 0, max_eff = 1, linewidth = 1.4, pp = Fals
 			ar[:, 1] = data['rejection'][sel]
 			np.savetxt(tagger+'_save.csv', ar, delimiter=',')
 
-		plt.plot(data['efficiency'][sel], 1-data['rejection'][sel], '-', label = r''+tagger, color = data['color'], linewidth=linewidth)
+		plt.plot(data['efficiency'][sel], data['rejection'][sel], '-', label = r''+tagger, color = data['color'], linewidth=linewidth)
                 # find the entry in rejection matrix that corresponds to 50% efficiency
                 idx = (np.abs(data['efficiency'][sel]-0.5)).argmin()
                 #print 'index: ' + str(idx)
                 fpr_05 = data['rejection'][sel][idx]
-                rej = fpr_05#1-fpr_05
+
+                # in order to have some consistency between TaggerTim.py, mva_tools.py and this
+                # we are going to use the fn.GetBGRej50() method from functions.py
+                #rej = fpr_05#1-fpr_05
+                rej = fn.GetBGRej50(data['roc_curve'])
                 if rej != 1:
                     rejpow = 1/(1-rej)
                 else:
@@ -362,8 +290,8 @@ def ROC_plotter(taggerdict, min_eff = 0, max_eff = 1, linewidth = 1.4, pp = Fals
 	if logscale == True:	
 		plt.ylim(1,10 ** 3)
 		ax.set_yscale('log')
-	ax.set_xlabel(r'$\epsilon_{t}$, W efficiency (' + signal + ')')
-	ax.set_ylabel(r"QCD ("+ background + ") rejection")
+	ax.set_xlabel(r'W efficiency')
+	ax.set_ylabel(r"QCD rejection (1-eff)")
 
 	plt.legend()
 	plt.title(r''+title + ': ' + str(rejpow))
