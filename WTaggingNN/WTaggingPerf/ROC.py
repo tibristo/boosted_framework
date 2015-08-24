@@ -119,6 +119,8 @@ def general_roc(data, discriminant, bins = 2000, inverse=False, name="", signal_
         else:
             job_id = ""
         model = me.modelEvaluation(fpr, tpr, thresholds, tagger_file, params, job_id, taggers, algorithm, score, train_file)
+        model.setSigEff(signal_eff)
+        model.setBkgEff(bkg_eff)
         model.setOutputPath('ROC_root')
         model.setOutputPrefix('AGILE_')
         model.setProbas(discriminant, top_ind, qcd_ind)

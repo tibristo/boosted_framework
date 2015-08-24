@@ -74,21 +74,21 @@ def generate_taggers(schema, tagger_name='tagger'):
                         tagger_name = specifications['name']
                         tagger_variables = net.inputs
                         algorithm = 'AntiKt10LCTopoTrimmedPtFrac5SmallR20'
-                        if specifications.has_key('algorithm'):
-                                algorithm = specifications['algorithm']
+                        if schema.has_key('algorithm'):
+                                algorithm = schema['algorithm']
                         
-                        if specifications.has_key('trainfile'):
-                                train_file = specifications['trainfile']
+                        if schema.has_key('trainfile'):
+                                train_file = schema['trainfile']
                         else:
                                 train_file = 'folds/AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_matchedM_loose_v2_200_1000_mw_mergedtrain_cv_001.root'
                         params = {'learning_rate': net.learning_rate, 'momentum':net.momentum, 'regularize':net.regularize}
                         print tagger_variables
-                        if specifications.has_key('signaleff'):
-                                sig_eff = float(specifications['signaleff'].strip())
+                        if schema.has_key('sigeff'):
+                                sig_eff = float(schema['sigeff'])
                         else:
                                 sig_eff=1.0
-                        if specifications.has_key('bkgeff'):
-                                bkg_eff = float(specifications['bkgeff'].strip())
+                        if schema.has_key('bkgeff'):
+                                bkg_eff = float(schema['bkgeff'])
                         else:
                                 bkg_eff=1.0
 			if specifications.has_key('optimise'):
