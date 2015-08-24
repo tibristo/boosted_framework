@@ -11,8 +11,10 @@ from sklearn.metrics import roc_curve, auc
 from ROOT import TH1F, TH2D, TCanvas, TFile, TNamed, gROOT
 from root_numpy import fill_hist
 import functions as fn
+import modelEvaluation as me
 gROOT.SetBatch(True)
 import os
+import sys
 
 def data_load(filename):
     data = np.genfromtxt(filename, delimiter = ',', names = True)
@@ -83,71 +85,7 @@ def pre_process(data):
 	#data = data[data['fjet_Tau3'] > -10]
 	return data
 
-def general_roc(data, discriminant, bins = 2000, inverse=False, name=""):
-    
-	top = data[:]['label']
-        
-	qcd_total = np.sum(top == 0)
-	top_total = np.sum(top == 1)
-
-	bincount = bins
-        
-	top_ind = data[:]['label'] == 1
-	qcd_ind = data[:]['label'] == 0
-        
-	discriminant_bins = np.linspace(np.min(discriminant), np.max(discriminant), bins)
-
-	sig, b1 = np.histogram(discriminant[top_ind], discriminant_bins)
-        
-        plt.clf()
-        plt.hist(discriminant[top_ind], alpha=0.5, bins=discriminant_bins, label='signal', normed=True)
-        plt.hist(discriminant[qcd_ind], alpha=0.5, bins=discriminant_bins, label='bkg', normed=True)
-        plt.legend(loc='upper right')
-        plt.title('discriminants')
-        #plt.show()
-        hist_bkg = TH1F("Background Discriminant","Discriminant",bins, np.min(discriminant), np.max(discriminant))
-        hist_sig = TH1F("Signal Discriminant","Discriminant",bins, np.min(discriminant), np.max(discriminant))
-        fill_hist(hist_bkg,discriminant[qcd_ind])
-
-        if hist_bkg.Integral() != 0:
-            hist_bkg.Scale(1/hist_bkg.Integral())
-        else:
-            print 'background integral is 0!!!'
-        fill_hist(hist_sig,discriminant[top_ind])
-        if hist_sig.Integral() != 0:
-            hist_sig.Scale(1/hist_sig.Integral())
-        else:
-            print 'signal integral is 0!!!'
-
-        hist_sig.SetLineColor(4)
-        hist_bkg.SetLineColor(2)
-        #hist_sig.SetFillColorAlpha(4, 0.5);
-        hist_sig.SetFillStyle(3004)
-        #hist_bkg.SetFillColorAlpha(2, 0.5);
-        hist_bkg.SetFillStyle(3005)
-        plt.savefig('disc_plots/discriminants'+name+'.png')
-        plt.clf()
-        
-
-        # find the median so that the correct ROC curve cut side is chosen.
-        sig_median = np.median(discriminant[top_ind])
-        bkg_median = np.median(discriminant[qcd_ind])
-        if sig_median > bkg_median:
-            roc_graph = fn.RocCurve_SingleSided(hist_sig, hist_bkg, 1, 1, 'R')
-        else:
-            roc_graph = fn.RocCurve_SingleSided(hist_sig, hist_bkg, 1, 1, 'L')
-
-
-        # the efficiency and rejection are dependent on the direction in which
-        # we calculate the ROC curve.  So now we need to find these values by hand.
-        # this is easy to do as this is all stored in the tgrpah that gets returned from
-        # the fn.RocCurve_SingleSided() method
-        sig_eff, bkg_rej = fn.getEfficiencies(roc_graph)
-
-        return sig_eff, bkg_rej, hist_sig, hist_bkg, roc_graph
-
-
-def general_roc_weighted(data, discriminant, weights, bins = 2000, inverse=False, name=""):
+def general_roc(data, discriminant, bins = 2000, inverse=False, name="", signal_eff=1.0, bkg_eff=1.0, variables = [], params=[], weights=[], tagger_file='', train_file = '', algorithm = ''):
 	top = data[:]['label']
 
 	# qcd_total = np.sum(top == 0)
@@ -156,55 +94,53 @@ def general_roc_weighted(data, discriminant, weights, bins = 2000, inverse=False
 
 	top_ind = data[:]['label'] == 1
 	qcd_ind = data[:]['label'] == 0
-	qcd_total = np.sum(weights[qcd_ind])
-	top_total = np.sum(weights[top_ind])
-	discriminant_bins = np.linspace(np.min(discriminant), np.max(discriminant), bins)
-        '''
-        plt.hist(discriminant[top_ind], alpha=0.5, bins=discriminant_bins, label='signal',weights=weights[top_ind])
-        plt.hist(discriminant[qcd_ind], alpha=0.5, bins=discriminant_bins, label='bkg',weights=weights[qcd_ind])
-        plt.legend(loc='upper right')
-        plt.title('discriminants_weighted')
-        #plt.show()
+        discriminant_bins = np.linspace(np.min(discriminant), np.max(discriminant), bins)
 
-        plt.savefig('discriminants_weighted'+name+'.png')
-        plt.clf()
-        '''
-	sig, b1 = np.histogram(discriminant[top_ind], discriminant_bins, weights = weights[top_ind])
-	bkd, b1 = np.histogram(discriminant[qcd_ind], discriminant_bins, weights = weights[qcd_ind])
+        # the score of the tagger we will define as the % correct classification when taking
+        # a cut at the median of the combined signal+background discriminant
+        # Accuracy is how many correctly classified signal AND background
+        median = np.median(discriminant)
+        top_disc = discriminant[top_ind]
+        qcd_disc = discriminant[qcd_ind]
+        sig_correct = top_disc[np.where(top_disc>=median)].shape[0]
+        sig_incorrect = top_disc[np.where(top_disc<median)].shape[0]
+        bkg_correct = qcd_disc[np.where(qcd_disc<median)].shape[0]
+        bkg_incorrect = qcd_disc[np.where(qcd_disc>=median)].shape[0]
+        score = float(sig_correct+bkg_correct)/float(discriminant.shape[0])
 
-        hist_bkg = TH1F("Background Discriminant","Discriminant",bins, np.min(discriminant), np.max(discriminant))
-        hist_sig = TH1F("Signal Discriminant","Discriminant",bins, np.min(discriminant), np.max(discriminant))
-        fill_hist(hist_bkg,discriminant[qcd_ind])
-        if hist_bkg.Integral() != 0:
-            hist_bkg.Scale(1/hist_bkg.Integral())
-        fill_hist(hist_sig,discriminant[top_ind])
-        if hist_sig.Integral() != 0:
-            hist_sig.Scale(1/hist_sig.Integral())
+        fpr,tpr,thresholds = roc_curve(top,discriminant)
 
-        hist_sig.SetLineColor(4)
-        hist_bkg.SetLineColor(2)
-        #hist_sig.SetFillColorAlpha(4, 0.5);
-        hist_sig.SetFillStyle(3004)
-        #hist_bkg.SetFillColorAlpha(2, 0.5);
-        hist_bkg.SetFillStyle(3005)
-
-        # find the median so that the correct ROC curve cut side is chosen.
-        sig_median = np.median(discriminant[top_ind])
-        bkg_median = np.median(discriminant[qcd_ind])
-        if sig_median > bkg_median:
-            roc_graph = fn.RocCurve_SingleSided(hist_sig, hist_bkg, 1, 1, 'R')
+        taggers = variables
+        # model could store the net, but it's easier to just say agile and then store the
+        # yaml filename
+        # job_id comes from the tagger_file name
+        if tagger_file != "":
+            job_id = tagger_file[tagger_file.rfind('/')+1:].replace('.yaml','')
         else:
-            roc_graph = fn.RocCurve_SingleSided(hist_sig, hist_bkg, 1, 1, 'L')
+            job_id = ""
+        model = me.modelEvaluation(fpr, tpr, thresholds, tagger_file, params, job_id, taggers, algorithm, score, train_file)
+        model.setOutputPath('ROC_root')
+        model.setOutputPrefix('AGILE_')
+        model.setProbas(discriminant, top_ind, qcd_ind)
+        model.toROOT()
+        print job_id
+        # now pickle the file
+        pickle_filename = 'evaluationObjects/'+job_id+'.pickle'
 
-        # the efficiency and rejection are dependent on the direction in which
-        # we calculate the ROC curve.  So now we need to find these values by hand.
-        # this is easy to do as this is all stored in the tgrpah that gets returned from
-        # the fn.RocCurve_SingleSided() method
-        sig_eff, bkg_rej = fn.getEfficiencies(roc_graph)
+        import pickle
+        try:
+            with open(pickle_filename,'w') as d:
+                pickle.dump(model,d)
+            d.close()
+        except:
+            msg = 'unable to dump ' + job_id+ ' object\n'
+            msg += str(sys.exc_info()[0])
+            with open(pickle_filename,'w') as d:
+                pickle.dump(msg, d)
+            d.close()
+            print msg
 
-            
-
-        return sig_eff, bkg_rej, hist_sig, hist_bkg, roc_graph
+        return model.ROC_sig_efficiency, model.ROC_bkg_rejection, model.hist_sig, model.hist_bkg, model.roc_graph
 
 
 
@@ -223,64 +159,29 @@ def ROC_plotter(taggerdict, min_eff = 0, max_eff = 1, linewidth = 1.4, pp = Fals
         tagger_rejpow = -1
 
 	for tagger, data in taggerdict.iteritems():
-		sel = (data['efficiency'] >= min_eff) & (data['efficiency'] <= max_eff)
-                #print data['efficiency'][sel]
-		if np.max(data['rejection'][sel]) > max_:
-			max_ = np.max(data['rejection'][sel])
-		if save_arr:
-			ar = np.zeros((data['rejection'][sel].shape[0], 2))
-			ar[:, 0] = data['efficiency'][sel]
-			ar[:, 1] = data['rejection'][sel]
-			np.savetxt(tagger+'_save.csv', ar, delimiter=',')
+            
+	    #sel = (data['efficiency'] >= min_eff) & (data['efficiency'] <= max_eff)
+            # if using sel, then add [sel] to the end of all data[whatever] to get data[whatever][sel]
+	    if np.max(data['rejection']) > max_:
+		max_ = np.max(data['rejection'])
+	    if save_arr:
+		ar = np.zeros((data['rejection'].shape[0], 2))
+		ar[:, 0] = data['efficiency']
+		ar[:, 1] = data['rejection']
+		np.savetxt(tagger+'_save.csv', ar, delimiter=',')
 
-		plt.plot(data['efficiency'][sel], data['rejection'][sel], '-', label = r''+tagger, color = data['color'], linewidth=linewidth)
-                # find the entry in rejection matrix that corresponds to 50% efficiency
-                idx = (np.abs(data['efficiency'][sel]-0.5)).argmin()
-                #print 'index: ' + str(idx)
-                fpr_05 = data['rejection'][sel][idx]
+	    plt.plot(data['efficiency'], data['rejection'], '-', label = r''+tagger, color = data['color'], linewidth=linewidth)
+            
+            # in order to have some consistency between TaggerTim.py, mva_tools.py and this
+            # we are going to use the fn.GetBGRej50() method from functions.py
+            rej = fn.GetBGRej50(data['roc_curve'])
+            if rej != 1:
+                rejpow = 1/(1-rej)
+            else:
+                rejpow = -1
 
-                # in order to have some consistency between TaggerTim.py, mva_tools.py and this
-                # we are going to use the fn.GetBGRej50() method from functions.py
-                #rej = fpr_05#1-fpr_05
-                rej = fn.GetBGRej50(data['roc_curve'])
-                if rej != 1:
-                    rejpow = 1/(1-rej)
-                else:
-                    rejpow = -1
-                #print 'auc_score ' + roc_auc_score(data['efficiency'][sel], data['rejection'][sel])
-                print tagger
-                #roc_auc = auc(data['rejection'][sel],data['efficiency'][sel])
-                #print 'roc_auc ' + str(roc_auc)
-                print 'rejection power: ' + str(rejpow)
-                if True:
-                #if data['optimise'] == True:
-                    print 'setting rej power '
-                    #tagger_roc_auc = roc_auc
-                    tagger_rejpow = rejpow
-                    #hist = TH2D(tagger, tagger, 100, 0, 1, 100, 0, 1)
-                    
-                    #matrix = np.vstack((data['efficiency'][sel],1-data['rejection'][sel])).T
-                    #fill_hist(hist, matrix)
-                    # remove any / from the file name
-                    inputfile_spl = inputfile.split('/')[-1]
-                    if not os.path.exists('ROC_root'):
-                        os.makedirs('ROC_root')
-                    fo = TFile.Open('ROC_root/AGILE_'+inputfile_spl.replace('.pdf','')+'.root','RECREATE')
-                    print 'inputfile: ' + inputfile
-                    data['roc_curve'].Write()
-                    #hist.Write()
-                    rej_str = 'rejection_power_'+str(rejpow)
-                    rej_n = TNamed(rej_str,rej_str)
-                    rej_n.Write()
-                    if not data['hist_sig'] is None:
-                        data['hist_sig'].Write()
-                        data['hist_bkg'].Write()
-                        c = TCanvas()
-                        data['hist_sig'].Draw('hist')
-                        data['hist_bkg'].Draw('histsame')
-                        c.Write()
-                    fo.Close()
-                #print 'AUC ' + str(np.trapz(1-data['rejection'][sel], data['efficiency'][sel]))
+            print 'rejection power: ' + str(rejpow)
+            tagger_rejpow = rejpow
 
 
 	ax = plt.subplot(1,1,1)

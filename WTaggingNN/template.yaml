@@ -6,7 +6,11 @@ sample:
 weightfiles: false
 weight: weight
 signal: "$W'"
+signaleff: 1.0
+bkgeff: 1.0
+algorithm: ALGORITHM
 background: QCD
+trainfile: TRAINFILE
 title: >
   W Tagging Efficiency vs. Rejection
 #benchmarks:

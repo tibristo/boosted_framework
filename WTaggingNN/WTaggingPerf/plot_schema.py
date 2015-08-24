@@ -68,15 +68,37 @@ def generate_taggers(schema, tagger_name='tagger'):
 			net = apy.NeuralNet()
 			net.load(taggerfile)
 			predictions = net.predict(data)[0]
+                        print net.predict(data)['label_predicted']
 			opt = 'false'
+                        # set the tagger_name to that given in the yaml
+                        tagger_name = specifications['name']
+                        tagger_variables = net.inputs
+                        algorithm = 'AntiKt10LCTopoTrimmedPtFrac5SmallR20'
+                        if specifications.has_key('algorithm'):
+                                algorithm = specifications['algorithm']
+                        
+                        if specifications.has_key('trainfile'):
+                                train_file = specifications['trainfile']
+                        else:
+                                train_file = 'folds/AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_matchedM_loose_v2_200_1000_mw_mergedtrain_cv_001.root'
+                        params = {'learning_rate': net.learning_rate, 'momentum':net.momentum, 'regularize':net.regularize}
+                        print tagger_variables
+                        if specifications.has_key('signaleff'):
+                                sig_eff = float(specifications['signaleff'].strip())
+                        else:
+                                sig_eff=1.0
+                        if specifications.has_key('bkgeff'):
+                                bkg_eff = float(specifications['bkgeff'].strip())
+                        else:
+                                bkg_eff=1.0
 			if specifications.has_key('optimise'):
 				opt = specifications['optimise']
 			if schema.has_key('weightfiles') and schema['weightfiles'] == 'true':
 				add_tagger(specifications['name'], specifications['color'], 
-					   general_roc_weighted(data, predictions['label_predicted'], data[schema['weight']], 100, name=tagger_name), taggers, opt)
+					   general_roc(data, predictions['label_predicted'], 100, name=tagger_name, signal_eff=sig_eff,bkg_eff=bkg_eff,variables=tagger_variables,params=params,weights=data[schema['weight']], tagger_file=taggerfile, train_file = train_file, algorithm=algorithm), taggers, opt)
 			else:
 				add_tagger(specifications['name'], specifications['color'], 
-					   general_roc(data, predictions['label_predicted'], 100, name=tagger_name), taggers, opt)#10000), taggers)
+					   general_roc(data, predictions['label_predicted'], 100, name=tagger_name, signal_eff=sig_eff,bkg_eff=bkg_eff,variables=tagger_variables,params=params, tagger_file=taggerfile,train_file=train_file, algorithm=algorithm), taggers, opt)#10000), taggers)
 
 
 	if schema.has_key('benchmarks'):

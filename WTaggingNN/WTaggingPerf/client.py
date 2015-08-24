@@ -175,6 +175,9 @@ class NeuralNet(object):
         self.binning = None
         self.outputs = None
         self.architecture = None
+        self.learning_rate = None
+        self.momentum = None
+        self.regularize = None
 
     def load(self, filename):
         '''
@@ -193,6 +196,12 @@ class NeuralNet(object):
         self.architecture = None
         with open(filename, 'r') as f:
             y = yaml.load(f.read())
+
+        if y.has_key('layer_0'):
+            self.learning_rate = float(y['network']['layer_0']['learning_rate'])
+            self.momentum = float(y['network']['layer_0']['momentum'])
+            self.regularize = float(y['network']['layer_0']['regularize'])
+            
         if y.has_key('branches'):
             self.branches = y['branches'].keys()
             self.has_branches = True

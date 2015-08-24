@@ -1,9 +1,9 @@
-# A number of tools for doing MVA analysis.
-# Includes:
-# Cross validation 
-# Grid search
-# Learning curves
-# Probability distributions
+# Tools for creating folds of data for cross validation
+# Persists the folds onto the disk
+# Can scale the data
+# Can plot the variables
+#
+
 import numpy as np
 from sklearn.preprocessing import StandardScaler
 from sklearn.cross_validation import ShuffleSplit, StratifiedKFold
@@ -38,7 +38,24 @@ def persist_cv_splits(X, y, variables, observers, n_cv_iter=5, test_size=0.25, n
     cv_split_filenames = []
     # normalise the weights, otherwise agilepack doesnt work
     observers['weight'] = 1/np.sum(observers['weight'])
+
+    all_means = {}
+    # create a scaled version of the full dataset to test on later
+    X_full = X.copy()
     
+    for v in variables:
+        mean = np.mean(X[v])
+        std = np.std(X[v])
+        all_means[v] = [mean]
+        X_full[v] = (X_full[v]-mean)/std
+
+    xfull_o = [X_full,observers]
+    merged_full = nf.merge_arrays(xfull_o,flatten=True,usemask=True)
+
+    recfull = nf.append_fields(merged_full, names='label', data=y, dtypes=np.int32, usemask=False)#, dtypes=int)#, usemask=False)
+    full_file = os.path.abspath(prefix+name + 'full.root')
+    array2root(recfull, full_file, 'outputTree', 'recreate')
+    return
     for i, (train, test) in enumerate(cv):
         print ("iteration %03d" % i)
         # can't scale all the variables - we don't want to scale weights!
@@ -54,6 +71,7 @@ def persist_cv_splits(X, y, variables, observers, n_cv_iter=5, test_size=0.25, n
 
             for v in variables:
                 mean = np.mean(X[v][train])
+                all_means[v].append(mean)
                 #weighted_mean = weightedMean(X[v][train], observers['weight'][train])
                 std = np.std(X[v][train])
                 #weighted_std = weightedStd(X[v][train], observers['weight'][train], weighted_mean)
@@ -99,7 +117,8 @@ def persist_cv_splits(X, y, variables, observers, n_cv_iter=5, test_size=0.25, n
         rectest_w = nf.append_fields(merged_test_w, names='label', data=ytest, dtypes=np.int32,usemask=False)#, dtypes=int)#, usemask=False)
         array2root(rectest_w, cv_split_test.replace('test','test_w'), 'outputTree', 'recreate')
         '''
-        
+
+    print all_means
     return cv_split_filenames
 
 
@@ -107,9 +126,11 @@ def cross_validation(data,iterations, name='data'):
     variables = list(data.dtype.names)
     variables.remove('label')
     # remove the variables that are "observers", ie that do not get used for training, or weights, since those must not be scaled.
-    observers = ['mc_event_weight','jet_antikt10truthtrimmedptfrac5smallr20_pt','jet_antikt10truthtrimmedptfrac5smallr20_eta','m','pt','eta','phi','evt_xsec','evt_filtereff','evt_nevts','weight','jet_camkt12truth_pt','jet_camkt12truth_eta','jet_camkt12truth_phi','jet_camkt12truth_m','jet_camkt12lctopo_pt','jet_camkt12lctopo_eta','jet_camkt12lctopo_phi','jet_camkt12lctopo_m']
+    observers = ['mc_event_weight','jet_antikt10truthtrimmedptfrac5smallr20_pt','jet_antikt10truthtrimmedptfrac5smallr20_eta','m','pt','eta','phi','evt_xsec','evt_filtereff','evt_nevts','weight','jet_camkt12truth_pt','jet_camkt12truth_eta','jet_camkt12truth_phi','jet_camkt12truth_m','jet_camkt12lctopo_pt','jet_camkt12lctopo_eta','jet_camkt12lctopo_phi','jet_camkt12lctopo_m','eff','averageintperxing']
     for o in observers:
-        variables.remove(o)
+        if o in variables:
+            variables.remove(o)
+    print variables
     X = data[variables]
     y = data['label']
     observer_data = data[observers]
@@ -181,8 +202,8 @@ algorithm = 'AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_matchedM_loose_v2_200_10
 #if name.find('/')!=-1:
 #    name = name[name.rfind('/')+1:]
 #print name
-name = algorithm
-cols = np.linspace(1,43,43,dtype=int)
+name = algorithm+'scale'
+cols = np.linspace(1,44,44,dtype=int)
 #data = np.recfromcsv(sys.argv[1],usecols=cols)
 data = np.recfromcsv(path+algorithm+'.csv',usecols=cols)
 

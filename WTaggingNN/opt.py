@@ -1,4 +1,4 @@
-def createOutYaml(config_out, job_id, filename_test):
+def createOutYaml(config_out, job_id, filename_test, filename_train, algorithm):
     import os
     if not os.path.exists('/Disk/ecdf-nfs-ppe/atlas/users/tibristo/boosted_framework/WTaggingNN/trained/'):
         os.makedirs('/Disk/ecdf-nfs-ppe/atlas/users/tibristo/boosted_framework/WTaggingNN/trained/')
@@ -12,15 +12,20 @@ def createOutYaml(config_out, job_id, filename_test):
             f_out.write(file_holder+'\n')
         elif l.find('TAGGERYAML') != -1:
             f_out.write(l.replace('TAGGERYAML', config_out))
+        elif l.find('TRAINFILE') != -1:
+            f_out.write('trainfile: '+filename_train+'\n')
+        elif.find('ALGORITHM') != -1:
+            f_out.write('algorithm: ' + algorithm+'\n')
         else:
             f_out.write(l)
-            
+    # store the training parameters and the train file in here as well!
+    # add algorithm name
     f_out.close()
     f_in.close()
     return outName
     
 
-def objective(filename_train, filename_test, tree, config, learning, momentum, regularize, uepochs, sepochs, formula, job_id):
+def objective(filename_train, filename_test, tree, config, learning, momentum, regularize, uepochs, sepochs, formula, job_id, algorithm):
     import subprocess
     import sys, time
     import WTaggingPerf as ww
@@ -42,7 +47,7 @@ def objective(filename_train, filename_test, tree, config, learning, momentum, r
     #f_log.close()
     popen.wait()
 
-    outName = createOutYaml(save, job_id, filename_test)
+    outName = createOutYaml(save, job_id, filename_test, filename_train, algorithm)
     
     f = open(outName, 'r')
 
@@ -78,7 +83,8 @@ def main(job_id, params):
     config = '/Disk/ecdf-nfs-ppe/atlas/users/tibristo/boosted_framework/WTaggingNN/tim-config_full.yaml'
     formula= 'label~*-thrustmin-thrustmaj-yfilt-angularity-foxwolfram20-tau21-pt-m-eta-phi-tauwta2-tauwta1-tau2-tau1| weight'
     #formula= 'label~*-ThrustMin-ThrustMaj-YFilt-Tau21-Dip12|weight'
-    auc = objective(filename_train, filename_test, 'outputTree', config, exp(params['log_learning'][0]), params['momentum'][0], exp(params['log_regularize'][0]), params['uepochs'][0], params['sepochs'][0], formula, job_id)
+    algorithm = 'AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_matchedM_loose_v2_200_1000_mw'
+    auc = objective(filename_train, filename_test, 'outputTree', config, exp(params['log_learning'][0]), params['momentum'][0], exp(params['log_regularize'][0]), params['uepochs'][0], params['sepochs'][0], formula, job_id, algorithm)
     print 'Job_id %d' % job_id
     print params
     print auc
