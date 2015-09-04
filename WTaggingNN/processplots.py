@@ -3,13 +3,15 @@ import sys
 import yaml
 import WTaggingPerf as tt
 import datetime
+import os
 
-
-if __name__ == '__main__':
-	filename = str(sys.argv[1])
-	f = open(filename, 'r')
+#if __name__ == '__main__':
+folder = str(sys.argv[1])
+files = [f for f in os.listdir(folder) if f.endswith('.yaml'))
+filenames = str(sys.argv[1])
+f = open(filename, 'r')
 	
-	schema = yaml.load(f)
+schema = yaml.load(f)
 
 	taggers = tt.generate_taggers(schema)
 

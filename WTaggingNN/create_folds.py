@@ -13,6 +13,36 @@ from pprint import pprint
 import math
 from root_numpy import array2root
 
+
+class scalerNN:
+    def __init__(self, variables, all_means, all_std, weighted_means = None, weighted_std = None):
+        '''
+        store the scaling for a sample.  Store the means and std deviations. Create standard scaler out of this too.
+        
+        keywords args:
+        variables --- the variables that the means and std correspond to. all_means/std[0] -> variables[0]
+        all_means --- np array of means(value) for variables(key)
+        all_std --- np array of std dev(value) for variables(key)
+        '''
+        import numpy as np
+        from sklearn.preprocessing import StandardScaler
+        self.means = all_means
+        self.std = all_std
+        self.variables = variables
+        
+        self.scaler = StandardScaler()
+        self.scaler.means_ = all_means
+        self.scaler.std_ = all_std
+
+        if weighted_means is not None:
+            self.weighted_means = weighted_means
+        if weighted_std is not None:
+            self.weighted_std = weighted_std
+        if weighted_std is not None and weighted_means is not None:
+            self.weighted_scaler = StandardScaler()
+            self.weighted_scaler.means_ = weighted_means
+            self.weighted_scaler.std_ = weighted_std
+
 def weightedMean(X, w):
     sum_wx = 0.0
     for i in range(len(X)):
@@ -29,8 +59,44 @@ def weightedStd(X, w, u):
 
     return math.sqrt(variance)
 
+def scaleSample(scaler_filename, filename='/Disk/ecdf-nfs-ppe/atlas/users/tibristo/BosonTagging/csv/AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_matchedM_loose_v2_200_1000_mw_merged.csv', prefix='folds/', name='data'):
+    '''
+    Method to standardise an input file with the mean and std from the training data (this is stored in the scaler file).
+    '''
+    #import scalerNN
+    import pickle
+    # check that the scaler pickle file exists
+    if not os.path.isfile(scaler_filename):
+        print 'Scaler file does not exist'
+        return
+    
+    # open the scaler pickle
+    with open(scaler_filename,'r') as p:
+        scaler = pickle.load(p)
+    # check the type to make sure it's not an error
+    if isinstance(scaler, basestring):
+        print "Scaler appears to be an error message"
+        print scaler
+        return
+    
+    cols = np.linspace(1,44,44,dtype=int)
+    #data = np.recfromcsv(sys.argv[1],usecols=cols)
+    X_full = np.recfromcsv(filename, usecols=cols)
+    # here we can pull the variables from the scaler and just scale those. the rest are all observers.
+    for i,v in enumerate(scaler.variables):
+        mean = scaler.means[i]
+        std = scaler.std[i]
+        X_full[v] = (X_full[v]-mean)/std
+
+    #recfull = nf.append_fields(X_full, names='label', data=y, dtypes=np.int32, usemask=False)#, dtypes=int)#, usemask=False)
+    full_file = os.path.abspath(prefix+name + 'full.root')
+    array2root(X_full, full_file, 'outputTree', 'recreate')    
+    
+
 #import cv_fold
 def persist_cv_splits(X, y, variables, observers, n_cv_iter=5, test_size=0.25, name='data', prefix='folds/', suffix="_cv_%03d.root", random_state=None, scale=False):
+    import pickle
+    #import scalerNN
     """Materialize randomized train test splits of a dataset."""
     cv = StratifiedKFold(y,n_folds=n_cv_iter,shuffle=True)
     #cv = ShuffleSplit(X.shape[0], n_iter=n_cv_iter,
@@ -39,23 +105,6 @@ def persist_cv_splits(X, y, variables, observers, n_cv_iter=5, test_size=0.25, n
     # normalise the weights, otherwise agilepack doesnt work
     observers['weight'] = 1/np.sum(observers['weight'])
 
-    all_means = {}
-    # create a scaled version of the full dataset to test on later
-    X_full = X.copy()
-    
-    for v in variables:
-        mean = np.mean(X[v])
-        std = np.std(X[v])
-        all_means[v] = [mean]
-        X_full[v] = (X_full[v]-mean)/std
-
-    xfull_o = [X_full,observers]
-    merged_full = nf.merge_arrays(xfull_o,flatten=True,usemask=True)
-
-    recfull = nf.append_fields(merged_full, names='label', data=y, dtypes=np.int32, usemask=False)#, dtypes=int)#, usemask=False)
-    full_file = os.path.abspath(prefix+name + 'full.root')
-    array2root(recfull, full_file, 'outputTree', 'recreate')
-    return
     for i, (train, test) in enumerate(cv):
         print ("iteration %03d" % i)
         # can't scale all the variables - we don't want to scale weights!
@@ -68,20 +117,37 @@ def persist_cv_splits(X, y, variables, observers, n_cv_iter=5, test_size=0.25, n
             # it is just more code.
             Xtrain = X[train]#*observers['weight'][train]
             Xtest = X[test]#*observers['weight'][test]
-
-            for v in variables:
+            curr_means = np.zeros(len(variables))
+            curr_std = np.ones(len(variables))
+            weighted_means = np.zeros(len(variables))
+            weighted_std = np.ones(len(variables))
+            for j,v in enumerate(variables):
                 mean = np.mean(X[v][train])
-                all_means[v].append(mean)
-                #weighted_mean = weightedMean(X[v][train], observers['weight'][train])
+                curr_means[j] = mean
+                weighted_mean = weightedMean(X[v][train], X['weight'][train])
+                weighted_means[j] = weighted_mean
                 std = np.std(X[v][train])
-                #weighted_std = weightedStd(X[v][train], observers['weight'][train], weighted_mean)
+                curr_std[j] = std
+                weighted_std[j] = weightedStd(X[v][train], X['weight'][train], weighted_mean)
                 Xtrain[v] = (Xtrain[v]-mean)/std
                 #Xtrain_weighted[v] = (Xtrain_weighted[v]-weighted_mean)/weighted_std
-                Xtest[v] = (Xtest[v]-mean)/std
+                Xtest[v] = (Xtest[v]-mean)/std                
                 #Xtest_weighted[v] = (Xtest_weighted[v]-weighted_mean)/weighted_std
-            #scaler = StandardScaler()
-            #Xtrain = scaler.fit_transform(X[train])
-            #Xtest = scaler.transform(X[test])
+            # create a scaler object to scale datasets later on
+            sc = scalerNN(variables, curr_means, curr_std, weighted_means, weighted_std)
+            # pickle the standardscaler and the variables for scaling
+            sc_filename = os.path.abspath(prefix+name+'train' + suffix % i)
+            sc_filename = sc_filename.replace('.root','_scaler.pkl')
+            try:
+                with open(sc_filename,'w') as d:
+                    pickle.dump(sc,d)
+                d.close()
+            except:
+                msg = 'unable to dump ' + sc_filename
+                msg+= str(sys.exc_info()[0])
+                with open(sc_filename,'w') as d:
+                    pickle.dump(msg,d)
+                d.close()
         else:
             Xtrain = X[train]
             Xtest = X[test]
@@ -97,12 +163,11 @@ def persist_cv_splits(X, y, variables, observers, n_cv_iter=5, test_size=0.25, n
         xtest_o = [Xtest,observers[test]]
         merged_train = nf.merge_arrays(xtrain_o,flatten=True,usemask=True)
         merged_test = nf.merge_arrays(xtest_o,flatten=True,usemask=True)
-        #print merged.shape
-        #print merged.dtype.names
-        rectrain = nf.append_fields(merged_train, names='label', data=ytrain, dtypes=np.int32, usemask=False)#, dtypes=int)#, usemask=False)
-        #rec = nf.append_fields(X[train], 'label', y[train], usemask=False)
+
+        # write this to a root file
+        rectrain = nf.append_fields(merged_train, names='label', data=ytrain, dtypes=np.int32, usemask=False)
         array2root(rectrain, cv_split_train, 'outputTree', 'recreate')
-        rectest = nf.append_fields(merged_test, names='label', data=ytest, dtypes=np.int32,usemask=False)#, dtypes=int)#, usemask=False)
+        rectest = nf.append_fields(merged_test, names='label', data=ytest, dtypes=np.int32,usemask=False)
         array2root(rectest, cv_split_test, 'outputTree', 'recreate')
 
         # now do the weighted ones
@@ -118,11 +183,10 @@ def persist_cv_splits(X, y, variables, observers, n_cv_iter=5, test_size=0.25, n
         array2root(rectest_w, cv_split_test.replace('test','test_w'), 'outputTree', 'recreate')
         '''
 
-    print all_means
     return cv_split_filenames
 
 
-def cross_validation(data,iterations, name='data'):
+def cross_validation(data,iterations, name='data', scale=True):
     variables = list(data.dtype.names)
     variables.remove('label')
     # remove the variables that are "observers", ie that do not get used for training, or weights, since those must not be scaled.
@@ -134,11 +198,8 @@ def cross_validation(data,iterations, name='data'):
     X = data[variables]
     y = data['label']
     observer_data = data[observers]
-    #print observer_data.dtype.names
-    #raw_input()
-    #w = data['weight']
 
-    filenames = persist_cv_splits(X, y, variables, observer_data, n_cv_iter=iterations, name=name, suffix="_cv_%03d.root", test_size=0.25, random_state=None, scale=True)
+    filenames = persist_cv_splits(X, y, variables, observer_data, n_cv_iter=iterations, name=name, suffix="_cv_%03d.root", test_size=0.25, random_state=None, scale=scale)
     #all_parameters, all_tasks = grid_search(
      #   lb_view, model, filenames, params)
     return filenames
@@ -180,8 +241,7 @@ def plotFiles(filenames, variables):
             bkg_max =  hist_sig.GetBinContent(hist_bkg.GetMaximumBin())
 
             leg.Clear()
-            leg.AddEntry(hist_sig, 'Signal','l'); leg.AddEntry(hist_bkg, 'Background','l')
-            
+            leg.AddEntry(hist_sig, 'Signal','l'); leg.AddEntry(hist_bkg, 'Background','l')            
 
             if sig_max > bkg_max:
                 hist_sig.Draw()
@@ -193,22 +253,34 @@ def plotFiles(filenames, variables):
             c.SaveAs(f[0].replace('.root','.png'))
             #maxX = max(hist_sig.GetXaxis().GetXmax(),hist_bkg.GetXaxis().GetXmax())
 
-print os.getcwd()
-from collections import OrderedDict
 
-path = '/Disk/ecdf-nfs-ppe/atlas/users/tibristo/BosonTagging/csv/'
-algorithm = 'AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_matchedM_loose_v2_200_1000_mw_merged'
-#name = sys.argv[1].replace('.csv','')
-#if name.find('/')!=-1:
-#    name = name[name.rfind('/')+1:]
-#print name
-name = algorithm+'scale'
-cols = np.linspace(1,44,44,dtype=int)
-#data = np.recfromcsv(sys.argv[1],usecols=cols)
-data = np.recfromcsv(path+algorithm+'.csv',usecols=cols)
+if __name__ == " __main__":
+    print os.getcwd()
+    from collections import OrderedDict
 
-filenames = cross_validation(data, 4, name)
+    path = '/Disk/ecdf-nfs-ppe/atlas/users/tibristo/BosonTagging/csv/'
+    #algorithm = 'AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_matchedM_loose_v2_200_1000_mw_merged'
+    algorithm = 'AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_matchedM_notcleaned_v2_200_1000_mw_merged'
 
-# plot all of the variables in these files
-variables = list(data.dtype.names)
-plotFiles(filenames, variables)
+    name = algorithm+'scale'
+    cols = np.linspace(1,44,44,dtype=int)
+
+    data = np.recfromcsv(path+algorithm+'.csv',usecols=cols)
+    scale = True
+    filenames = cross_validation(data, 4, name, scale)
+    #filenames = [f for f in os.listdir('folds') if f.find()]
+
+    #full_dataset = '/Disk/ecdf-nfs-ppe/atlas/users/tibristo/BosonTagging/csv/AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_matchedM_loose_v2_200_1000_mw_merged.csv'
+    full_dataset = '/Disk/ecdf-nfs-ppe/atlas/users/tibristo/BosonTagging/csv/AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_matchedM_notcleaned_v2_200_1000_mw_merged.csv'
+
+    if scale:
+        # create the full datasets scaled according to the different training samples:
+        for f in filenames:
+            # first entry in f is the train sample name, second is test
+            # get the scalerNN object for the train sample
+            scaler_fname = f[0].replace('.root', '_scaler.pkl')
+            scaleSample(scaler_fname, filename=full_dataset, prefix='folds/', name=algorithm+'_full_scaled')
+
+    # plot all of the variables in these files
+    #variables = list(data.dtype.names)
+    #plotFiles(filenames, variables)

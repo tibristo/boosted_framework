@@ -1,0 +1,21 @@
+branches:
+  ThrustMin: double
+  Dip12: double
+  Aplanarity: double
+  Sphericity: double
+  Tau21: double
+  ThrustMaj: double
+  EEC_C2_1: double
+  EEC_C2_2: double
+  SPLIT12: double
+  TauWTA2TauWTA1: double
+  EEC_D2_1: double
+  YFilt: double
+  Mu12: double
+  TauWTA2: double
+  ZCUT12: double
+  Tau2: double
+  EEC_D2_2: double
+  PlanarFlow: double
+  label: int
+  weight: double
