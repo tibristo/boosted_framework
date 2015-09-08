@@ -6,6 +6,7 @@ import root_numpy as rn
 import numpy as np
 import os
 import hashlib
+import copy
 
 def _tree_to_array(schema, to_npy = False):
 	print 'Loading File...'
@@ -57,6 +58,7 @@ def _get_data(schema):
 		print 'No matching Schema hash found. Loading from ROOT file.'
 		return _tree_to_array(schema, True)
 
+
 def generate_taggers(schema, tagger_name='tagger'):
 	data = _get_data(schema)
 
@@ -81,7 +83,22 @@ def generate_taggers(schema, tagger_name='tagger'):
                                 train_file = schema['trainfile']
                         else:
                                 train_file = 'folds/AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_matchedM_loose_v2_200_1000_mw_mergedtrain_cv_001.root'
+
+                        # can we get the predictions on the training file as well? it's probably
+                        # a good idea, especially for over/under fitting validation curves
+                        # copy the schema file and just set the filename
+                        schema_copy = copy.copy(schema)
+                        schema_copy['sample']['file'] = train_file
+                        data_train = _get_data(schema_copy)
+                	predictions_train = net.predict(data_train)[0]
+                        
                         params = {'learning_rate': net.learning_rate, 'momentum':net.momentum, 'regularize':net.regularize}
+                        # check if the schema has the epochs
+                        if schema.has_key('uepochs'):
+                                params['uepochs'] = int(schema['uepochs'])
+                        if schema.has_key('sepochs'):
+                                params['sepochs'] = int(schema['sepochs'])
+                                
                         print tagger_variables
                         if schema.has_key('sigeff'):
                                 sig_eff = float(schema['sigeff'])
@@ -95,10 +112,10 @@ def generate_taggers(schema, tagger_name='tagger'):
 				opt = specifications['optimise']
 			if schema.has_key('weightfiles') and schema['weightfiles'] == 'true':
 				add_tagger(specifications['name'], specifications['color'], 
-					   general_roc(data, predictions['label_predicted'], 100, name=tagger_name, signal_eff=sig_eff,bkg_eff=bkg_eff,variables=tagger_variables,params=params,weights=data[schema['weight']], tagger_file=taggerfile, train_file = train_file, algorithm=algorithm), taggers, opt)
+					   general_roc(data, predictions['label_predicted'], 100, name=tagger_name, signal_eff=sig_eff,bkg_eff=bkg_eff,variables=tagger_variables,params=params,weights=data[schema['weight']], tagger_file=taggerfile, train_file = train_file, algorithm=algorithm, data_train = data_train, discriminant_train=predictions_train['label_predicted']), taggers, opt)
 			else:
 				add_tagger(specifications['name'], specifications['color'], 
-					   general_roc(data, predictions['label_predicted'], 100, name=tagger_name, signal_eff=sig_eff,bkg_eff=bkg_eff,variables=tagger_variables,params=params, tagger_file=taggerfile,train_file=train_file, algorithm=algorithm), taggers, opt)#10000), taggers)
+					   general_roc(data, predictions['label_predicted'], 100, name=tagger_name, signal_eff=sig_eff,bkg_eff=bkg_eff,variables=tagger_variables,params=params, tagger_file=taggerfile,train_file=train_file, algorithm=algorithm, data_train = data_train, discriminant_train=predictions_train['label_predicted']), taggers, opt)#10000), taggers)
 
 
 	if schema.has_key('benchmarks'):

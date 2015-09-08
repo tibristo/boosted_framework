@@ -85,9 +85,48 @@ def pre_process(data):
 	#data = data[data['fjet_Tau3'] > -10]
 	return data
 
-def general_roc(data, discriminant, bins = 2000, inverse=False, name="", signal_eff=1.0, bkg_eff=1.0, variables = [], params=[], weights=[], tagger_file='', train_file = '', algorithm = ''):
+def score(top_ind, qcd_ind, discriminant):
+    # the score of the tagger we will define as the % correct classification when taking
+    # a cut at 50% signal efficiency
+    # Accuracy is how many correctly classified signal AND background
+    # what is the middle element's value in the signal array? that is the cut
+
+    sig_med = np.median(discriminant[top_ind])
+    bkg_med = np.median(discriminant[qcd_ind])
+    top_disc = discriminant[top_ind]
+    qcd_disc = discriminant[qcd_ind]
+    cut = top_disc[len(top_disc)/2]
+
+    sig_correct = float(top_disc[np.where(top_disc>=cut)].shape[0])
+    sig_incorrect = float(top_disc[np.where(top_disc<cut)].shape[0])
+    bkg_correct = float(qcd_disc[np.where(qcd_disc<cut)].shape[0])
+    bkg_incorrect = float(qcd_disc[np.where(qcd_disc>=cut)].shape[0])
+    # if signal median is less than bkg, swap signal and background
+    if sig_med < bkg_med:
+        sig_correct, bkg_correct = bkg_correct, sig_correct
+        sig_incorrect, bkg_incorrect = bkg_incorrect, sig_incorrect
+
+    score = float(sig_correct+bkg_correct)/float(discriminant.shape[0])
+    # calculate the different scoring metrics
+    # accuracy = correct/total -> doesn't discrim between signal and bkg
+    # precision = correct signal / (TP+FP)
+    # recall = TP/(TP+FN)
+    # f1 = 2*precion.recall/ (precision+recall)
+    # TP = 1 when 1, FP = 1 when 0, TN = 0 when 0, FN = 0 when 1
+    # we need to decide what our decision value is! what probability do we cut on?
+    # choose 50% since that is what we normally go for in the cut-based tagger
+    # for the bkg rejection power (at 50% signal)
+    accuracy = score
+    precision = float(sig_correct/(sig_correct+bkg_incorrect))
+    recall = float(sig_correct/(sig_correct+sig_incorrect))
+    f1 = 2*precision*recall/(precision+recall)
+    return cut, accuracy, precision, recall, f1
+    
+def general_roc(data, discriminant, bins = 2000, inverse=False, name="", signal_eff=1.0, bkg_eff=1.0, variables = [], params=[], weights=[], tagger_file='', train_file = '', algorithm = '', data_train = [], discriminant_train = []):
 	top = data[:]['label']
 
+        train_avail = len(data_train) > 0
+        
 	# qcd_total = np.sum(top == 0)
 	# top_total = np.sum(top == 1)
 	bincount = bins
@@ -95,21 +134,17 @@ def general_roc(data, discriminant, bins = 2000, inverse=False, name="", signal_
 	top_ind = data[:]['label'] == 1
 	qcd_ind = data[:]['label'] == 0
         discriminant_bins = np.linspace(np.min(discriminant), np.max(discriminant), bins)
-
-        # the score of the tagger we will define as the % correct classification when taking
-        # a cut at the median of the combined signal+background discriminant
-        # Accuracy is how many correctly classified signal AND background
-        median = np.median(discriminant)
-        top_disc = discriminant[top_ind]
-        qcd_disc = discriminant[qcd_ind]
-        sig_correct = top_disc[np.where(top_disc>=median)].shape[0]
-        sig_incorrect = top_disc[np.where(top_disc<median)].shape[0]
-        bkg_correct = qcd_disc[np.where(qcd_disc<median)].shape[0]
-        bkg_incorrect = qcd_disc[np.where(qcd_disc>=median)].shape[0]
-        score = float(sig_correct+bkg_correct)/float(discriminant.shape[0])
+        if train_avail:
+            top_ind_tr = data_train[:]['label'] == 1
+	    qcd_ind_tr = data_train[:]['label'] == 0
 
         fpr,tpr,thresholds = roc_curve(top,discriminant)
 
+        # get the scores for the validation
+        cut, accuracy, precision, recall, f1 = score(top_ind, qcd_ind, discriminant)
+        # get the scores for the training
+        if train_avail:
+            cut_tr, accuracy_tr, precision_tr, recall_tr, f1_tr = score(top_ind_tr, qcd_ind_tr, discriminant_train)
         taggers = variables
         # model could store the net, but it's easier to just say agile and then store the
         # yaml filename
@@ -118,7 +153,16 @@ def general_roc(data, discriminant, bins = 2000, inverse=False, name="", signal_
             job_id = tagger_file[tagger_file.rfind('/')+1:].replace('.yaml','')
         else:
             job_id = ""
-        model = me.modelEvaluation(fpr, tpr, thresholds, tagger_file, params, job_id, taggers, algorithm, score, train_file)
+        
+        model = me.modelEvaluation(fpr, tpr, thresholds, tagger_file, params, job_id, taggers, algorithm, accuracy, train_file)
+
+        # set the scores
+        model.setScores('test',accuracy=accuracy, precision=precision, recall=recall, f1=f1, cut=cut)
+        if train_avail:
+            model.setScores('train',accuracy=accuracy_tr, precision=precision_tr, recall=recall_tr, f1=f1_tr, cut=cut_tr)
+            model.setNumberTrainEvents(signal=len(top_ind_tr),background=len(qcd_ind_tr))
+            
+        # get the efficiencies
         model.setSigEff(signal_eff)
         model.setBkgEff(bkg_eff)
         model.setOutputPath('ROC_root')
