@@ -50,8 +50,9 @@ def objective(filename_train, filename_test, tree, config, learning, momentum, r
     save = '/Disk/ecdf-nfs-ppe/atlas/users/tibristo/boosted_framework/WTaggingNN/output_config/config-output-'+str(job_id)+'.yaml'
     args = ['/Disk/ecdf-nfs-ppe/atlas/users/tibristo/AGILEPack/AGILEPackTrainer','--file='+filename_train,'--tree='+tree,'--shuffle','--save='+str(save),'--config='+config,'--learning='+str(learning),'--momentum='+str(momentum),'--regularize='+str(regularize),'--uepochs='+str(uepochs),'--sepochs='+str(sepochs),'--batch=1',formula_out]
     popen = subprocess.Popen(args, stdout=subprocess.PIPE)
-    #lines_iter = iter(popen.stdout.readline,b"")
-    #for line in lines_iter:
+    lines_iter = iter(popen.stdout.readline,b"")
+    for line in lines_iter:
+        pass
     #    print line
     popen.wait()
     
@@ -125,14 +126,14 @@ def find_bests(all_parameters, all_tasks, n_top=5, save=False, bests_tag='cv'):
 
     
 def printProgress(tasks):
-    total = 0.0
+    total = len(tasks)
+    print total
     finished = 0.0
     for t in tasks:
-        total += 1.0
         if t.ready():
             finished+=1
             t.get()
-
+    print 'finished: ' + str(finished)
     return float(finished/total)
 
 
