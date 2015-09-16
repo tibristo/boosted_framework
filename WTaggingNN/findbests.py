@@ -18,9 +18,11 @@ def get_score(fname,directory=''):
 
 # get all config files to test
 files = [f for f in os.listdir(folder+'/') if os.path.isfile(folder+'/'+f) and f.startswith('config-trained-paramID')]
-#files = ['config-trained-33.yaml']
+
 # get the scores for each config
 scores = {}
+
+# remember that all cross validation folds have to be averaged to get the proper score!
 for f in files:
     print f
     scores[f] = get_score(f,folder+'/')
@@ -32,7 +34,7 @@ sorted_scores = sorted(scores.items(), key = operator.itemgetter(1) )
 print sorted_scores
 
 #save to file
-f_out = open('best_rejection_full_cv.txt','w')
+f_out = open('best_rejection_cv_full.txt','w')
 for s in range(len(sorted_scores)):
     f_out.write(sorted_scores[s][0] + ': ' + str(sorted_scores[s][1])+'\n')
 

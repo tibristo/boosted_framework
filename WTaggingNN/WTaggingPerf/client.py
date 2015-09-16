@@ -197,10 +197,10 @@ class NeuralNet(object):
         with open(filename, 'r') as f:
             y = yaml.load(f.read())
 
-        if y.has_key('layer_0'):
-            self.learning_rate = float(y['network']['layer_0']['learning_rate'])
+        if y['network'].has_key('layer_0'):
+            self.learning_rate = float(y['network']['layer_0']['learning'])
             self.momentum = float(y['network']['layer_0']['momentum'])
-            self.regularize = float(y['network']['layer_0']['regularize'])
+            self.regularize = float(y['network']['layer_0']['regularizer'])
             
         if y.has_key('branches'):
             self.branches = y['branches'].keys()

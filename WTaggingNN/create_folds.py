@@ -13,6 +13,8 @@ import numpy.lib.recfunctions as nf
 from pprint import pprint
 import math
 from root_numpy import array2root
+import ROOT
+import AtlasStyle as atlas
 
 
 class scalerNN:
@@ -192,6 +194,7 @@ def cross_validation(data,iterations, name='data', scale=True):
     variables.remove('label')
     # remove the variables that are "observers", ie that do not get used for training, or weights, since those must not be scaled.
     observers = ['mc_event_weight','jet_antikt10truthtrimmedptfrac5smallr20_pt','jet_antikt10truthtrimmedptfrac5smallr20_eta','m','pt','eta','phi','evt_xsec','evt_filtereff','evt_nevts','weight','jet_camkt12truth_pt','jet_camkt12truth_eta','jet_camkt12truth_phi','jet_camkt12truth_m','jet_camkt12lctopo_pt','jet_camkt12lctopo_eta','jet_camkt12lctopo_phi','jet_camkt12lctopo_m','eff','averageintperxing']
+    # this can be done in one line
     for o in observers:
         if o in variables:
             variables.remove(o)
@@ -201,14 +204,15 @@ def cross_validation(data,iterations, name='data', scale=True):
     observer_data = data[observers]
 
     filenames = persist_cv_splits(X, y, variables, observer_data, n_cv_iter=iterations, name=name, suffix="_cv_%03d.root", test_size=0.25, random_state=None, scale=scale)
-    #all_parameters, all_tasks = grid_search(
-     #   lb_view, model, filenames, params)
-    return filenames
-    #return all_parameters, all_tasks
 
-def plotFiles(filenames, variables, key):
-    import ROOT
+    return filenames
+
+
+def plotFiles(filenames, variables, key, weight_plots = False):
+
+
     ROOT.gROOT.SetBatch(True)
+    atlas.SetAtlasStyle()
     print filenames
 
     # check how many cv folds are represented in this list of files
@@ -225,6 +229,8 @@ def plotFiles(filenames, variables, key):
         event_counts[c] = {'Train':{},'Valid':{}}
     stats['Full'] = {}
     event_counts['Full'] = {}
+
+    weight_id = '_weighted' if weight_plots else ''
     
     for i, f in enumerate(filenames):
         # is this a test or train file?
@@ -240,7 +246,6 @@ def plotFiles(filenames, variables, key):
 
         #stats = open('fold_stats/'+f.replace('.root','.txt'),'a')
 
-        print f
         f_open = ROOT.TFile.Open('folds/'+f)
         tree = f_open.Get('outputTree')
         leg = ROOT.TLegend(0.8,0.55,0.9,0.65);leg.SetFillColor(ROOT.kWhite)
@@ -256,6 +261,7 @@ def plotFiles(filenames, variables, key):
             event_counts['Full'] = '{0:15}  {1:10} {2:14}{3:10}'.format(file_type,str(signal_events), str(bkg_events),str(total_events))
         # create histograms for each variable
         hists = {}
+
         for v in variables:
             # set up the names for the different histograms
             hist_full_name = v
@@ -270,8 +276,10 @@ def plotFiles(filenames, variables, key):
             
             # set up the variable expression that gets used in the Draw function
             varexp = v+">>"+hist_sig_name
-            # cut string to select signal only
-            cutstring = 'label==1'
+            # cut string to select signal only.  An additional string can be added here to apply the weights.
+            cutstring = '(label==1)'#*(weight)
+            if weight_plots:
+                cutstring += '*weight'
             # create the signal histogram and retrieve it
             tree.Draw(varexp, cutstring)
             hist_sig = ROOT.gDirectory.Get(hist_sig_name).Clone()
@@ -305,8 +313,8 @@ def plotFiles(filenames, variables, key):
             leg.AddEntry(hist_sig, 'Signal','l'); leg.AddEntry(hist_bkg, 'Background','l')            
 
             # find the maximum for when we draw them together on a single canvas
-            sig_max =  hist_sig.GetBinContent(hist_sig.GetMaximumBin())
-            bkg_max =  hist_sig.GetBinContent(hist_bkg.GetMaximumBin())
+            sig_max =  hist_sig.GetMaximum()
+            bkg_max =  hist_bkg.GetMaximum()
             max_val = max(sig_max, bkg_max)
             hist_sig.SetMaximum(max_val*1.1)
             hist_bkg.SetMaximum(max_val*1.1)
@@ -315,7 +323,7 @@ def plotFiles(filenames, variables, key):
             hist_bkg.Draw('same')
 
             leg.Draw('same')
-            c.SaveAs('fold_plots/'+key+'_'+cv_num+'_'+v+'.png')
+            c.SaveAs('fold_plots/'+key+'_'+cv_num+'_'+v+weight_id+'.png')
             # write the means and std to the stats file
             result = '{0:15}: {1:10} {2:10} {3:10} {4:10} {5:10}'.format(file_type+' '+cv_num,str(mean),str(std),str(sig_mean),str(sig_std),str(bkg_mean),str(bkg_std))
             # check that this variable has a dictionary entry
@@ -328,7 +336,7 @@ def plotFiles(filenames, variables, key):
                 
     # now all of the stats can be written to file!
     # first write the combined stats
-    combined_stats = open('fold_stats/combined_stats_'+key+'.txt','w')
+    combined_stats = open('fold_stats/combined_stats_'+key+weight_id+'.txt','w')
     combined_stats.write('{0:15}  {1:10} {2:14}{3:10}'.format('Sample','Signal','Background','Total')+'\n')
     combined_stats.write(event_counts['Full']+'\n')
     for cv in cv_nums:
@@ -346,8 +354,9 @@ def plotFiles(filenames, variables, key):
         combined_stats.write('\n')
     combined_stats.close()
     # write the stats for each cv fold
+
     for cv in cv_nums:
-        stats_file = open('fold_stats/'+key+'_'+cv+'.txt','w')
+        stats_file = open('fold_stats/'+key+'_'+cv+weight_id+'.txt','w')
         stats_file.write('{0:15}  {1:10} {2:14}{3:10}'.format('Sample','Signal','Background','Total')+'\n')
         stats_file.write(event_counts['Full']+'\n')
         stats_file.write(event_counts[cv]['Train']+'\n')
@@ -369,6 +378,7 @@ def main(args):
     parser.add_argument('folds', help = 'If the cv folds should be created')
     parser.add_argument('plot', help = 'If the cv folds should be plotted')
     parser.add_argument('--key', help = 'Key to be used for identifying files')
+    parser.add_argument('--weight', help = 'If the plots should be weighted')
     args = parser.parse_args()
     if not args.folds or not args.plot:
         print 'need to set if folds should be created! usage: python create_folds.py folds(true/false) plot(true/false) [--key=key]'
@@ -426,9 +436,10 @@ def main(args):
             print 'Filenames were defined, converting to a 1D list'
             filenames = [item for sublist in filenames for item in sublist]
         variables = ['aplanarity','eec_c2_1', 'eec_c2_2', 'split12','eec_d2_1', 'tauwta2']
-            
-        plotFiles(filenames, variables, key=key)        
+        weight = True if args.weight.lower() == 'true' else False
 
+        plotFiles(filenames, variables, key, weight_plots=weight)
+        
 if __name__ == "__main__":
     print ' running main '
     main(sys.argv)

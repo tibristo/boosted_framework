@@ -93,6 +93,7 @@ def generate_taggers(schema, tagger_name='tagger'):
                 	predictions_train = net.predict(data_train)[0]
                         
                         params = {'learning_rate': net.learning_rate, 'momentum':net.momentum, 'regularize':net.regularize}
+                        print params
                         # check if the schema has the epochs
                         if schema.has_key('uepochs'):
                                 params['uepochs'] = int(schema['uepochs'])
