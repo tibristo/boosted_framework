@@ -47,6 +47,9 @@ class scalerNN:
             self.weighted_scaler.std_ = weighted_std
 
 def weightedMean(X, w):
+    '''
+    Method to calculate the weighted mean of a sample
+    '''
     sum_wx = 0.0
     for i in range(len(X)):
         sum_wx += w[i]*X[i]
@@ -55,6 +58,9 @@ def weightedMean(X, w):
     return sum_wx
 
 def weightedStd(X, w, u):
+    '''
+    Method to calculate the weighted std of a sample
+    '''
     variance = 0.0
     for i in range(len(X)):
         variance += w[i]*(X[i]-u)**2
@@ -120,10 +126,12 @@ def persist_cv_splits(X, y, variables, observers, n_cv_iter=5, test_size=0.25, n
             # it is just more code.
             Xtrain = X[train]#*observers['weight'][train]
             Xtest = X[test]#*observers['weight'][test]
+            # set up some empty numpy arrays for the means and std
             curr_means = np.zeros(len(variables))
             curr_std = np.ones(len(variables))
             weighted_means = np.zeros(len(variables))
             weighted_std = np.ones(len(variables))
+            # calculate the stats for each variable of interest
             for j,v in enumerate(variables):
                 mean = np.mean(X[v][train])
                 curr_means[j] = mean
@@ -132,10 +140,11 @@ def persist_cv_splits(X, y, variables, observers, n_cv_iter=5, test_size=0.25, n
                 std = np.std(X[v][train])
                 curr_std[j] = std
                 weighted_std[j] = weightedStd(X[v][train], X['weight'][train], weighted_mean)
+
+                # do the standardisation
                 Xtrain[v] = (Xtrain[v]-mean)/std
-                #Xtrain_weighted[v] = (Xtrain_weighted[v]-weighted_mean)/weighted_std
-                Xtest[v] = (Xtest[v]-mean)/std                
-                #Xtest_weighted[v] = (Xtest_weighted[v]-weighted_mean)/weighted_std
+                Xtest[v] = (Xtest[v]-mean)/std
+                
             # create a scaler object to scale datasets later on
             sc = scalerNN(variables, curr_means, curr_std, weighted_means, weighted_std)
             # pickle the standardscaler and the variables for scaling
@@ -152,10 +161,12 @@ def persist_cv_splits(X, y, variables, observers, n_cv_iter=5, test_size=0.25, n
                     pickle.dump(msg,d)
                 d.close()
         else:
+            # if we're not standardising
             Xtrain = X[train]
             Xtest = X[test]
         ytrain = y[train]
         ytest = y[test]
+        # output file names
         cv_split_filename = prefix+name + 'train' + suffix % i
         cv_split_train = os.path.abspath(cv_split_filename)
         cv_split_test = os.path.abspath(cv_split_filename.replace('train','test'))
@@ -190,7 +201,9 @@ def persist_cv_splits(X, y, variables, observers, n_cv_iter=5, test_size=0.25, n
 
 
 def cross_validation(data,iterations, name='data', scale=True):
+    # name of all variables in the dataset
     variables = list(data.dtype.names)
+    # remove the ones we do not want to standardist
     variables.remove('label')
     # remove the variables that are "observers", ie that do not get used for training, or weights, since those must not be scaled.
     observers = ['mc_event_weight','jet_antikt10truthtrimmedptfrac5smallr20_pt','jet_antikt10truthtrimmedptfrac5smallr20_eta','m','pt','eta','phi','evt_xsec','evt_filtereff','evt_nevts','weight','jet_camkt12truth_pt','jet_camkt12truth_eta','jet_camkt12truth_phi','jet_camkt12truth_m','jet_camkt12lctopo_pt','jet_camkt12lctopo_eta','jet_camkt12lctopo_phi','jet_camkt12lctopo_m','eff','averageintperxing']
@@ -199,17 +212,21 @@ def cross_validation(data,iterations, name='data', scale=True):
         if o in variables:
             variables.remove(o)
     print variables
+    # Get X, which is all training/ testing variables
     X = data[variables]
+    # target variable
     y = data['label']
+    # variables that are not standardised
     observer_data = data[observers]
 
+    # create the folds
     filenames = persist_cv_splits(X, y, variables, observer_data, n_cv_iter=iterations, name=name, suffix="_cv_%03d.root", test_size=0.25, random_state=None, scale=scale)
 
     return filenames
 
 
 def plotFiles(filenames, variables, key, weight_plots = False):
-
+    # plot a bunch of files and get stats of variables
 
     ROOT.gROOT.SetBatch(True)
     atlas.SetAtlasStyle()
@@ -227,9 +244,11 @@ def plotFiles(filenames, variables, key, weight_plots = False):
     for c in cv_nums:
         stats[c] = {'Train':{},'Valid':{}}
         event_counts[c] = {'Train':{},'Valid':{}}
+    # dict for the stats of the full dataset
     stats['Full'] = {}
     event_counts['Full'] = {}
 
+    # add this to the end of the filenames to differentiate between weighted and not weighted
     weight_id = '_weighted' if weight_plots else ''
     
     for i, f in enumerate(filenames):
@@ -244,8 +263,7 @@ def plotFiles(filenames, variables, key, weight_plots = False):
         if file_type != 'Full':
             cv_num = 'cv_'+f.split('_')[-1].replace('.root','')
 
-        #stats = open('fold_stats/'+f.replace('.root','.txt'),'a')
-
+        # open the file and get the tree
         f_open = ROOT.TFile.Open('folds/'+f)
         tree = f_open.Get('outputTree')
         leg = ROOT.TLegend(0.8,0.55,0.9,0.65);leg.SetFillColor(ROOT.kWhite)
@@ -254,11 +272,14 @@ def plotFiles(filenames, variables, key, weight_plots = False):
         total_events = tree.GetEntries()
         signal_events = tree.GetEntries("label==1")
         bkg_events = tree.GetEntries("label==0")
-        #event_counts('{0:15}  {1:10} {2:14}{3:10}'.format('Sample','Signal','Background','Total')+'\n')
+
+        # this is the full dataset
         if cv_num != '':
             event_counts[cv_num][file_type] = '{0:15}  {1:10} {2:14}{3:10}'.format(file_type+' ' + cv_num,str(signal_events), str(bkg_events),str(total_events))
         else:
+            # this is a cv split
             event_counts['Full'] = '{0:15}  {1:10} {2:14}{3:10}'.format(file_type,str(signal_events), str(bkg_events),str(total_events))
+            
         # create histograms for each variable
         hists = {}
 
@@ -270,6 +291,7 @@ def plotFiles(filenames, variables, key, weight_plots = False):
 
             # first get the full histogram to get an idea of the combined mean and rms
             tree.Draw(v+'>>'+v)
+            # pull from the global space
             hist_full = ROOT.gDirectory.Get(hist_full_name).Clone()
             mean = '{0:.4f}'.format(float(hist_full.GetMean()))
             std = '{0:.4f}'.format(float(hist_full.GetRMS()))
@@ -295,7 +317,7 @@ def plotFiles(filenames, variables, key, weight_plots = False):
             hist_sig.GetXaxis().SetTitle(v)
             # now get the background histogram
             tree.Draw(varexp.replace('sig','bkg'),cutstring.replace('1','0'))
-            hist_bkg = ROOT.gDirectory.Get(hist_bkg_name).Clone()
+            hist_bkg = ROOT.gDirectory.Get(hist_bkg_name).Clone() # pull from global
             # stats
             bkg_mean = '{0:.4f}'.format(float(hist_sig.GetMean()))
             bkg_std = '{0:.4f}'.format(float(hist_sig.GetRMS()))
@@ -329,9 +351,9 @@ def plotFiles(filenames, variables, key, weight_plots = False):
             # check that this variable has a dictionary entry
             #if v not in stats[cv_num][file_type].keys():
             #stats[cv_num][file_type][v] = {}
-            if cv_num != '':
+            if cv_num != '': # full dataset
                 stats[cv_num][file_type][v] = result
-            else:
+            else: # cv split
                 stats['Full'][v] = result
                 
     # now all of the stats can be written to file!
@@ -339,10 +361,12 @@ def plotFiles(filenames, variables, key, weight_plots = False):
     combined_stats = open('fold_stats/combined_stats_'+key+weight_id+'.txt','w')
     combined_stats.write('{0:15}  {1:10} {2:14}{3:10}'.format('Sample','Signal','Background','Total')+'\n')
     combined_stats.write(event_counts['Full']+'\n')
+    # write out all of the cv splits
     for cv in cv_nums:
         for f in ['Train','Valid']:
             combined_stats.write(event_counts[cv][f]+'\n')
     combined_stats.write('\n'+'\n')
+    # now start doing the variables
     combined_stats.write('\n{0:15}: {1:10} {2:10} {3:10} {4:10} {5:10}'.format('Variable','Mean','Std','Mean Sig','Std Sig','Mean Bkg','Std Bkg')+'\n\n')
 
     for v in variables:
@@ -353,8 +377,8 @@ def plotFiles(filenames, variables, key, weight_plots = False):
             combined_stats.write(stats[c]['Valid'][v]+'\n')
         combined_stats.write('\n')
     combined_stats.close()
+    
     # write the stats for each cv fold
-
     for cv in cv_nums:
         stats_file = open('fold_stats/'+key+'_'+cv+weight_id+'.txt','w')
         stats_file.write('{0:15}  {1:10} {2:14}{3:10}'.format('Sample','Signal','Background','Total')+'\n')
@@ -363,6 +387,7 @@ def plotFiles(filenames, variables, key, weight_plots = False):
         stats_file.write(event_counts[cv]['Valid']+'\n')
 
         stats_file.write('\n{0:15}: {1:10} {2:10} {3:10} {4:10} {5:10}'.format('Variable','Mean','Std','Mean Sig','Std Sig','Mean Bkg','Std Bkg')+'\n\n')
+        # now write each variable
         for v in variables:
             stats_file.write(v+'\n')
             stats_file.write(stats['Full'][v]+'\n')
@@ -372,38 +397,49 @@ def plotFiles(filenames, variables, key, weight_plots = False):
         stats_file.close()
 
 def main(args):
+    # print the current directory
     print os.getcwd()
     from collections import OrderedDict
+    # set up the arguments parser
     parser = argparse.ArgumentParser(description='Plot some variables or create cv folds.')
     parser.add_argument('folds', help = 'If the cv folds should be created')
     parser.add_argument('plot', help = 'If the cv folds should be plotted')
     parser.add_argument('--key', help = 'Key to be used for identifying files')
     parser.add_argument('--weight', help = 'If the plots should be weighted')
+    # parse args
     args = parser.parse_args()
+    
     if not args.folds or not args.plot:
         print 'need to set if folds should be created! usage: python create_folds.py folds(true/false) plot(true/false) [--key=key]'
         sys.exit(0)
 
+    # this is the default path
     path = '/Disk/ecdf-nfs-ppe/atlas/users/tibristo/BosonTagging/csv/'
     #algorithm = 'AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_matchedM_loose_v2_200_1000_mw_merged'
+    # set the name of the algorithm (this is part of the filename)
     algorithm = 'AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_matchedM_notcleaned_v2_200_1000_mw_merged'
 
-    name = algorithm+'scale'
+    name = algorithm+'scale' # use this if we want to name the output file something different
+    # set up the cols which get used for creating a dataframe from csv
     cols = np.linspace(1,44,44,dtype=int)
 
 
     #['mc_event_weight', 'jet_antikt10truthtrimmedptfrac5smallr20_pt', 'jet_antikt10truthtrimmedptfrac5smallr20_eta', 'aplanarity', 'thrustmin', 'tau1', 'sphericity', 'm', 'foxwolfram20', 'tau21', 'thrustmaj', 'eec_c2_1', 'pt', 'eec_c2_2', 'dip12', 'split12', 'phi', 'tauwta2tauwta1', 'eec_d2_1', 'yfilt', 'mu12', 'tauwta2', 'zcut12', 'angularity', 'tau2', 'eec_d2_2', 'eta', 'tauwta1', 'planarflow', 'averageintperxing', 'evt_xsec', 'evt_filtereff', 'evt_nevts', 'jet_camkt12truth_pt', 'jet_camkt12truth_eta', 'jet_camkt12truth_phi', 'jet_camkt12truth_m', 'jet_camkt12lctopo_pt', 'jet_camkt12lctopo_eta', 'jet_camkt12lctopo_phi', 'jet_camkt12lctopo_m', 'weight', 'eff', 'label']
 
+    # if we want to create the folds
     if args.folds.lower() == 'true':
+        # read in the data as a numpy recarray
         data = np.recfromcsv(path+algorithm+'.csv',usecols=cols)
+        # get the names of the variables in the recarray
         variables = list(data.dtype.names)
     
         print 'Creating folds'
+        # are we standardising the data?
         scale = True
+        # the cross validation method will call the persists_cv method and create the folds
         filenames = cross_validation(data, 4, name, scale)
-        #filenames = [f for f in os.listdir('folds') if f.find()]
-        
         #full_dataset = '/Disk/ecdf-nfs-ppe/atlas/users/tibristo/BosonTagging/csv/AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_matchedM_loose_v2_200_1000_mw_merged.csv'
+        # name of the full dataset which is used for the cv splits
         full_dataset = '/Disk/ecdf-nfs-ppe/atlas/users/tibristo/BosonTagging/csv/AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_matchedM_notcleaned_v2_200_1000_mw_merged.csv'
 
         if scale:
@@ -411,7 +447,9 @@ def main(args):
             for f in filenames:
                 # first entry in f is the train sample name, second is test
                 # get the scalerNN object for the train sample
+                # scalerNN saves the values we used to do the standardisation
                 scaler_fname = f[0].replace('.root', '_scaler.pkl')
+                # apply the standardisation to the dataset
                 scaleSample(scaler_fname, filename=full_dataset, prefix='folds/', name=algorithm+'_full_scaled')
     else:
         print 'Not creating folds'        
@@ -422,6 +460,7 @@ def main(args):
     
     # plot all of the variables in these files
     if args.plot.lower() == 'true':
+        # key to be used for finding the correct files
         key = '13tev_matchedM_loose_v2_200_1000_mw'
         if args.key:
             key = args.key
@@ -435,6 +474,7 @@ def main(args):
         else:
             print 'Filenames were defined, converting to a 1D list'
             filenames = [item for sublist in filenames for item in sublist]
+        # the variables we're interested in
         variables = ['aplanarity','eec_c2_1', 'eec_c2_2', 'split12','eec_d2_1', 'tauwta2']
         weight = True if args.weight.lower() == 'true' else False
 

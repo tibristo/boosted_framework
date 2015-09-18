@@ -188,12 +188,6 @@ def runCV():
         ('sepochs',np.linspace(40, 80, 2, dtype=np.int))
     ])
 
-    #from IPython.parallel import Client
-
-    #client = Client()
-    #with client[:].sync_imports():
-    #lb_view = client.load_balanced_view()
-
     # key to look for in the filenames
     key = 'matchedM_loose_v2_200_1000_mw'
     # output file id
@@ -239,10 +233,6 @@ def runCV():
         time.sleep(10)
         prog = printProgress(pool_results)
         print "progress: " + str(prog)
-        #pprint(find_bests(allparms,alltasks))
-
-
-    #pprint(find_bests(allparms,alltasks,len(allparms), True, test_case))
 
 
 if __name__=="__main__":
