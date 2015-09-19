@@ -225,7 +225,7 @@ def cross_validation(data,iterations, name='data', scale=True):
     return filenames
 
 
-def plotFiles(filenames, variables, key, weight_plots = False):
+def plotFiles(filenames, variables, key, weight_plots = False, plot_dict = {}, tex_dict = {}):
     # plot a bunch of files and get stats of variables
 
     ROOT.gROOT.SetBatch(True)
@@ -340,12 +340,22 @@ def plotFiles(filenames, variables, key, weight_plots = False):
             max_val = max(sig_max, bkg_max)
             hist_sig.SetMaximum(max_val*1.1)
             hist_bkg.SetMaximum(max_val*1.1)
+
+            if v.strip() in plot_dict.keys():
+                hist_sig.GetXaxis().SetTitle(plot_dict[v])
+                hist_bkg.GetXaxis().SetTitle(plot_dict[v])
+                fnum = 'Full' if cv_num == '' else cv_num
+                hist_sig.SetTitle('Fold ' +fnum+': ' + plot_dict[v])
+                hist_bkg.SetTitle('Fold '+fnum + ': '+plot_dict[v])
             
             hist_sig.Draw()
             hist_bkg.Draw('same')
 
             leg.Draw('same')
-            c.SaveAs('fold_plots/'+key+'_'+cv_num+'_'+v+weight_id+'.png')
+            if cv_num == '':
+                c.SaveAs('fold_plots/'+key+'_Full_'+v+weight_id+'.png')
+            else:
+                c.SaveAs('fold_plots/'+key+'_Full_'+v+weight_id+'.png')
             # write the means and std to the stats file
             result = '{0:15}: {1:10} {2:10} {3:10} {4:10} {5:10}'.format(file_type+' '+cv_num,str(mean),str(std),str(sig_mean),str(sig_std),str(bkg_mean),str(bkg_std))
             # check that this variable has a dictionary entry
@@ -370,7 +380,10 @@ def plotFiles(filenames, variables, key, weight_plots = False):
     combined_stats.write('\n{0:15}: {1:10} {2:10} {3:10} {4:10} {5:10}'.format('Variable','Mean','Std','Mean Sig','Std Sig','Mean Bkg','Std Bkg')+'\n\n')
 
     for v in variables:
-        combined_stats.write(v+'\n')
+        if v.strip() in tex_dict.keys():
+            combined_stats.write(tex_dict[v]+'\n')
+        else:
+            combined_stats.write(v+'\n')
         combined_stats.write(stats['Full'][v]+'\n')
         for c in cv_nums:
             combined_stats.write(stats[c]['Train'][v]+'\n')
@@ -389,7 +402,10 @@ def plotFiles(filenames, variables, key, weight_plots = False):
         stats_file.write('\n{0:15}: {1:10} {2:10} {3:10} {4:10} {5:10}'.format('Variable','Mean','Std','Mean Sig','Std Sig','Mean Bkg','Std Bkg')+'\n\n')
         # now write each variable
         for v in variables:
-            stats_file.write(v+'\n')
+            if v.strip() in tex_dict.keys():
+                stats_file.write(tex_dict[v]+'\n')
+            else:
+                stats_file.write(v+'\n')
             stats_file.write(stats['Full'][v]+'\n')
             stats_file.write(stats[cv]['Train'][v]+'\n')
             stats_file.write(stats[cv]['Valid'][v]+'\n')
@@ -474,11 +490,13 @@ def main(args):
         else:
             print 'Filenames were defined, converting to a 1D list'
             filenames = [item for sublist in filenames for item in sublist]
-        # the variables we're interested in
-        variables = ['aplanarity','eec_c2_1', 'eec_c2_2', 'split12','eec_d2_1', 'tauwta2']
+        # the variables we're interested in                  
+        variables = ['aplanarity','eec_c2_1', 'eec_c2_2', 'split12','eec_d2_1', 'eec_d2_2', 'tauwta2tauwta1','zcut12','sphericity','mu12','planarflow']
+        plot_dict = {'tauwta2tauwta1':"#tau^{WTA}_{2}/#tau_{WTA}_{1}",'eec_c2_1':"C^{(#beta=1)}_{2}",'eec_c2_2':"C^{(#beta=2)}_{2}",'eec_d2_1':"D^{(#beta=1)}_{2}",'eec_d2_2':"D^{(#beta=2)}_{2}", 'split12':"#sqrt{d_{12}}",'aplanarity':"#it{A}",'zcut12':"#sqrt{z_{12}}",'sphericity':"#it{S}",'planarflow':"#it{P}"}
+        tex_dict = {'tauwta2tauwta1':r"$\tau^{WTA}_{2}/\tau_{WTA}_{1}$",'eec_c2_1':r"$C^{(\beta=1)}_{2}$",'eec_c2_2':r"$C^{(\beta=2)}_{2}$",'eec_d2_1':r"$D^{(\beta=1)}_{2}$",'eec_d2_2':r"$D^{(\beta=2)}_{2}$", 'split12':r"$\sqrt{d_{12}}$",'aplanarity':r"$\textit{A}$",'zcut12':r"$\sqrt{z_{12}}$",'sphericity':r"$\textit{S}$",'planarflow':r"$\textit{P}$"}
         weight = True if args.weight.lower() == 'true' else False
 
-        plotFiles(filenames, variables, key, weight_plots=weight)
+        plotFiles(filenames, variables, key, weight_plots=weight, plot_dict = plot_dict, tex_dict = tex_dict)
         
 if __name__ == "__main__":
     print ' running main '
