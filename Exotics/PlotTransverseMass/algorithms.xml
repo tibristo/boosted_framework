@@ -124,6 +124,18 @@
 </algorithm>
 
 <algorithm>
+  <Algorithm>CamKt12LCTopoBDRSFilteredMU100Y4</Algorithm>
+  <GroomingAlgorithm>TopoSplitFilteredMu100SmallR30YCut4</GroomingAlgorithm>
+  <JetAlgorithm>CamKt12</JetAlgorithm>
+  <Abbreviation>SF100r30Y4</Abbreviation>
+  <PlotLabel>CA12 Split Filtered jets, #mu=1.0, y_{cut}=0.04, R_{subjet}=0.3</PlotLabel>
+  <Type>splitfiltered</Type>
+  <SubjetGroomingAlgorithm>TopoSplitFiltSubjetsMu100SmallR30YCut4</SubjetGroomingAlgorithm>
+  <SubjetIndexBranch>jet_CamKt12LCTopo_SplitFiltSubjetsMu100SmallR30YCut4_index</SubjetIndexBranch>
+  <BinLabel>CA12 Split-Filt (1.0, 0.04, 0.3)</BinLabel>
+</algorithm>
+
+<algorithm>
   <Algorithm>CamKt12LCTopoSplitFilteredMu100SmallR30YCut9</Algorithm>
   <GroomingAlgorithm>TopoSplitFilteredMu100SmallR30YCut9</GroomingAlgorithm>
   <JetAlgorithm>CamKt12</JetAlgorithm>

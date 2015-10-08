@@ -164,7 +164,7 @@ inline double var(vector<double>& masses, double avg){
 
 
 // enums used for sample types, jet types, histogram types and lepton types
-enum sampleType{BACKGROUND,SIGNAL};
+enum sampleType{BACKGROUND,SIGNAL,DATA};
 enum jetType{TRUTH,TOPO,GROOMED,MAX};
 enum histType{TRUTHJET,GROOMEDJET,LEADTRUTHJET};
 enum leptonType{FAIL,ELECTRON,MUON};
@@ -276,42 +276,12 @@ Float_t actualIntPerXingOut = 0;
 UInt_t nvtxIn = 0;
 UInt_t nvtxOut = 0;
 
-//counters for efficiency issues
-int nEvt_0=0; //total events
-int nEvt_1=0; // events with leading proper topo jet
-int nEvt_2=0; // events with matched truth to proper topo jet
-int nEvt_3=0; // events with split cut 9 matched to truth jet matches to proper topo jet
-int nEvt_4=0;
-
-//counters for efficiency issues
-int nEvt1_0=0; //total events
-int nEvt1_1=0; // events with leading proper topo jet
-int nEvt1_2=0; // events with matched truth to proper topo jet
-int nEvt1_3=0; // events with split cut 9 matched to truth jet matches to proper topo jet
-int nEvt1_4=0;
-
-
 // settings for algorithm
 
 // values calculated for signal and background mass windows
 TString AlgoListN;
 TString pTbinsN[nPtBins];
 TString pTFinebinsN[nFineBins];
-
-// ROC
-TGraph *finePtBin_mass_curve[3][nFineBins];
-TGraph *Lead_CA12_mass_curve[3][nPtBins];
-TGraph *Lead_CA12_pt_curve[3];
-TGraph *Lead_CA12_scaled_pt_curve[3];
-TGraph *pTweights_curve;
-TGraph *PtReweight_curve;
-
-// for drawing histograms
-TCanvas * c1[3][nPtBins]; 
-TCanvas * c3[3][nFineBins];
-TCanvas * c2[nPtBins];
-TPad *pad1[nPtBins];
-TPad *pad2[nPtBins];
 
 // define strings for a bunch of the pt ranges and pt bins
 void defineStrings(TString *pTbins, TString *finePtBins){

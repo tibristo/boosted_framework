@@ -726,14 +726,6 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
 			//rw_weight = xs[mc_channel_number] * mc_event_weight_d3pd * filt;
 		    }
 		  pt_reweight->Fill(var_ca12_pt_vec->at(leadingCA12TruthIndex)/1000.0, rw_weight);
-		  /*
-		  dumpfile << "EventNumber: " << EventNumber << endl;
-		  dumpfile << "Leading truth pt: " << var_ca12_pt_vec->at(leadingCA12TruthIndex) << endl;
-		  dumpfile << "Leading truth eta: " << var_ca12_eta_vec->at(leadingCA12TruthIndex) << endl;
-		  dumpfile << "Leading truth phi: " << var_ca12_phi_vec->at(leadingCA12TruthIndex) << endl;
-		  dumpfile << "Leading truth m: " << var_ca12_m_vec->at(leadingCA12TruthIndex) << endl;
-
-		  dumpfile << "*******************" << endl;*/
 		}
 
 

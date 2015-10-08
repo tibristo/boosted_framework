@@ -103,8 +103,8 @@ def score(top_ind, qcd_ind, discriminant):
     bkg_incorrect = float(qcd_disc[np.where(qcd_disc>=cut)].shape[0])
     # if signal median is less than bkg, swap signal and background
     if sig_med < bkg_med:
-        sig_correct, bkg_correct = bkg_correct, sig_correct
-        sig_incorrect, bkg_incorrect = bkg_incorrect, sig_incorrect
+        sig_correct, sig_incorrect = sig_incorrect, sig_correct
+        bkg_correct, bkg_incorrect = bkg_incorrect, bkg_correct
 
     score = float(sig_correct+bkg_correct)/float(discriminant.shape[0])
     # calculate the different scoring metrics

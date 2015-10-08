@@ -266,7 +266,7 @@ def plotFiles(filenames, variables, key, weight_plots = False, plot_dict = {}, t
         # open the file and get the tree
         f_open = ROOT.TFile.Open('folds/'+f)
         tree = f_open.Get('outputTree')
-        leg = ROOT.TLegend(0.8,0.55,0.9,0.65);leg.SetFillColor(ROOT.kWhite)
+        leg = ROOT.TLegend(0.7,0.55,0.9,0.75);leg.SetFillColor(ROOT.kWhite)
         c = ROOT.TCanvas(f)
 
         total_events = tree.GetEntries()
@@ -357,7 +357,7 @@ def plotFiles(filenames, variables, key, weight_plots = False, plot_dict = {}, t
             else:
                 c.SaveAs('fold_plots/'+key+'_Full_'+v+weight_id+'.png')
             # write the means and std to the stats file
-            result = '{0:15}: {1:10} {2:10} {3:10} {4:10} {5:10}'.format(file_type+' '+cv_num,str(mean),str(std),str(sig_mean),str(sig_std),str(bkg_mean),str(bkg_std))
+            result = '{0:15}: {1:10} {2:10} {3:10} {4:10} {5:10} {6:10}'.format(file_type+' '+cv_num,str(mean),str(std),str(sig_mean),str(sig_std),str(bkg_mean),str(bkg_std))
             # check that this variable has a dictionary entry
             #if v not in stats[cv_num][file_type].keys():
             #stats[cv_num][file_type][v] = {}
@@ -377,7 +377,7 @@ def plotFiles(filenames, variables, key, weight_plots = False, plot_dict = {}, t
             combined_stats.write(event_counts[cv][f]+'\n')
     combined_stats.write('\n'+'\n')
     # now start doing the variables
-    combined_stats.write('\n{0:15}: {1:10} {2:10} {3:10} {4:10} {5:10}'.format('Variable','Mean','Std','Mean Sig','Std Sig','Mean Bkg','Std Bkg')+'\n\n')
+    combined_stats.write('\n{0:15}: {1:10} {2:10} {3:10} {4:10} {5:10} {6:10}'.format('Variable','Mean','Std','Mean Sig','Std Sig','Mean Bkg','Std Bkg')+'\n\n')
 
     for v in variables:
         if v.strip() in tex_dict.keys():
@@ -399,7 +399,7 @@ def plotFiles(filenames, variables, key, weight_plots = False, plot_dict = {}, t
         stats_file.write(event_counts[cv]['Train']+'\n')
         stats_file.write(event_counts[cv]['Valid']+'\n')
 
-        stats_file.write('\n{0:15}: {1:10} {2:10} {3:10} {4:10} {5:10}'.format('Variable','Mean','Std','Mean Sig','Std Sig','Mean Bkg','Std Bkg')+'\n\n')
+        stats_file.write('\n{0:15}: {1:10} {2:10} {3:10} {4:10} {5:10} {6:10}'.format('Variable','Mean','Std','Mean Sig','Std Sig','Mean Bkg','Std Bkg')+'\n\n')
         # now write each variable
         for v in variables:
             if v.strip() in tex_dict.keys():
@@ -492,8 +492,8 @@ def main(args):
             filenames = [item for sublist in filenames for item in sublist]
         # the variables we're interested in                  
         variables = ['aplanarity','eec_c2_1', 'eec_c2_2', 'split12','eec_d2_1', 'eec_d2_2', 'tauwta2tauwta1','zcut12','sphericity','mu12','planarflow']
-        plot_dict = {'tauwta2tauwta1':"#tau^{WTA}_{2}/#tau_{WTA}_{1}",'eec_c2_1':"C^{(#beta=1)}_{2}",'eec_c2_2':"C^{(#beta=2)}_{2}",'eec_d2_1':"D^{(#beta=1)}_{2}",'eec_d2_2':"D^{(#beta=2)}_{2}", 'split12':"#sqrt{d_{12}}",'aplanarity':"#it{A}",'zcut12':"#sqrt{z_{12}}",'sphericity':"#it{S}",'planarflow':"#it{P}"}
-        tex_dict = {'tauwta2tauwta1':r"$\tau^{WTA}_{2}/\tau_{WTA}_{1}$",'eec_c2_1':r"$C^{(\beta=1)}_{2}$",'eec_c2_2':r"$C^{(\beta=2)}_{2}$",'eec_d2_1':r"$D^{(\beta=1)}_{2}$",'eec_d2_2':r"$D^{(\beta=2)}_{2}$", 'split12':r"$\sqrt{d_{12}}$",'aplanarity':r"$\textit{A}$",'zcut12':r"$\sqrt{z_{12}}$",'sphericity':r"$\textit{S}$",'planarflow':r"$\textit{P}$"}
+        plot_dict = {'tauwta2tauwta1':"#tau^{WTA}_{2}/#tau^{WTA}_{1}",'eec_c2_1':"C^{(#beta=1)}_{2}",'eec_c2_2':"C^{(#beta=2)}_{2}",'eec_d2_1':"D^{(#beta=1)}_{2}",'eec_d2_2':"D^{(#beta=2)}_{2}", 'split12':"#sqrt{d_{12}}",'aplanarity':"#it{A}",'zcut12':"#sqrt{z_{12}}",'sphericity':"#it{S}",'planarflow':"#it{P}"}
+        tex_dict = {'tauwta2tauwta1':r"$\tau^{WTA}_{2}/\tau^{WTA}_{1}$",'eec_c2_1':r"$C^{(\beta=1)}_{2}$",'eec_c2_2':r"$C^{(\beta=2)}_{2}$",'eec_d2_1':r"$D^{(\beta=1)}_{2}$",'eec_d2_2':r"$D^{(\beta=2)}_{2}$", 'split12':r"$\sqrt{d_{12}}$",'aplanarity':r"$\textit{A}$",'zcut12':r"$\sqrt{z_{12}}$",'sphericity':r"$\textit{S}$",'planarflow':r"$\textit{P}$"}
         weight = True if args.weight.lower() == 'true' else False
 
         plotFiles(filenames, variables, key, weight_plots=weight, plot_dict = plot_dict, tex_dict = tex_dict)

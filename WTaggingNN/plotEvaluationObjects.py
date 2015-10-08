@@ -15,6 +15,7 @@ job_id = 'features_l_2_10'
 
 # set up the job ids
 key = 'config-output-paramID'
+#key = 'bdt_variables'
 #key = 'features_l_2_10ID'
 #full_dataset = 'persist/data_features_nc_2_10_v2_100.pkl'
 
@@ -22,7 +23,7 @@ key = 'config-output-paramID'
 print 'finished creating new full objects'
 #sys.exit()
 #raw_input()
-files = [f for f in os.listdir('evaluationObjects/') if f.find(key)!=-1 and f.endswith('.pickle')]
+files = [f for f in os.listdir('evaluationObjects/') if f.find(key)!=-1 and f.endswith('.pickle') and f.find('bdt') == -1]
 
 
 def createDataframe(key, files):

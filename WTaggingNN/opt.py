@@ -191,7 +191,7 @@ def runCV():
     # key to look for in the filenames
     key = 'matchedM_loose_v2_200_1000_mw'
     # output file id
-    file_id = 'test_cv_ipython'
+    file_id = 'bdt_variables'
     folder ='/Disk/ecdf-nfs-ppe/atlas/users/tibristo/boosted_framework/WTaggingNN/'
     # we need the files to be the output of what we would normally get back from
     # the cross_validation method from create_folds.py
