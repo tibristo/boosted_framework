@@ -230,6 +230,7 @@ bool calcTauWTA21 = true;
 bool recluster = false;
 bool calcYFilt = false;
 bool truthBosonMatching = false;
+bool truthBoson4vec = false;
 bool beta2available = false;
 bool addResponse = false;
 bool clusterTLV = false;
@@ -398,6 +399,8 @@ std::vector<float> * var_truthboson_pt_vec;
 std::vector<float> * var_truthboson_eta_vec;
 std::vector<float> * var_truthboson_phi_vec;
 std::vector<int> * var_truthboson_ID_vec;
+// the new mc15 samples have truthboson info in a vector<TLV>
+std::vector<TLorentzVector> * var_truthboson_tlv_vec;
 
 // reading in jet clusters
 Int_t var_cl_n;

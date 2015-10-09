@@ -785,6 +785,22 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
 	      // 18/03/2015: Previously we were looking for a match on the truth jet here, not the groomed jet.
 	      if (truthBosonMatching && signal)
 		{
+
+		  // if the truthBoson_pt,_eta,_phi variables were not available, but the 4 vector was,
+		  // then we can set these variables from the 4 vector here.
+		  if (truthBoson4vec)
+		    {
+		      var_truthboson_pt_vec = new vector<float>();
+		      var_truthboson_eta_vec = new vector<float>();
+		      var_truthboson_phi_vec = new vector<float>();
+		      for (std::vector<TLorentzVector>::iterator it = var_truthboson_tlv_vec->begin(); it!= var_truthboson_tlv_vec->end(); it++)
+			{
+			  var_truthboson_pt_vec->push_back((*it).Pt());
+			  var_truthboson_eta_vec->push_back((*it).Eta());
+			  var_truthboson_phi_vec->push_back((*it).Phi());
+			}
+		    }
+		  
 		  int count = 0;
 		  for (int jet_i = 0; jet_i < (*var_truthboson_eta_vec).size(); jet_i++)
 		    {
@@ -1186,6 +1202,7 @@ vector<std::pair<std::string,bool> > getListOfJetBranches(std::string &algorithm
       branchmap["truthBoson_eta"] = true;
       branchmap["truthBoson_phi"] = true;
       branchmap["truthBoson_ID"] = true;
+      branchmap["truthBosons"] = true; // this is the vector<tlv>
     }
 
   // need to add some essential ones in case they get forgotten in that config file :)
@@ -1972,11 +1989,11 @@ void setJetsBranches(TChain * tree, std::string &groomalgo,  std::string & groom
       if (!setVector(tree, brancharray, var_ECF3_vec.at(i), std::string(jetString+"ECF3") ))
 	floatvec(var_ECF3_vec[i]);
 
-      if (!setVector(tree, brancharray, var_ECF1_2_vec.at(i), std::string(jetString+"ECF1_beta2") ))
+      if (!beta2available || !setVector(tree, brancharray, var_ECF1_2_vec.at(i), std::string(jetString+"ECF1_beta2") ))
 	floatvec(var_ECF1_vec[i]);
-      if (!setVector(tree, brancharray, var_ECF2_2_vec.at(i), std::string(jetString+"ECF2_beta2") ))
+      if (!beta2available || !setVector(tree, brancharray, var_ECF2_2_vec.at(i), std::string(jetString+"ECF2_beta2") ))
 	floatvec(var_ECF2_vec[i]);
-      if (!setVector(tree, brancharray, var_ECF3_2_vec.at(i), std::string(jetString+"ECF3_beta2") ))
+      if (!beta2available || !setVector(tree, brancharray, var_ECF3_2_vec.at(i), std::string(jetString+"ECF3_beta2") ))
 	floatvec(var_ECF3_vec[i]);
 
       if (!calcFoxWolfram20 && !preCalcFoxWolfram20)
@@ -2005,17 +2022,40 @@ void setJetsBranches(TChain * tree, std::string &groomalgo,  std::string & groom
     } // end for loop over topo/truth/groom
 
   // setup the truth boson branches - note this is only done on the xAODs
-  //if (truthBosonMatching)
-  //{
-      if (!setVector(tree,brancharray, var_truthboson_pt_vec, std::string("truthBoson_pt")))
+  if (truthBosonMatching && xAOD)
+  {
+
+    // first check to see if the truthBoson_pt,_eta,_phi branches exist. If they do not, look for the truthBoson TLV and set them from that 4vec
+    if (brancharray.find(std::string("truthBoson_pt")) != brancharray.end())
+      {
+	if (!setVector(tree,brancharray, var_truthboson_pt_vec, std::string("truthBoson_pt")))
+	  floatvec(var_truthboson_pt_vec);
+	if (!setVector(tree,brancharray, var_truthboson_eta_vec, std::string("truthBoson_eta")))
+	  floatvec(var_truthboson_eta_vec);
+	if (!setVector(tree,brancharray, var_truthboson_phi_vec, std::string("truthBoson_phi")))
+	  floatvec(var_truthboson_phi_vec);
+      }
+    else if(brancharray.find("truthBosons") != brancharray.end())
+      {
+	if (!setVector(tree, brancharray, var_truthboson_tlv_vec, "truthBosons"))
+	    tlvvec(var_truthboson_tlv_vec);
+	//tree->SetBranchAddress("truthBosons", &var_truthboson_tlv_vec);
+	truthBoson4vec = true;
 	floatvec(var_truthboson_pt_vec);
-      if (!setVector(tree,brancharray, var_truthboson_eta_vec, std::string("truthBoson_eta")))
-	floatvec(var_truthboson_eta_vec);
-      if (!setVector(tree,brancharray, var_truthboson_phi_vec, std::string("truthBoson_phi")))
-	floatvec(var_truthboson_phi_vec);
+	floatvec(var_truthboson_pt_vec);
+	floatvec(var_truthboson_pt_vec);
+      }
+    else
+      {
+	// There are no truthboson entries at all, just set to default values
+	floatvec(var_truthboson_pt_vec);
+	floatvec(var_truthboson_pt_vec);
+	floatvec(var_truthboson_pt_vec);
+      }
+      
       if (!setVector(tree,brancharray, var_truthboson_ID_vec, std::string("truthBoson_ID")))
 	intvec(var_truthboson_ID_vec);
-      //}
+  }
 
   
       // there is only yfilt stored for groomed jets
@@ -2254,6 +2294,7 @@ void initVectors()
   var_truthboson_eta_vec = 0;
   var_truthboson_phi_vec = 0;
   var_truthboson_ID_vec = 0;
+  var_truthboson_tlv_vec = 0;
   // truth ca12
   var_ca12_pt_vec = 0;
   var_ca12_m_vec = 0;
