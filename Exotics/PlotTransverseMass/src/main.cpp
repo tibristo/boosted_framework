@@ -2409,6 +2409,10 @@ void setLeptonVectors()
  */
 void setOutputVariables( int jet_idx_truth, int jet_idx_topo, int jet_idx_groomed, int jet_idx_ca12, int jet_idx_ca12topo, int subjet_idx, std::string & groomalgo, std::string &  samplePrefix)
 {
+  // There is the issue that when running over a CamKt12 algorithm the Topo jets get read in twice -> once for the pt rw and once for the rest.  So we check if we are running over
+  // this type of algorithm, then we can set the output variables accordingly
+  bool ca12Algo = groomalgo.find("CamKt12") == std::string::npos ? false : true;
+
   // set to 0 for now
   int jet_idx = 0;
   // set some of the variables that are not collections/ vectors
@@ -2491,16 +2495,30 @@ void setOutputVariables( int jet_idx_truth, int jet_idx_topo, int jet_idx_groome
 	  jet_idx = jet_idx_groomed;
 	  break;
 	}
-      
+      if (!keepTopo && x == jetType::TOPO)
+	continue;
+
       if (jet_idx == -99) // mostly just topo jets
 	continue;
       
       // all of the _vec variables have a default value that is not null.
       var_E[x]=(*var_E_vec[x])[jet_idx];
-      var_pt[x]=(*var_pt_vec[x])[jet_idx];
-      var_m[x]=(*var_m_vec[x])[jet_idx];
-      var_eta[x]=(*var_eta_vec[x])[jet_idx];
-      var_phi[x]=(*var_phi_vec[x])[jet_idx];
+      // if running over a camk12 algorithm the topo pt, eta, m and phi have already been assigned to that vector, so make 
+      // sure we set it correctly here.
+      if (ca12Algo)
+	{
+	  var_pt[x]=(*var_ca12topo_pt_vec)[jet_idx];
+	  var_m[x]=(*var_ca12topo_m_vec)[jet_idx];
+	  var_eta[x]=(*var_ca12topo_eta_vec)[jet_idx];
+	  var_phi[x]=(*var_ca12topo_phi_vec)[jet_idx];
+	}
+      else
+	{
+	  var_pt[x]=(*var_pt_vec[x])[jet_idx];
+	  var_m[x]=(*var_m_vec[x])[jet_idx];
+	  var_eta[x]=(*var_eta_vec[x])[jet_idx];
+	  var_phi[x]=(*var_phi_vec[x])[jet_idx];
+	}
       if (x!=0 && !xAOD && var_emfrac_vec[x] != NULL)//useBranch(string(jetString +"emfrac")))
 	var_emfrac[x]=(*var_emfrac_vec[x])[jet_idx];
       var_Tau1[x]=(*var_Tau1_vec[x])[jet_idx];
@@ -2842,7 +2860,9 @@ void setOutputBranches(TTree * tree, std::string & groomalgo, std::string & groo
     {
       if (i!=0)
 	addResponse = false;
-     
+      if (!keepTopo && i == jetType::TOPO)
+	continue;
+
       std::string jetString = returnJetType(samplePrefix, groomalgo, addLC,i); //set to truth/ topo/ groomed
 
       // check that we actually want to use this branch/ output this branch
