@@ -166,7 +166,6 @@ inline double var(vector<double>& masses, double avg){
 // enums used for sample types, jet types, histogram types and lepton types
 enum sampleType{BACKGROUND,SIGNAL,DATA};
 enum jetType{TRUTH,TOPO,GROOMED,MAX};
-enum histType{TRUTHJET,GROOMEDJET,LEADTRUTHJET};
 enum leptonType{FAIL,ELECTRON,MUON};
 
 //DECLARATIONS FOR RECLUSTERING FUNCTIONS
@@ -235,6 +234,7 @@ bool beta2available = false;
 bool addResponse = false;
 bool clusterTLV = false;
 bool ca12TLV = false;
+bool keepTopo = true;
 
 bool xAODJets = false;
 //bool xAODemfrac = false;
@@ -244,6 +244,9 @@ bool xAOD = false;
 float radius = 1.0;
 int nqjets = 25;
 
+
+// the list of jet collections we are keeping -> truth, topo, groomed
+std::vector<int> jetCollections;
 
 TChain *inputTChain[2];
 

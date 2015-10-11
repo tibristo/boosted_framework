@@ -3,11 +3,6 @@
 ///Analysis code for Jet Substructure 
 ///
 ///
-///v0.1 - August 14th, 2014
-///v0.2 - August 25th, 2014
-///v0.3 - August 26th, 2014
-///v0.4 - August 30th, 2014
-///
 ///v whatevs 
 ///
 
@@ -115,6 +110,7 @@ int main( int argc, char * argv[] ) {
       ("ecf-beta2", po::value<bool>(&beta2available)->default_value(false),"Set if running on xAOD and the ECF (beta2) values are available. Not all xAODs have this variable.")
       ("response", po::value<bool>(&addResponse)->default_value(false),"Add response variables for the branches.")
       ("clusterTLV", po::value<bool>(&clusterTLV)->default_value(false),"Add the cluster TLVs for the xAOD samples.")
+      ("keepTopo", po::value<bool>(&keepTopo)->default_value(true),"Keep the ungroomed topo jets.")
       
       ;
         
@@ -229,6 +225,12 @@ int main( int argc, char * argv[] ) {
       return 1;
     }    
 
+  // list of jet collections we are keeping
+  jetCollections.push_back(jetType::TRUTH);
+  if (keepTopo)
+    jetCollections.push_back(jetType::TOPO);
+  jetCollections.push_back(jetType::GROOMED);
+  
   // read in algorithm config
   algorithms.load("algorithms.xml");
 
@@ -562,7 +564,9 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
 	      UInt_t * found = new UInt_t(1);// = 0;
 	      // if the branch is not in this sample just skip it
 	      if (current_branchmap.find((*it).first) == current_branchmap.end())
-		continue;
+		{
+		  continue;
+		}
 	      // if the branch is in the samlple but not being used, turn it off
 	      if ((*it).second == 0)
 		{
@@ -690,7 +694,7 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
 		}
 
 	      // check that the leading ca12truth has pT > 50 GeV and within |eta| < 1.2
-	      if ((*var_ca12_pt_vec)[leadingCA12TruthIndex] <= 50*1000.0 || fabs((*var_ca12_eta_vec)[leadingCA12TruthIndex]) > 1.2)
+	      if (leadingCA12TruthIndex < 0 || (*var_ca12_pt_vec)[leadingCA12TruthIndex] <= 50*1000.0 || fabs((*var_ca12_eta_vec)[leadingCA12TruthIndex]) > 1.2)
 	      	continue;
 
 	      ca12jetCount++;
@@ -701,7 +705,6 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
 	      ca12max = -1;
 	      for (vector<float>::iterator it = (*var_ca12topo_pt_vec).begin(); it != (*var_ca12topo_pt_vec).end() ; it++)	      
 		{
-		  //std::cout << (*it) << std::endl;
 		  if ((*it) > ca12max)
 		    {
 		      ca12max = (*it);
@@ -709,7 +712,7 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
 		    }
 		  c++; // awww yeah
 		} 
-	      
+	      //std::cout << (*var_ca12topo_pt_vec).size() << " " << (*var_ca12_pt_vec).size() << std::endl;
 	      // try to match the (ungroomed) leading ca12 truth and leading ca12 reco
 	      // if they match then we can use this event for pt reweighting
 	      
@@ -1370,6 +1373,7 @@ bool useBranch(std::string const& br, bool partialmatch)
 	}
 
     }
+
   // didn't find it if we reach this point, return false
   return false;
 }
@@ -1788,6 +1792,8 @@ void setJetsBranches(TChain * tree, std::string &groomalgo,  std::string & groom
   if (algorithms.AlgoType[groomIdx].find("recluster") == std::string::npos) // we're doing reclustering
     addLC = true; // just add the LC to the name
 
+  bool ca12Algo = groomalgo.find("CamKt12") == std::string::npos ? false : true;
+  
   // these branches should always exist
   if (xAOD)
     tree->SetBranchAddress("mc_event_weight",&mc_event_weight_xaod);
@@ -1884,6 +1890,7 @@ void setJetsBranches(TChain * tree, std::string &groomalgo,  std::string & groom
   // first check if the individual variables for pt, m, eta, phi exist, otherwise look for the TLV of ca12 jets.
   if (brancharray.find("jet_CamKt12Truth_pt") == brancharray.end())// && useBranch("jet_CamKt12Truth_pt"))
     {
+      std::cout << "using the four vectors for the camkt12 truth and topo jets" << std::endl;
       if (brancharray.find("CamKt12TruthJets") != brancharray.end())
 	{
 	  branchmap["CamKt12TruthJets"] = true;
@@ -1904,6 +1911,8 @@ void setJetsBranches(TChain * tree, std::string &groomalgo,  std::string & groom
   if(ca12TLV || !setVector(tree,brancharray, var_ca12_phi_vec, "jet_CamKt12Truth_phi"))
     floatvec(var_ca12_phi_vec);
   // set the ca12 topo jets
+  // this can get tricky when running over any CamKt12 groomed jet collection because it will
+  // try to read this into two variables
   if(ca12TLV || !setVector(tree,brancharray, var_ca12topo_pt_vec, "jet_CamKt12LCTopo_pt"))
     floatvec(var_ca12topo_pt_vec);
   if(ca12TLV || !setVector(tree,brancharray, var_ca12topo_m_vec, "jet_CamKt12LCTopo_m"))
@@ -1920,16 +1929,18 @@ void setJetsBranches(TChain * tree, std::string &groomalgo,  std::string & groom
       if (!setVector(tree, brancharray, var_E_vec.at(i), std::string(jetString+"E") ))
 	floatvec(var_E_vec[i]);
 
-      if (!setVector(tree, brancharray, var_pt_vec.at(i), std::string(jetString+"pt") ))
+      // only set the vector for the topo jets if we are NOT running over a jet_camkt12 collection (see note 20 lines above)
+      if ((i==jetType::TOPO && ca12Algo) || !setVector(tree, brancharray, var_pt_vec.at(i), std::string(jetString+"pt") ))
 	floatvec(var_pt_vec[i]);
 
-      if (!setVector(tree, brancharray, var_m_vec.at(i), std::string(jetString+"m") ))
+      // only set the vector for the topo jets if we are NOT running over a jet_camkt12 collection (see note 20 lines above)
+      if ((i==jetType::TOPO && ca12Algo) || !setVector(tree, brancharray, var_m_vec.at(i), std::string(jetString+"m") ))
 	floatvec(var_m_vec[i]);
 
-      if (!setVector(tree, brancharray, var_eta_vec.at(i), std::string(jetString+"eta") ))
+      if ((i==jetType::TOPO && ca12Algo) || !setVector(tree, brancharray, var_eta_vec.at(i), std::string(jetString+"eta") ))
 	floatvec(var_eta_vec[i]);
 
-      if (!setVector(tree, brancharray, var_phi_vec.at(i), std::string(jetString+"phi") ))
+      if ((i==jetType::TOPO && ca12Algo) || !setVector(tree, brancharray, var_phi_vec.at(i), std::string(jetString+"phi") ))
 	floatvec(var_phi_vec[i]);
 
       if (!setVector(tree, brancharray, var_emfrac_vec.at(i), std::string(jetString+"emfrac") ))
