@@ -225,11 +225,6 @@ int main( int argc, char * argv[] ) {
       return 1;
     }    
 
-  // list of jet collections we are keeping
-  jetCollections.push_back(jetType::TRUTH);
-  if (keepTopo)
-    jetCollections.push_back(jetType::TOPO);
-  jetCollections.push_back(jetType::GROOMED);
   
   // read in algorithm config
   algorithms.load("algorithms.xml");
@@ -1040,7 +1035,7 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
 		}
 
 	      // make sure all of the other output variables have their values set
-	      setOutputVariables(chosenLeadTruthJetIndex, chosenLeadTopoJetIndex, chosenLeadGroomedIndex, leadingCA12TruthIndex, leadingCA12TopoIndex, lead_subjet, algorithmName , prefix);
+	      setOutputVariables(chosenLeadTruthJetIndex, chosenLeadTopoJetIndex, chosenLeadGroomedIndex, leadingCA12TruthIndex, leadingCA12TopoIndex, lead_subjet, algorithm, algorithmName , prefix);
 	      
 	      // count how many entries have passed selection
 	      passed_counter += 1;
@@ -1792,7 +1787,7 @@ void setJetsBranches(TChain * tree, std::string &groomalgo,  std::string & groom
   if (algorithms.AlgoType[groomIdx].find("recluster") == std::string::npos) // we're doing reclustering
     addLC = true; // just add the LC to the name
 
-  bool ca12Algo = groomalgo.find("CamKt12") == std::string::npos ? false : true;
+  bool ca12Algo = groomIdx.find("CamKt12") == std::string::npos ? false : true;
   
   // these branches should always exist
   if (xAOD)
@@ -2407,11 +2402,11 @@ void setLeptonVectors()
  * @param groomalgo The abbreviated name of the algorithm.
  * @param samplePrefix If it has "LC" in the name of the algorithm
  */
-void setOutputVariables( int jet_idx_truth, int jet_idx_topo, int jet_idx_groomed, int jet_idx_ca12, int jet_idx_ca12topo, int subjet_idx, std::string & groomalgo, std::string &  samplePrefix)
+void setOutputVariables( int jet_idx_truth, int jet_idx_topo, int jet_idx_groomed, int jet_idx_ca12, int jet_idx_ca12topo, int subjet_idx, std::string & algorithm, std::string & groomalgo, std::string &  samplePrefix)
 {
   // There is the issue that when running over a CamKt12 algorithm the Topo jets get read in twice -> once for the pt rw and once for the rest.  So we check if we are running over
   // this type of algorithm, then we can set the output variables accordingly
-  bool ca12Algo = groomalgo.find("CamKt12") == std::string::npos ? false : true;
+  bool ca12Algo = algorithm.find("CamKt12") == std::string::npos ? false : true;
 
   // set to 0 for now
   int jet_idx = 0;

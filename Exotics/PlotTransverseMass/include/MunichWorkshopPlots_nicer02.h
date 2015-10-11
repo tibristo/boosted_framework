@@ -84,7 +84,7 @@ std::string returnJetType(std::string & samplePrefix, std::string & groomalgo, b
 std::string returnSubJetType(std::string & samplePrefix, std::string & groomalgo, bool addLC);
 void clearVectors();
 void clearOutputVariables();
-void setOutputVariables(int idx1, int idx2, int idx3, int idxca, int idxcatopo, int subidx, std::string & groomalgo, std::string & groomIdx);
+void setOutputVariables(int idx1, int idx2, int idx3, int idxca, int idxcatopo, int subidx, std::string & algorithm, std::string & groomalgo, std::string & groomIdx);
 void setOutputBranches(TTree* tree, std::string & algorithm, std::string & groomIdx);
 void resetOutputVariables();
 void setAddress(TChain * tree, std::string  name, std::vector<Float_t> * var_vec);
@@ -245,8 +245,6 @@ float radius = 1.0;
 int nqjets = 25;
 
 
-// the list of jet collections we are keeping -> truth, topo, groomed
-std::vector<int> jetCollections;
 
 TChain *inputTChain[2];
 
