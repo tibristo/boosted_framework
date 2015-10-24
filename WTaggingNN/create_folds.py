@@ -87,8 +87,14 @@ def scaleSample(scaler_filename, filename='/Disk/ecdf-nfs-ppe/atlas/users/tibris
         print "Scaler appears to be an error message"
         print scaler
         return
+
+    # need to know how many columns there are in the data
+    f = open(filename)
+    l = f.readline()
+    colcount = l.count(',')
+    f.close()
     
-    cols = np.linspace(1,44,44,dtype=int)
+    cols = np.linspace(1,colcount,colcount,dtype=int)
     #data = np.recfromcsv(sys.argv[1],usecols=cols)
     X_full = np.recfromcsv(filename, usecols=cols)
     # here we can pull the variables from the scaler and just scale those. the rest are all observers.
@@ -103,7 +109,7 @@ def scaleSample(scaler_filename, filename='/Disk/ecdf-nfs-ppe/atlas/users/tibris
     
 
 #import cv_fold
-def persist_cv_splits(X, y, variables, observers, n_cv_iter=5, test_size=0.25, name='data', prefix='folds/', suffix="_cv_%03d.root", random_state=None, scale=False):
+def persist_cv_splits(X, y, w, variables, observers, n_cv_iter=5, test_size=0.25, name='data', prefix='folds/', suffix="_cv_%03d.root", random_state=None, scale=False):
     import pickle
     #import scalerNN
     """Materialize randomized train test splits of a dataset."""
@@ -112,7 +118,7 @@ def persist_cv_splits(X, y, variables, observers, n_cv_iter=5, test_size=0.25, n
     #    test_size=test_size, random_state=random_state)
     cv_split_filenames = []
     # normalise the weights, otherwise agilepack doesnt work
-    observers['weight'] = 1/np.sum(observers['weight'])
+    #observers['weight'] = 1/np.sum(observers['weight'])
 
     for i, (train, test) in enumerate(cv):
         print ("iteration %03d" % i)
@@ -135,13 +141,14 @@ def persist_cv_splits(X, y, variables, observers, n_cv_iter=5, test_size=0.25, n
             for j,v in enumerate(variables):
                 mean = np.mean(X[v][train])
                 curr_means[j] = mean
-                weighted_mean = weightedMean(X[v][train], X['weight'][train])
+                weighted_mean = weightedMean(X[v][train], w[train])
                 weighted_means[j] = weighted_mean
                 std = np.std(X[v][train])
                 curr_std[j] = std
-                weighted_std[j] = weightedStd(X[v][train], X['weight'][train], weighted_mean)
+                weighted_std[j] = weightedStd(X[v][train], w[train], weighted_mean)
 
                 # do the standardisation
+                print v
                 Xtrain[v] = (Xtrain[v]-mean)/std
                 Xtest[v] = (Xtest[v]-mean)/std
                 
@@ -203,24 +210,30 @@ def persist_cv_splits(X, y, variables, observers, n_cv_iter=5, test_size=0.25, n
 def cross_validation(data,iterations, name='data', scale=True):
     # name of all variables in the dataset
     variables = list(data.dtype.names)
-    # remove the ones we do not want to standardist
+    # remove the ones we do not want to standardise
     variables.remove('label')
     # remove the variables that are "observers", ie that do not get used for training, or weights, since those must not be scaled.
     observers = ['mc_event_weight','jet_antikt10truthtrimmedptfrac5smallr20_pt','jet_antikt10truthtrimmedptfrac5smallr20_eta','m','pt','eta','phi','evt_xsec','evt_filtereff','evt_nevts','weight','jet_camkt12truth_pt','jet_camkt12truth_eta','jet_camkt12truth_phi','jet_camkt12truth_m','jet_camkt12lctopo_pt','jet_camkt12lctopo_eta','jet_camkt12lctopo_phi','jet_camkt12lctopo_m','eff','averageintperxing']
+
+    # variables in the mc15 samples
+    #mc_event_weight,jet_AntiKt10TruthTrimmedPtFrac5SmallR20_pt,jet_AntiKt10TruthTrimmedPtFrac5SmallR20_eta,EEC_D2_1,Aplanarity,m,FoxWolfram20,ThrustMaj,TauWTA2,EEC_C2_1,Angularity,ThrustMin,pt,PlanarFlow,Dip12,Mu12,YFilt,TauWTA1,phi,EEC_D2_2,SPLIT12,Sphericity,ZCUT12,eta,TauWTA2TauWTA1,EEC_C2_2,averageIntPerXing,evt_xsec,evt_filtereff,evt_nEvts,jet_CamKt12Truth_pt,jet_CamKt12Truth_eta,jet_CamKt12Truth_phi,jet_CamKt12Truth_m,jet_CamKt12LCTopo_pt,jet_CamKt12LCTopo_eta,jet_CamKt12LCTopo_phi,jet_CamKt12LCTopo_m,weight,eff,label
+    
     # this can be done in one line
     for o in observers:
-        if o in variables:
+        if o.lower() in variables:
             variables.remove(o)
     print variables
     # Get X, which is all training/ testing variables
     X = data[variables]
     # target variable
     y = data['label']
+    # weights
+    w = data['weight']
     # variables that are not standardised
     observer_data = data[observers]
 
     # create the folds
-    filenames = persist_cv_splits(X, y, variables, observer_data, n_cv_iter=iterations, name=name, suffix="_cv_%03d.root", test_size=0.25, random_state=None, scale=scale)
+    filenames = persist_cv_splits(X, y, w, variables, observer_data, n_cv_iter=iterations, name=name, suffix="_cv_%03d.root", test_size=0.25, random_state=None, scale=scale)
 
     return filenames
 
@@ -422,22 +435,25 @@ def main(args):
     parser.add_argument('plot', help = 'If the cv folds should be plotted')
     parser.add_argument('--key', help = 'Key to be used for identifying files')
     parser.add_argument('--weight', help = 'If the plots should be weighted')
+    parser.add_argument('--algorithm', default = 'AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_matchedM_loose_v2_200_1000_mw_merged', help = 'Name of the algorithm (this is the name of the csv file, without the .csv at the end).')
+    parser.add_argument('--fulldataset', default = 'DEFAULT', help = 'Full dataset filename.  This is the NOT Cleaned file.')
+    
     # parse args
     args = parser.parse_args()
     
     if not args.folds or not args.plot:
-        print 'need to set if folds should be created! usage: python create_folds.py folds(true/false) plot(true/false) [--key=key]'
+        print 'need to set if folds should be created! usage: python create_folds.py folds(true/false) plot(true/false) [--key=key] [--weight=true/false] [--algorithm=alg] [--fulldataset=fullset]'
         sys.exit(0)
 
     # this is the default path
     path = '/Disk/ecdf-nfs-ppe/atlas/users/tibristo/BosonTagging/csv/'
-    #algorithm = 'AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_matchedM_loose_v2_200_1000_mw_merged'
-    # set the name of the algorithm (this is part of the filename)
-    algorithm = 'AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_matchedM_notcleaned_v2_200_1000_mw_merged'
 
-    name = algorithm+'scale' # use this if we want to name the output file something different
+    name = args.algorithm+'scale' # use this if we want to name the output file something different
     # set up the cols which get used for creating a dataframe from csv
-    cols = np.linspace(1,44,44,dtype=int)
+    colcheck = open(path+args.algorithm+'.csv')
+    line1 = colcheck.readline()
+    colcount = line1.count(',')
+    cols = np.linspace(1,colcount, colcount,dtype=int)
 
 
     #['mc_event_weight', 'jet_antikt10truthtrimmedptfrac5smallr20_pt', 'jet_antikt10truthtrimmedptfrac5smallr20_eta', 'aplanarity', 'thrustmin', 'tau1', 'sphericity', 'm', 'foxwolfram20', 'tau21', 'thrustmaj', 'eec_c2_1', 'pt', 'eec_c2_2', 'dip12', 'split12', 'phi', 'tauwta2tauwta1', 'eec_d2_1', 'yfilt', 'mu12', 'tauwta2', 'zcut12', 'angularity', 'tau2', 'eec_d2_2', 'eta', 'tauwta1', 'planarflow', 'averageintperxing', 'evt_xsec', 'evt_filtereff', 'evt_nevts', 'jet_camkt12truth_pt', 'jet_camkt12truth_eta', 'jet_camkt12truth_phi', 'jet_camkt12truth_m', 'jet_camkt12lctopo_pt', 'jet_camkt12lctopo_eta', 'jet_camkt12lctopo_phi', 'jet_camkt12lctopo_m', 'weight', 'eff', 'label']
@@ -445,7 +461,7 @@ def main(args):
     # if we want to create the folds
     if args.folds.lower() == 'true':
         # read in the data as a numpy recarray
-        data = np.recfromcsv(path+algorithm+'.csv',usecols=cols)
+        data = np.recfromcsv(path+args.algorithm+'.csv',usecols=cols)
         # get the names of the variables in the recarray
         variables = list(data.dtype.names)
     
@@ -456,7 +472,12 @@ def main(args):
         filenames = cross_validation(data, 4, name, scale)
         #full_dataset = '/Disk/ecdf-nfs-ppe/atlas/users/tibristo/BosonTagging/csv/AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_matchedM_loose_v2_200_1000_mw_merged.csv'
         # name of the full dataset which is used for the cv splits
-        full_dataset = '/Disk/ecdf-nfs-ppe/atlas/users/tibristo/BosonTagging/csv/AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_matchedM_notcleaned_v2_200_1000_mw_merged.csv'
+        if args.fulldataset == 'DEFAULT':
+            full_dataset = path+algorithm.replace('loose','notcleaned')+'.csv'
+            if not os.path.isfile(full_dataset):
+                print 'full dataset does not exist!' + full_dataset
+        else:
+            full_dataset = path + args.fulldataset
 
         if scale:
             # create the full datasets scaled according to the different training samples:
@@ -465,8 +486,10 @@ def main(args):
                 # get the scalerNN object for the train sample
                 # scalerNN saves the values we used to do the standardisation
                 scaler_fname = f[0].replace('.root', '_scaler.pkl')
+                # find out which cv split we're on
+                cv_split = f[0][f[0].find('cv'):f[0].find('.root')]
                 # apply the standardisation to the dataset
-                scaleSample(scaler_fname, filename=full_dataset, prefix='folds/', name=algorithm+'_full_scaled')
+                scaleSample(scaler_fname, filename=full_dataset, prefix='folds/', name=full_dataset[full_dataset.rfind('/')+1:].replace('.csv','')+'_full_scaled_'+cv_split)
     else:
         print 'Not creating folds'        
         
@@ -490,8 +513,10 @@ def main(args):
         else:
             print 'Filenames were defined, converting to a 1D list'
             filenames = [item for sublist in filenames for item in sublist]
-        # the variables we're interested in                  
-        variables = ['aplanarity','eec_c2_1', 'eec_c2_2', 'split12','eec_d2_1', 'eec_d2_2', 'tauwta2tauwta1','zcut12','sphericity','mu12','planarflow']
+        # the variables we're interested in                  dc14
+        #variables = ['aplanarity','eec_c2_1', 'eec_c2_2', 'split12','eec_d2_1', 'eec_d2_2', 'tauwta2tauwta1','zcut12','sphericity','mu12','planarflow']
+        # mc15
+        variables = ['aplanarity','eec_c2_1', 'split12','eec_d2_1', 'tauwta2tauwta1','zcut12','sphericity','mu12','planarflow']
         plot_dict = {'tauwta2tauwta1':"#tau^{WTA}_{2}/#tau^{WTA}_{1}",'eec_c2_1':"C^{(#beta=1)}_{2}",'eec_c2_2':"C^{(#beta=2)}_{2}",'eec_d2_1':"D^{(#beta=1)}_{2}",'eec_d2_2':"D^{(#beta=2)}_{2}", 'split12':"#sqrt{d_{12}}",'aplanarity':"#it{A}",'zcut12':"#sqrt{z_{12}}",'sphericity':"#it{S}",'planarflow':"#it{P}"}
         tex_dict = {'tauwta2tauwta1':r"$\tau^{WTA}_{2}/\tau^{WTA}_{1}$",'eec_c2_1':r"$C^{(\beta=1)}_{2}$",'eec_c2_2':r"$C^{(\beta=2)}_{2}$",'eec_d2_1':r"$D^{(\beta=1)}_{2}$",'eec_d2_2':r"$D^{(\beta=2)}_{2}$", 'split12':r"$\sqrt{d_{12}}$",'aplanarity':r"$\textit{A}$",'zcut12':r"$\sqrt{z_{12}}$",'sphericity':r"$\textit{S}$",'planarflow':r"$\textit{P}$"}
         weight = True if args.weight.lower() == 'true' else False

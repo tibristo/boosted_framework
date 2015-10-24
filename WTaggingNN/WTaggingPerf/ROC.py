@@ -117,9 +117,18 @@ def score(top_ind, qcd_ind, discriminant):
     # choose 50% since that is what we normally go for in the cut-based tagger
     # for the bkg rejection power (at 50% signal)
     accuracy = score
-    precision = float(sig_correct/(sig_correct+bkg_incorrect))
-    recall = float(sig_correct/(sig_correct+sig_incorrect))
-    f1 = 2*precision*recall/(precision+recall)
+    if sig_correct+bkg_incorrect != 0:
+        precision = float(sig_correct/(sig_correct+bkg_incorrect))
+    else:
+        precision = -1
+    if sig_correct+sig_incorrect != 0:
+        recall = float(sig_correct/(sig_correct+sig_incorrect))
+    else:
+        recall = -1
+    if precision+recall != 0:
+        f1 = 2*precision*recall/(precision+recall)
+    else:
+        f1 = -1
     return cut, accuracy, precision, recall, f1
     
 def general_roc(data, discriminant, bins = 2000, inverse=False, name="", signal_eff=1.0, bkg_eff=1.0, variables = [], params=[], weights=[], tagger_file='', train_file = '', algorithm = '', data_train = [], discriminant_train = []):

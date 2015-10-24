@@ -44,6 +44,7 @@ int main( int argc, char * argv[] ) {
   // so that we can use vector<TLorentzVector> in ROOT
   gROOT->LoadMacro( "include/TLorentzVectorDict.h+" );
   AtlasStyle();
+
   
   bool makePtPlotsFlag = false;
   bool scaleHistsFlag = false;  
@@ -872,7 +873,7 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
 
 
 	      // set the mass to the leading groomed jet
-	      mass = (*var_m_vec[2])[chosenLeadGroomedIndex]/1000.0 ;
+	      mass = (*var_m_vec[jetType::GROOMED])[chosenLeadGroomedIndex]/1000.0 ;
 	      if (mass < 0.0) // not sure why this happens, but it seems to happen
 		continue;
 
@@ -2500,7 +2501,7 @@ void setOutputVariables( int jet_idx_truth, int jet_idx_topo, int jet_idx_groome
       var_E[x]=(*var_E_vec[x])[jet_idx];
       // if running over a camk12 algorithm the topo pt, eta, m and phi have already been assigned to that vector, so make 
       // sure we set it correctly here.
-      if (ca12Algo)
+      if (ca12Algo && x == jetType::TOPO)
 	{
 	  var_pt[x]=(*var_ca12topo_pt_vec)[jet_idx];
 	  var_m[x]=(*var_ca12topo_m_vec)[jet_idx];
@@ -2842,7 +2843,7 @@ void setOutputBranches(TTree * tree, std::string & groomalgo, std::string & groo
   if (xAOD)
     {
       tree->Branch("evt_kfactor",&evt_kfactor_out,"evt_kfactor/F");
-      tree->Branch("evt_nEvts",&evt_nEvts_out,"evt_nEvts/I");
+      tree->Branch("evt_nEvts",&evt_nEvts_out,"evt_nEvts/F");
       tree->Branch("evt_filtereff",&evt_filtereff_out,"evt_filtereff/F");
       tree->Branch("evt_sumWeights",&evt_sumWeights_out,"evt_sumWeights/F");
       tree->Branch("evt_xsec",&evt_xsec_out,"evt_xsec/F");

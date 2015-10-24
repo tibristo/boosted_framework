@@ -10,11 +10,11 @@ import operator
 import re
 import matplotlib.pyplot as plt
 from math import floor, log10
-job_id = 'features_l_2_10'
+job_id = 'jz5_bkg_v2'
 
 
 # set up the job ids
-key = 'config-output-paramID'
+key = 'jz5_bkg'
 #key = 'bdt_variables'
 #key = 'features_l_2_10ID'
 #full_dataset = 'persist/data_features_nc_2_10_v2_100.pkl'
@@ -23,7 +23,7 @@ key = 'config-output-paramID'
 print 'finished creating new full objects'
 #sys.exit()
 #raw_input()
-files = [f for f in os.listdir('evaluationObjects/') if f.find(key)!=-1 and f.endswith('.pickle') and f.find('bdt') == -1]
+files = [f for f in os.listdir('evaluationObjects/') if f.find(key)!=-1 and f.endswith('.pickle') and f.find(job_id) == -1]
 
 
 def createDataframe(key, files):
@@ -158,7 +158,10 @@ srt_bkg = gmean.sort('bkg_rej_test',ascending=False)
 # before writing to csv, format it to only use 3 sig digits
 to_round = ['momentum','regularize','learning','accuracy_test','bkg_rej_test']
 for r in to_round:
-    srt_bkg[r] = srt_bkg[r].map(lambda x: round(x, -int(floor(log10(x)))+2) )
+    try:
+        srt_bkg[r] = srt_bkg[r].map(lambda x: round(x, -int(floor(log10(x)))+2) )
+    except:
+        print 'encountered math error'
 # make sure the epochs are ints
 srt_bkg[['uepochs','sepochs']] = srt_bkg[['uepochs','sepochs']].astype(int)
     

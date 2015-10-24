@@ -155,7 +155,7 @@ def main(job_id, params):
     #filename_test = '/Disk/ecdf-nfs-ppe/atlas/users/tibristo/nnbosontagging/folds/AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_matchedL_ranged_v2_1000_1500_nomw_mergedtest_cv_001.root'
     #config = '/Disk/ecdf-nfs-ppe/atlas/users/tibristo/nnbosontagging/tim-config.yaml'
     config = '/Disk/ecdf-nfs-ppe/atlas/users/tibristo/boosted_framework/WTaggingNN/tim-config_full.yaml'
-    formula= 'label~*-thrustmin-thrustmaj-yfilt-angularity-foxwolfram20-tau21-pt-m-eta-phi-mu12-zcut12-planarflow-tauwta1-tau2-tau1-sphericity-eec_d2_1-tauwta2tauwta1| weight'
+    formula= 'label~*-thrustmin-thrustmaj-yfilt-angularity-foxwolfram20-pt-m-eta-phi-mu12-zcut12-planarflow-tauwta1-tau2-tau1-sphericity-eec_d2_1-tauwta2tauwta1| weight' #-tau21-tau1-tau2 <- these are not in mc15
     #formula= 'label~*-ThrustMin-ThrustMaj-YFilt-Tau21-Dip12|weight'
     algorithm = 'AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_matchedM_loose_v2_200_1000_mw'
     auc = objective(filename_train, filename_test, 'outputTree', config, exp(params['log_learning'][0]), params['momentum'][0], exp(params['log_regularize'][0]), params['uepochs'][0], params['sepochs'][0], formula, job_id, algorithm)
@@ -181,7 +181,7 @@ def runCV():
     #])
 
     params = OrderedDict([
-        ('log_learning', np.linspace(-7, -2, 2, dtype=int)),
+        ('log_learning', np.linspace(-10, -2, 5, dtype=int)),
         ('momentum', np.linspace(0.7, 0.85, 2)),
         ('log_regularize', np.linspace(-10, -7, 2)),
         ('uepochs',np.linspace(20, 60, 2, dtype=np.int)),
@@ -189,9 +189,10 @@ def runCV():
     ])
 
     # key to look for in the filenames
-    key = 'matchedM_loose_v2_200_1000_mw'
+    #key = 'matchedM_loose_v2_200_1000_mw'
+    key = 'mc15_jz5_v1'
     # output file id
-    file_id = 'bdt_variables'
+    file_id = 'jz5_bkg_v2'
     folder ='/Disk/ecdf-nfs-ppe/atlas/users/tibristo/boosted_framework/WTaggingNN/'
     # we need the files to be the output of what we would normally get back from
     # the cross_validation method from create_folds.py
@@ -211,9 +212,14 @@ def runCV():
     
 
     config = '/Disk/ecdf-nfs-ppe/atlas/users/tibristo/boosted_framework/WTaggingNN/tim-config_full.yaml'
-    formula= 'label~*-thrustmin-thrustmaj-yfilt-angularity-foxwolfram20-tau21-pt-m-eta-phi-mu12-zcut12-planarflow-tauwta1-tau2-tau1-sphericity-eec_d2_1-tauwta2tauwta1| weight'
+    # training on mc15 with variables: aplanarity, eec_c2_1, split12, tauwta2tauwta1, eec_d2_1, zcut12, planarflow. However, zcut12 and split12 are highly
+    # correlated and planarflow and sphericity are actually higher than eec_d2_1 when looking at the bdt feature importances!
+    # for mc15_jz5_v1
+    #formula= 'label~*-thrustmin-thrustmaj-yfilt-angularity-foxwolfram20-pt-m-eta-phi-mu12-sphericity-tauwta2-tauwta1| weight' # tau2, tau1, tau21 not in mc15
+    # for mc15_jz5_v2
+    formula= 'label~*-thrustmin-thrustmaj-yfilt-angularity-foxwolfram20-pt-m-eta-phi-mu12-tauwta2-tauwta1-zcut12| weight' # tau2, tau1, tau21 not in mc15
     #formula= 'label~*-thrustmin-thrustmaj-yfilt-angularity-foxwolfram20-tau21-pt-m-eta-phi-tauwta2-tauwta1-tau2-tau1| weight'
-    algorithm = 'AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_matchedM_loose_v2_200_1000_mw'
+    algorithm = 'AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_mc15_jz5_v1_800_1200_mw'
 
     #allparms, alltasks = grid_search(
     #    lb_view, folder, filenames, params, config, algorithm, id_tag=file_id, formula=formula)

@@ -543,13 +543,14 @@ Float_t var_filter_eff;
 Float_t var_xs;
 // some have the weights pre-calculated
 Float_t evt_kfactor = 0;
-Int_t evt_nEvts = 0;
+//Long_t evt_nEvts = 0; // this is on the dc14 samples
+Float_t evt_nEvts = 0; // this is on the mc15 samples
 Float_t evt_filtereff = 0;
 Float_t evt_sumWeights = 0;
 Float_t evt_xsec = 0;
 
 Float_t evt_kfactor_out;
-Int_t evt_nEvts_out;
+Float_t evt_nEvts_out;
 Float_t evt_filtereff_out;
 Float_t evt_sumWeights_out;
 Float_t evt_xsec_out;
