@@ -252,10 +252,10 @@ def plotFiles(filenames, variables, key, weight_plots = False, plot_dict = {}, t
     print filenames
 
     # check how many cv folds are represented in this list of files
-    cv_folds = filter(lambda x: x.find('cv') != -1 and x.endswith('root'), filenames)
+    cv_folds = filter(lambda x: x.find('cv') != -1 and x.endswith('root') and x.find('train') != -1, filenames)
     # get the cv_xxx name and only return unique values
     cv_nums = list(set(map(lambda x: 'cv_'+x.split('_')[-1].replace('.root','') , cv_folds)))
-    
+    print cv_nums
     # create a dictionary for the stats of each cv fold
     stats = {}
     # create a dict for the event counts of each cv fold
@@ -271,6 +271,7 @@ def plotFiles(filenames, variables, key, weight_plots = False, plot_dict = {}, t
     weight_id = '_weighted' if weight_plots else ''
     
     for i, f in enumerate(filenames):
+        print f
         # is this a test or train file?
         file_type = "Full"
         if f.lower().find('train') != -1:
@@ -389,24 +390,32 @@ def plotFiles(filenames, variables, key, weight_plots = False, plot_dict = {}, t
     # first write the combined stats
     combined_stats = open('fold_stats/combined_stats_'+key+weight_id+'.txt','w')
     combined_stats.write('{0:15}  {1:10} {2:14}{3:10}'.format('Sample','Signal','Background','Total')+'\n')
-    combined_stats.write(event_counts['Full']+'\n')
+    print event_counts['Full']
+    combined_stats.write(str(event_counts['Full'])+'\n')
     # write out all of the cv splits
     for cv in cv_nums:
         for f in ['Train','Valid']:
-            combined_stats.write(event_counts[cv][f]+'\n')
+            combined_stats.write(str(event_counts[cv][f])+'\n')
     combined_stats.write('\n'+'\n')
     # now start doing the variables
     combined_stats.write('\n{0:15}: {1:10} {2:10} {3:10} {4:10} {5:10} {6:10}'.format('Variable','Mean','Std','Mean Sig','Std Sig','Mean Bkg','Std Bkg')+'\n\n')
-
+    print stats['Full'].keys()
+    print stats.keys()
+    print stats['cv_000']['Train'].keys()
     for v in variables:
+        print v
+        v = v.strip()
+        if not v.strip() in stats['Full'].keys():
+            continue
         if v.strip() in tex_dict.keys():
             combined_stats.write(tex_dict[v]+'\n')
         else:
             combined_stats.write(v+'\n')
         combined_stats.write(stats['Full'][v]+'\n')
         for c in cv_nums:
-            combined_stats.write(stats[c]['Train'][v]+'\n')
-            combined_stats.write(stats[c]['Valid'][v]+'\n')
+            print c
+            combined_stats.write(str(stats[c]['Train'][v])+'\n')
+            combined_stats.write(str(stats[c]['Valid'][v])+'\n')
         combined_stats.write('\n')
     combined_stats.close()
     
@@ -414,9 +423,9 @@ def plotFiles(filenames, variables, key, weight_plots = False, plot_dict = {}, t
     for cv in cv_nums:
         stats_file = open('fold_stats/'+key+'_'+cv+weight_id+'.txt','w')
         stats_file.write('{0:15}  {1:10} {2:14}{3:10}'.format('Sample','Signal','Background','Total')+'\n')
-        stats_file.write(event_counts['Full']+'\n')
-        stats_file.write(event_counts[cv]['Train']+'\n')
-        stats_file.write(event_counts[cv]['Valid']+'\n')
+        stats_file.write(str(event_counts['Full'])+'\n')
+        stats_file.write(str(event_counts[cv]['Train'])+'\n')
+        stats_file.write(str(event_counts[cv]['Valid'])+'\n')
 
         stats_file.write('\n{0:15}: {1:10} {2:10} {3:10} {4:10} {5:10} {6:10}'.format('Variable','Mean','Std','Mean Sig','Std Sig','Mean Bkg','Std Bkg')+'\n\n')
         # now write each variable
@@ -481,7 +490,7 @@ def main(args):
         #full_dataset = '/Disk/ecdf-nfs-ppe/atlas/users/tibristo/BosonTagging/csv/AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_matchedM_loose_v2_200_1000_mw_merged.csv'
         # name of the full dataset which is used for the cv splits
         if args.fulldataset == 'DEFAULT':
-            full_dataset = path+algorithm.replace('loose','notcleaned')+'.csv'
+            full_dataset = path+args.algorithm.replace('loose','notcleaned')+'.csv'
             if not os.path.isfile(full_dataset):
                 print 'full dataset does not exist!' + full_dataset
         else:
