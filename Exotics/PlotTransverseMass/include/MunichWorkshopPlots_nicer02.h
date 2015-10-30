@@ -116,7 +116,7 @@ void printTLV(vector<TLorentzVector> & tlv);
 std::unordered_map<std::string,bool> createBranchMap(TObjArray *& arr);
 void SignalHandlerMapAccess(int signal);
 void calculateResponseValues();
-void setCa12Vectors();
+void setCa12Vectors(bool truth, bool topo);
 
 // typedef for the exception when accessing a missing element from a map
 typedef void (*SignalHandlerPointer)(int);
@@ -234,6 +234,7 @@ bool beta2available = false;
 bool addResponse = false;
 bool clusterTLV = false;
 bool ca12TLV = false;
+bool ca12topoTLV = false;
 bool keepTopo = true;
 
 bool xAODJets = false;

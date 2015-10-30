@@ -21,7 +21,7 @@ branches:
   label: int
   m: double
   weight: double
-
+  weight_train: double
 #    eec_c2_2: double
 #  eec_d2_2: double
 #  tau1: double

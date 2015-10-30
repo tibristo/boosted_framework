@@ -671,8 +671,8 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
 	      int chosenLeadTopoJetIndex=-99;
 	      
 	      // if the individual ca12 kinematic variables do not exist they need to be set from the TLV of jets
-	      if (ca12TLV)
-		setCa12Vectors();
+	      if (ca12TLV||ca12topoTLV)
+		setCa12Vectors(ca12TLV, ca12topoTLV);
 
 
 	      // find the leading ca12 truth jet
@@ -1886,16 +1886,26 @@ void setJetsBranches(TChain * tree, std::string &groomalgo,  std::string & groom
   // first check if the individual variables for pt, m, eta, phi exist, otherwise look for the TLV of ca12 jets.
   if (brancharray.find("jet_CamKt12Truth_pt") == brancharray.end())// && useBranch("jet_CamKt12Truth_pt"))
     {
-      std::cout << "using the four vectors for the camkt12 truth and topo jets" << std::endl;
+      std::cout << "using the four vectors for the camkt12 truth jets" << std::endl;
       if (brancharray.find("CamKt12TruthJets") != brancharray.end())
 	{
 	  branchmap["CamKt12TruthJets"] = true;
-	  branchmap["CamKt12LCTopoJets"] = true;
 	  ca12TLV = true;
 	  if (!setVector(tree, brancharray, var_ca12_tlv_vec, "CamKt12TruthJets"))
 	    tlvvec(var_ca12_tlv_vec);
+	}
+    }
+    // first check if the individual variables for pt, m, eta, phi exist, otherwise look for the TLV of ca12 jets.
+  if (brancharray.find("jet_CamKt12LCTopo_pt") == brancharray.end())// && useBranch("jet_CamKt12Truth_pt"))
+    {
+      std::cout << "using the four vectors for the camkt12 truth and topo jets" << std::endl;
+      if (brancharray.find("CamKt12LCTopoJets") != brancharray.end())
+	{
+	  branchmap["CamKt12LCTopoJets"] = true;
+	  ca12topoTLV = true;
 	  if (!setVector(tree, brancharray, var_ca12topo_tlv_vec, "CamKt12LCTopoJets"))
 	    tlvvec(var_ca12topo_tlv_vec);
+	  
 	}
     }
   if(ca12TLV || !setVector(tree,brancharray, var_ca12_pt_vec, "jet_CamKt12Truth_pt"))
@@ -1909,13 +1919,13 @@ void setJetsBranches(TChain * tree, std::string &groomalgo,  std::string & groom
   // set the ca12 topo jets
   // this can get tricky when running over any CamKt12 groomed jet collection because it will
   // try to read this into two variables
-  if(ca12TLV || !setVector(tree,brancharray, var_ca12topo_pt_vec, "jet_CamKt12LCTopo_pt"))
+  if(ca12topoTLV || !setVector(tree,brancharray, var_ca12topo_pt_vec, "jet_CamKt12LCTopo_pt"))
     floatvec(var_ca12topo_pt_vec);
-  if(ca12TLV || !setVector(tree,brancharray, var_ca12topo_m_vec, "jet_CamKt12LCTopo_m"))
+  if(ca12topoTLV || !setVector(tree,brancharray, var_ca12topo_m_vec, "jet_CamKt12LCTopo_m"))
     floatvec(var_ca12topo_m_vec);
-  if(ca12TLV || !setVector(tree,brancharray, var_ca12topo_eta_vec, "jet_CamKt12LCTopo_eta"))
+  if(ca12topoTLV || !setVector(tree,brancharray, var_ca12topo_eta_vec, "jet_CamKt12LCTopo_eta"))
     floatvec(var_ca12topo_eta_vec);
-  if(ca12TLV || !setVector(tree,brancharray, var_ca12topo_phi_vec, "jet_CamKt12LCTopo_phi"))
+  if(ca12topoTLV || !setVector(tree,brancharray, var_ca12topo_phi_vec, "jet_CamKt12LCTopo_phi"))
     floatvec(var_ca12topo_phi_vec);
 
   // loop through the truth, toppo and groomed jets and set up the branches for the different variables
@@ -2156,34 +2166,38 @@ void setJetsBranches(TChain * tree, std::string &groomalgo,  std::string & groom
  * Set the values for the ca12 pt, eta, phi and m from the ca12 tlv.  Done for both lctopo and truth.
  */
 
-void setCa12Vectors()
+void setCa12Vectors(bool truth, bool topo)
 {
-  // loop through all of the truth jets
-  var_ca12_pt_vec->clear();// = new vector<float>();
-  var_ca12_eta_vec->clear();// = new vector<float>();
-  var_ca12_phi_vec->clear();// = new vector<float>();
-  var_ca12_m_vec->clear();// = new vector<float>();
-  for (std::vector<TLorentzVector>::iterator it = var_ca12_tlv_vec->begin(); it != var_ca12_tlv_vec->end(); it++)
+  if (truth)
     {
-      var_ca12_pt_vec->push_back((*it).Pt());
-      var_ca12_phi_vec->push_back((*it).Phi());
-      var_ca12_eta_vec->push_back((*it).Eta());
-      var_ca12_m_vec->push_back((*it).M());
+      // loop through all of the truth jets
+      var_ca12_pt_vec->clear();// = new vector<float>();
+      var_ca12_eta_vec->clear();// = new vector<float>();
+      var_ca12_phi_vec->clear();// = new vector<float>();
+      var_ca12_m_vec->clear();// = new vector<float>();
+      for (std::vector<TLorentzVector>::iterator it = var_ca12_tlv_vec->begin(); it != var_ca12_tlv_vec->end(); it++)
+	{
+	  var_ca12_pt_vec->push_back((*it).Pt());
+	  var_ca12_phi_vec->push_back((*it).Phi());
+	  var_ca12_eta_vec->push_back((*it).Eta());
+	  var_ca12_m_vec->push_back((*it).M());
+	}
     }
-
-  // loop through all of the lctopo jets
-  var_ca12topo_pt_vec->clear();// = new vector<float>();
-  var_ca12topo_eta_vec->clear();// = new vector<float>();
-  var_ca12topo_phi_vec->clear();// = new vector<float>();
-  var_ca12topo_m_vec->clear();// = new vector<float>();
-  for (std::vector<TLorentzVector>::iterator it = var_ca12topo_tlv_vec->begin(); it != var_ca12topo_tlv_vec->end(); it++)
+  if (topo)
     {
-      var_ca12topo_pt_vec->push_back((*it).Pt());
-      var_ca12topo_phi_vec->push_back((*it).Phi());
-      var_ca12topo_eta_vec->push_back((*it).Eta());
-      var_ca12topo_m_vec->push_back((*it).M());
+      // loop through all of the lctopo jets
+      var_ca12topo_pt_vec->clear();// = new vector<float>();
+      var_ca12topo_eta_vec->clear();// = new vector<float>();
+      var_ca12topo_phi_vec->clear();// = new vector<float>();
+      var_ca12topo_m_vec->clear();// = new vector<float>();
+      for (std::vector<TLorentzVector>::iterator it = var_ca12topo_tlv_vec->begin(); it != var_ca12topo_tlv_vec->end(); it++)
+	{
+	  var_ca12topo_pt_vec->push_back((*it).Pt());
+	  var_ca12topo_phi_vec->push_back((*it).Phi());
+	  var_ca12topo_eta_vec->push_back((*it).Eta());
+	  var_ca12topo_m_vec->push_back((*it).M());
+	}
     }
-  
 }
 
 /*

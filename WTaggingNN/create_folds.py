@@ -15,7 +15,7 @@ import math
 from root_numpy import array2root
 import ROOT
 import AtlasStyle as atlas
-
+import copy
 
 class scalerNN:
     def __init__(self, variables, all_means, all_std, weighted_means = None, weighted_std = None):
@@ -207,7 +207,7 @@ def persist_cv_splits(X, y, w, variables, observers, n_cv_iter=5, test_size=0.25
     return cv_split_filenames
 
 
-def cross_validation(data,iterations, name='data', scale=True):
+def cross_validation(data,iterations, name='data', scale=True, pt_rw = True):
     # name of all variables in the dataset
     variables = list(data.dtype.names)
     # remove the ones we do not want to standardise
@@ -222,16 +222,22 @@ def cross_validation(data,iterations, name='data', scale=True):
     for o in observers:
         if o.lower() in variables:
             variables.remove(o)
-    print variables
+    #print variables
     # Get X, which is all training/ testing variables
     X = data[variables]
     # target variable
     y = data['label']
     # weights
+    # sometimes the weights need to be adjusted.
+
     w = data['weight']
     # variables that are not standardised
-    observer_data = data[observers]
-
+    observer_data = nf.append_fields(data[observers], names='weight_train', data=copy.deepcopy(data['weight']), dtypes=np.float, usemask=False)
+    #observer_data = data[observers]
+    if not pt_rw:
+        # for signal all weights set to 1, no pt rw for training the nn
+        print 'setting signal weights to 1'
+        observer_data['weight_train'][data['label']==1] = 1.0
     # create the folds
     filenames = persist_cv_splits(X, y, w, variables, observer_data, n_cv_iter=iterations, name=name, suffix="_cv_%03d.root", test_size=0.25, random_state=None, scale=scale)
 
@@ -437,12 +443,14 @@ def main(args):
     parser.add_argument('--weight', help = 'If the plots should be weighted')
     parser.add_argument('--algorithm', default = 'AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_matchedM_loose_v2_200_1000_mw_merged', help = 'Name of the algorithm (this is the name of the csv file, without the .csv at the end).')
     parser.add_argument('--fulldataset', default = 'DEFAULT', help = 'Full dataset filename.  This is the NOT Cleaned file.')
-    
+    parser.add_argument('--ptrw', dest='ptrw', action='store_true',help = 'If signal should be pt weighted. Default True.')
+    parser.add_argument('--no-ptrw', dest='ptrw',action='store_false', help = 'If signal should be pt weighted. Default True.')
+    parser.set_defaults(ptrw=True)
     # parse args
     args = parser.parse_args()
     
     if not args.folds or not args.plot:
-        print 'need to set if folds should be created! usage: python create_folds.py folds(true/false) plot(true/false) [--key=key] [--weight=true/false] [--algorithm=alg] [--fulldataset=fullset]'
+        print 'need to set if folds should be created! usage: python create_folds.py folds(true/false) plot(true/false) [--key=key] [--weight=true/false] [--algorithm=alg] [--fulldataset=fullset] [--ptrw=true/false]'
         sys.exit(0)
 
     # this is the default path
@@ -454,7 +462,7 @@ def main(args):
     line1 = colcheck.readline()
     colcount = line1.count(',')
     cols = np.linspace(1,colcount, colcount,dtype=int)
-
+    print 'pt rw ' +str(args.ptrw)
 
     #['mc_event_weight', 'jet_antikt10truthtrimmedptfrac5smallr20_pt', 'jet_antikt10truthtrimmedptfrac5smallr20_eta', 'aplanarity', 'thrustmin', 'tau1', 'sphericity', 'm', 'foxwolfram20', 'tau21', 'thrustmaj', 'eec_c2_1', 'pt', 'eec_c2_2', 'dip12', 'split12', 'phi', 'tauwta2tauwta1', 'eec_d2_1', 'yfilt', 'mu12', 'tauwta2', 'zcut12', 'angularity', 'tau2', 'eec_d2_2', 'eta', 'tauwta1', 'planarflow', 'averageintperxing', 'evt_xsec', 'evt_filtereff', 'evt_nevts', 'jet_camkt12truth_pt', 'jet_camkt12truth_eta', 'jet_camkt12truth_phi', 'jet_camkt12truth_m', 'jet_camkt12lctopo_pt', 'jet_camkt12lctopo_eta', 'jet_camkt12lctopo_phi', 'jet_camkt12lctopo_m', 'weight', 'eff', 'label']
 
@@ -469,7 +477,7 @@ def main(args):
         # are we standardising the data?
         scale = True
         # the cross validation method will call the persists_cv method and create the folds
-        filenames = cross_validation(data, 4, name, scale)
+        filenames = cross_validation(data, 4, name, scale, pt_rw = args.ptrw)
         #full_dataset = '/Disk/ecdf-nfs-ppe/atlas/users/tibristo/BosonTagging/csv/AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_matchedM_loose_v2_200_1000_mw_merged.csv'
         # name of the full dataset which is used for the cv splits
         if args.fulldataset == 'DEFAULT':
