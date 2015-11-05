@@ -75,13 +75,14 @@ def scaleSample(scaler_filename, filename='/Disk/ecdf-nfs-ppe/atlas/users/tibris
     #import scalerNN
     import pickle
     # check that the scaler pickle file exists
-    if not os.path.isfile(scaler_filename):
+    if not os.path.isfile(prefix+scaler_filename):
         print 'Scaler file does not exist'
         return
     
     # open the scaler pickle
-    with open(scaler_filename,'r') as p:
+    with open(prefix+scaler_filename,'r') as p:
         scaler = pickle.load(p)
+        
     # check the type to make sure it's not an error
     if isinstance(scaler, basestring):
         print "Scaler appears to be an error message"
@@ -101,6 +102,8 @@ def scaleSample(scaler_filename, filename='/Disk/ecdf-nfs-ppe/atlas/users/tibris
     for i,v in enumerate(scaler.variables):
         mean = scaler.means[i]
         std = scaler.std[i]
+        if std == 0.0:
+            std = 1.0
         X_full[v] = (X_full[v]-mean)/std
 
     #recfull = nf.append_fields(X_full, names='label', data=y, dtypes=np.int32, usemask=False)#, dtypes=int)#, usemask=False)
@@ -149,6 +152,8 @@ def persist_cv_splits(X, y, w, variables, observers, n_cv_iter=5, test_size=0.25
 
                 # do the standardisation
                 print v
+                if std == 0.0:
+                    std = 1.0
                 Xtrain[v] = (Xtrain[v]-mean)/std
                 Xtest[v] = (Xtest[v]-mean)/std
                 
@@ -207,7 +212,7 @@ def persist_cv_splits(X, y, w, variables, observers, n_cv_iter=5, test_size=0.25
     return cv_split_filenames
 
 
-def cross_validation(data,iterations, name='data', scale=True, pt_rw = True):
+def cross_validation(data,iterations, name='data', scale=True, pt_rw = True, transform_weights=True):
     # name of all variables in the dataset
     variables = list(data.dtype.names)
     # remove the ones we do not want to standardise
@@ -231,13 +236,31 @@ def cross_validation(data,iterations, name='data', scale=True, pt_rw = True):
     # sometimes the weights need to be adjusted.
 
     w = data['weight']
+    w_tmp = data[['weight','label']]
+    print type(w_tmp)
     # variables that are not standardised
-    observer_data = nf.append_fields(data[observers], names='weight_train', data=copy.deepcopy(data['weight']), dtypes=np.float, usemask=False)
+
     #observer_data = data[observers]
     if not pt_rw:
         # for signal all weights set to 1, no pt rw for training the nn
         print 'setting signal weights to 1'
-        observer_data['weight_train'][data['label']==1] = 1.0
+        for idx in xrange(0, w_tmp.shape[0]):
+            if w_tmp['label'][idx] == 0:
+                continue
+            w_tmp['weight'][idx] = 1.0
+        #observer_data['weight_train'][data['label']==1] = 1.0
+    if transform_weights:
+        #weights_tx = w_tmp.apply(lambda x: x['weight'] if x['label'] == 1 else np.arctan(1/x['weight']), axis=1)
+        #np.apply_along_axis(lambda x: x['weight'] if x['label'] == 1 else np.arctan(1/x['weight']), axis=1, w_tmp)
+        # arg none of that works so annoying
+        for idx in xrange(0, w_tmp.shape[0]):
+            if w_tmp['label'][idx] == 0:
+                w_tmp['weight'][idx] = np.arctan(1./w_tmp['weight'][idx])
+
+        #observer_data = nf.append_fields(data[observers], names='weight_train', data=copy.deepcopy(weights_tx), dtypes=np.float, usemask=False)
+        #observer_data['weight_train'][data['label']==0] =
+    #else:
+    observer_data = nf.append_fields(data[observers], names='weight_train', data=copy.deepcopy(w_tmp['weight']), dtypes=np.float, usemask=False)
     # create the folds
     filenames = persist_cv_splits(X, y, w, variables, observer_data, n_cv_iter=iterations, name=name, suffix="_cv_%03d.root", test_size=0.25, random_state=None, scale=scale)
 
@@ -448,13 +471,18 @@ def main(args):
     parser = argparse.ArgumentParser(description='Plot some variables or create cv folds.')
     parser.add_argument('folds', help = 'If the cv folds should be created')
     parser.add_argument('plot', help = 'If the cv folds should be plotted')
-    parser.add_argument('--key', help = 'Key to be used for identifying files')
+    parser.add_argument('--key', default='nokey', help = 'Key to be used for identifying files')
     parser.add_argument('--weight', help = 'If the plots should be weighted')
     parser.add_argument('--algorithm', default = 'AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_matchedM_loose_v2_200_1000_mw_merged', help = 'Name of the algorithm (this is the name of the csv file, without the .csv at the end).')
     parser.add_argument('--fulldataset', default = 'DEFAULT', help = 'Full dataset filename.  This is the NOT Cleaned file.')
     parser.add_argument('--ptrw', dest='ptrw', action='store_true',help = 'If signal should be pt weighted. Default True.')
     parser.add_argument('--no-ptrw', dest='ptrw',action='store_false', help = 'If signal should be pt weighted. Default True.')
+    parser.add_argument('--transform-weights', dest='txweights',action='store_true', help = 'If signal should be pt weighted. Default True.')
+    parser.add_argument('--scale', dest='scale',action='store_true', help = 'If we are just scaling the input full dataset according to the training files which are matched with the provided key. Default True.')
+    parser.add_argument('--scaleid', default = 'x', help = 'ID for the scaled file.  If scaling a file to some training sample, the ID should be indicative of this. Default x.')
     parser.set_defaults(ptrw=True)
+    parser.set_defaults(txweights=False)
+    parser.set_defaults(scale=False)
     # parse args
     args = parser.parse_args()
     
@@ -486,7 +514,7 @@ def main(args):
         # are we standardising the data?
         scale = True
         # the cross validation method will call the persists_cv method and create the folds
-        filenames = cross_validation(data, 4, name, scale, pt_rw = args.ptrw)
+        filenames = cross_validation(data, 4, name, scale, pt_rw = args.ptrw, transform_weights = args.txweights)
         #full_dataset = '/Disk/ecdf-nfs-ppe/atlas/users/tibristo/BosonTagging/csv/AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_matchedM_loose_v2_200_1000_mw_merged.csv'
         # name of the full dataset which is used for the cv splits
         if args.fulldataset == 'DEFAULT':
@@ -507,9 +535,29 @@ def main(args):
                 cv_split = f[0][f[0].find('cv'):f[0].find('.root')]
                 # apply the standardisation to the dataset
                 scaleSample(scaler_fname, filename=full_dataset, prefix='folds/', name=full_dataset[full_dataset.rfind('/')+1:].replace('.csv','')+'_full_scaled_'+cv_split)
+                
+    elif args.scale == True:
+        # scale some folds that we have already created
+        full_dataset = path + args.fulldataset
+        # create the full datasets scaled according to the different training samples:
+        if args.key == 'nokey':
+            print "please enter a key to use for finding the scaler files"
+            key = input()
+        else:
+            key = args.key
+        filenames = [f for f in os.listdir('folds') if f.endswith('_scaler.pkl') and f.find(key) != -1]
+        for f in filenames:
+            # first entry in f is the train sample name, second is test
+            # get the scalerNN object for the train sample
+            # scalerNN saves the values we used to do the standardisation
+            #scaler_fname = f[0].replace('.root', '_scaler.pkl')
+            # find out which cv split we're on
+            cv_split = f[f.find('cv'):f.find('_scaler.pkl')]
+            # apply the standardisation to the dataset
+            scaleSample(f, filename=full_dataset, prefix='folds/', name=full_dataset[full_dataset.rfind('/')+1:].replace('.csv','')+'_full_scaled_'+args.scaleid+'_'+cv_split)
     else:
-        print 'Not creating folds'        
-        
+        print 'Not creating folds or scaling samples'        
+
     
     # arg because I didn't read this properly, if using plotFiles() after doing cross_validation, the filenames list
     # must be converted to a 1D list
@@ -518,7 +566,7 @@ def main(args):
     if args.plot.lower() == 'true':
         # key to be used for finding the correct files
         key = '13tev_matchedM_loose_v2_200_1000_mw'
-        if args.key:
+        if args.key != 'nokey':
             key = args.key
 
         print 'Plotting files'

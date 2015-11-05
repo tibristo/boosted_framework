@@ -14,7 +14,7 @@ job_id = 'jz5_bkg_v1'
 
 
 # set up the job ids
-key = 'jz5_v2_bkg_v1'
+key = 'mc15_v2.2_bkg_v1'
 #key = 'bdt_variables'
 #key = 'features_l_2_10ID'
 #full_dataset = 'persist/data_features_nc_2_10_v2_100.pkl'

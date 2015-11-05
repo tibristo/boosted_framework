@@ -5,7 +5,7 @@ import operator
 import sys
 
 folder = sys.argv[1]
-file_id = 'jz5_v2_bkg_v1'
+file_id = 'mc15_v2.2_bkg_v1'
 
 def get_score(fname,directory=''):
     f = open(directory+fname, 'r')
@@ -35,7 +35,7 @@ sorted_scores = sorted(scores.items(), key = operator.itemgetter(1) )
 print sorted_scores
 
 #save to file
-f_out = open('best_rejection_jz5_v2_bkg_v1_full.txt','w')
+f_out = open('best_rejection_mc15_v2.2_bkg_v1_full.txt','w')
 #f_out = open('best_rejection_cv_full_bdt_vars.txt','w')
 for s in range(len(sorted_scores)):
     f_out.write(sorted_scores[s][0] + ': ' + str(sorted_scores[s][1])+'\n')
