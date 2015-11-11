@@ -99,6 +99,12 @@ def generate_taggers(schema, tagger_name='tagger'):
                                 params['uepochs'] = int(schema['uepochs'])
                         if schema.has_key('sepochs'):
                                 params['sepochs'] = int(schema['sepochs'])
+                        weight_validation = False
+                        if schema.has_key('weight_validation'):
+                                weight_validation = bool(schema['weight_validation'])
+                        tx_weight_validation = False
+                        if schema.has_key('transform_weight_validation'):
+                                tx_weight_validation = bool(schema['transform_weight_validation'])
                                 
                         print tagger_variables
                         if schema.has_key('sigeff'):
@@ -113,10 +119,10 @@ def generate_taggers(schema, tagger_name='tagger'):
 				opt = specifications['optimise']
 			if schema.has_key('weightfiles') and schema['weightfiles'] == 'true':
 				add_tagger(specifications['name'], specifications['color'], 
-					   general_roc(data, predictions['label_predicted'], 100, name=tagger_name, signal_eff=sig_eff,bkg_eff=bkg_eff,variables=tagger_variables,params=params,weights=data[schema['weight']], tagger_file=taggerfile, train_file = train_file, algorithm=algorithm, data_train = data_train, discriminant_train=predictions_train['label_predicted']), taggers, opt)
+					   general_roc(data, predictions['label_predicted'], 100, name=tagger_name, signal_eff=sig_eff,bkg_eff=bkg_eff,variables=tagger_variables,params=params,weights=data[schema['weight']], tagger_file=taggerfile, train_file = train_file, algorithm=algorithm, data_train = data_train, discriminant_train=predictions_train['label_predicted'], weight_validation = weight_validation, tx_weight_validation = tx_weight_validation), taggers, opt)
 			else:
 				add_tagger(specifications['name'], specifications['color'], 
-					   general_roc(data, predictions['label_predicted'], 100, name=tagger_name, signal_eff=sig_eff,bkg_eff=bkg_eff,variables=tagger_variables,params=params, tagger_file=taggerfile,train_file=train_file, algorithm=algorithm, data_train = data_train, discriminant_train=predictions_train['label_predicted']), taggers, opt)#10000), taggers)
+					   general_roc(data, predictions['label_predicted'], 100, name=tagger_name, signal_eff=sig_eff,bkg_eff=bkg_eff,variables=tagger_variables,params=params, tagger_file=taggerfile,train_file=train_file, algorithm=algorithm, data_train = data_train, discriminant_train=predictions_train['label_predicted'], weight_validation = weight_validation, tx_weight_validation = tx_weight_validation), taggers, opt)#10000), taggers)
 
 
 	if schema.has_key('benchmarks'):

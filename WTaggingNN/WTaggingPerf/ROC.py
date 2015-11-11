@@ -7,7 +7,7 @@ import matplotlib.tri as tri
 from matplotlib.mlab import griddata
 from matplotlib import rc
 import numpy.ma as ma
-from sklearn.metrics import roc_curve, auc
+from sklearn.metrics import roc_curve, auc, f1_score, precision_score, recall_score
 from ROOT import TH1F, TH2D, TCanvas, TFile, TNamed, gROOT
 from root_numpy import fill_hist
 import functions as fn
@@ -85,7 +85,7 @@ def pre_process(data):
 	#data = data[data['fjet_Tau3'] > -10]
 	return data
 
-def score(top_ind, qcd_ind, discriminant):
+def score(top_ind, qcd_ind, discriminant, sample_weight = None):
     # the score of the tagger we will define as the % correct classification when taking
     # a cut at 50% signal efficiency
     # Accuracy is how many correctly classified signal AND background
@@ -97,16 +97,27 @@ def score(top_ind, qcd_ind, discriminant):
     qcd_disc = discriminant[qcd_ind]
     cut = top_disc[len(top_disc)/2]
 
-    sig_correct = float(top_disc[np.where(top_disc>=cut)].shape[0])
-    sig_incorrect = float(top_disc[np.where(top_disc<cut)].shape[0])
-    bkg_correct = float(qcd_disc[np.where(qcd_disc<cut)].shape[0])
-    bkg_incorrect = float(qcd_disc[np.where(qcd_disc>=cut)].shape[0])
+    sig_correct = top_disc >= cut
+    sig_incorrect = top_disc < cut
+    bkg_correct = qcd_disc < cut
+    bkg_incorrect = qcd_disc >= cut
     # if signal median is less than bkg, swap signal and background
     if sig_med < bkg_med:
         sig_correct, sig_incorrect = sig_incorrect, sig_correct
         bkg_correct, bkg_incorrect = bkg_incorrect, bkg_correct
 
-    score = float(sig_correct+bkg_correct)/float(discriminant.shape[0])
+    if sample_weight is not None:
+        sig_score = sig_correct.sum()
+        sig_failed = sig_incorrect.sum()
+        bkg_score = bkg_correct.sum()
+        bkg_failed = bkg_incorrect.sum()
+    else:
+        sig_weights = sample_weight[top_disc]
+        sig_score = np.average(sig_correct, weights=sig_weights)
+        sig_failed = np.average(sig_incorrect, weights=sig_weights)
+        bkg_weights = sample_weight[qcd_disc]
+        bkg_score = np.average(bkg_correct, weights=bkg_weights)
+        bkg_failed = np.average(bkg_incorrect, weights=bkg_weights)
     # calculate the different scoring metrics
     # accuracy = correct/total -> doesn't discrim between signal and bkg
     # precision = correct signal / (TP+FP)
@@ -116,22 +127,26 @@ def score(top_ind, qcd_ind, discriminant):
     # we need to decide what our decision value is! what probability do we cut on?
     # choose 50% since that is what we normally go for in the cut-based tagger
     # for the bkg rejection power (at 50% signal)
+    score = float(sig_score+bkg_score)/float(discriminant.shape[0])
     accuracy = score
-    if sig_correct+bkg_incorrect != 0:
-        precision = float(sig_correct/(sig_correct+bkg_incorrect))
+    # Usage for precision, recall and f1 asks for blah_score(y_true, y_pred, sample_weight=weight)
+    # top_ind is effectively y_true, the ground truth target labels -> True for label==1, and False for label==0. This is set in
+    # general_roc() below.
+    # y_pred is an array of the estimated targets
+    if sig_med < bkg_med:
+        y_pred = discriminant < cut
     else:
-        precision = -1
-    if sig_correct+sig_incorrect != 0:
-        recall = float(sig_correct/(sig_correct+sig_incorrect))
-    else:
-        recall = -1
-    if precision+recall != 0:
-        f1 = 2*precision*recall/(precision+recall)
-    else:
-        f1 = -1
+        y_pred = discriminant >= cut
+
+    precision = precision_score(top_ind, y_pred, sample_weight=sample_weight)
+
+    recall = recall_score(top_ind, y_pred, sample_weight=sample_weight)
+    
+    f1 = f1_score(top_ind, y_pred, sample_weight=sample_weight)
+    
     return cut, accuracy, precision, recall, f1
     
-def general_roc(data, discriminant, bins = 2000, inverse=False, name="", signal_eff=1.0, bkg_eff=1.0, variables = [], params=[], weights=[], tagger_file='', train_file = '', algorithm = '', data_train = [], discriminant_train = []):
+def general_roc(data, discriminant, bins = 2000, inverse=False, name="", signal_eff=1.0, bkg_eff=1.0, variables = [], params=[], weights=[], tagger_file='', train_file = '', algorithm = '', data_train = [], discriminant_train = [], weight_validation = False, tx_weight_validation = False):
 	top = data[:]['label']
 
         train_avail = len(data_train) > 0
@@ -142,18 +157,24 @@ def general_roc(data, discriminant, bins = 2000, inverse=False, name="", signal_
 
 	top_ind = data[:]['label'] == 1
 	qcd_ind = data[:]['label'] == 0
+
+        w_string = 'weight_train' if tx_weight_validation else 'weight'
+        weights = data[:][w_string] if weight_validation else None # if we want to test with the transformed weights, then this needs to be "weight_train"
+
+        
         discriminant_bins = np.linspace(np.min(discriminant), np.max(discriminant), bins)
         if train_avail:
             top_ind_tr = data_train[:]['label'] == 1
 	    qcd_ind_tr = data_train[:]['label'] == 0
+            weights_train = data_train[:]['weight_train'] if weight_validation else None
 
-        fpr,tpr,thresholds = roc_curve(top,discriminant)
+        fpr,tpr,thresholds = roc_curve(top,discriminant,sample_weight=weights)
 
         # get the scores for the validation
-        cut, accuracy, precision, recall, f1 = score(top_ind, qcd_ind, discriminant)
+        cut, accuracy, precision, recall, f1 = score(top_ind, qcd_ind, discriminant, sample_weight = weights)
         # get the scores for the training
         if train_avail:
-            cut_tr, accuracy_tr, precision_tr, recall_tr, f1_tr = score(top_ind_tr, qcd_ind_tr, discriminant_train)
+            cut_tr, accuracy_tr, precision_tr, recall_tr, f1_tr = score(top_ind_tr, qcd_ind_tr, discriminant_train, sample_weight = weights_train)
         taggers = variables
         # model could store the net, but it's easier to just say agile and then store the
         # yaml filename
@@ -176,7 +197,7 @@ def general_roc(data, discriminant, bins = 2000, inverse=False, name="", signal_
         model.setBkgEff(bkg_eff)
         model.setOutputPath('ROC_root')
         model.setOutputPrefix('AGILE_')
-        model.setProbas(discriminant, top_ind, qcd_ind)
+        model.setProbas(discriminant, top_ind, qcd_ind, weights)
         model.toROOT()
         print job_id
         # now pickle the file
