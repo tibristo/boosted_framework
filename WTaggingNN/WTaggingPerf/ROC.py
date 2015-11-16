@@ -95,6 +95,7 @@ def score(top_ind, qcd_ind, discriminant, sample_weight = None):
     bkg_med = np.median(discriminant[qcd_ind])
     top_disc = discriminant[top_ind]
     qcd_disc = discriminant[qcd_ind]
+    # at 50% signal eff
     cut = top_disc[len(top_disc)/2]
 
     sig_correct = top_disc >= cut
@@ -106,18 +107,22 @@ def score(top_ind, qcd_ind, discriminant, sample_weight = None):
         sig_correct, sig_incorrect = sig_incorrect, sig_correct
         bkg_correct, bkg_incorrect = bkg_incorrect, bkg_correct
 
-    if sample_weight is not None:
+    if sample_weight is None:
         sig_score = sig_correct.sum()
         sig_failed = sig_incorrect.sum()
         bkg_score = bkg_correct.sum()
         bkg_failed = bkg_incorrect.sum()
+        score = float(sig_score+bkg_score)/float(discriminant.shape[0])
     else:
-        sig_weights = sample_weight[top_disc]
+        sig_weights = sample_weight[top_ind]
         sig_score = np.average(sig_correct, weights=sig_weights)
         sig_failed = np.average(sig_incorrect, weights=sig_weights)
-        bkg_weights = sample_weight[qcd_disc]
+        bkg_weights = sample_weight[qcd_ind]
         bkg_score = np.average(bkg_correct, weights=bkg_weights)
         bkg_failed = np.average(bkg_incorrect, weights=bkg_weights)
+        all_correct = np.concatenate((sig_correct,bkg_correct),axis=0)
+        all_correct_weights = np.concatenate((sig_weights, bkg_weights),axis=0)
+        score = np.average(all_correct, weights=all_correct_weights)
     # calculate the different scoring metrics
     # accuracy = correct/total -> doesn't discrim between signal and bkg
     # precision = correct signal / (TP+FP)
@@ -127,7 +132,6 @@ def score(top_ind, qcd_ind, discriminant, sample_weight = None):
     # we need to decide what our decision value is! what probability do we cut on?
     # choose 50% since that is what we normally go for in the cut-based tagger
     # for the bkg rejection power (at 50% signal)
-    score = float(sig_score+bkg_score)/float(discriminant.shape[0])
     accuracy = score
     # Usage for precision, recall and f1 asks for blah_score(y_true, y_pred, sample_weight=weight)
     # top_ind is effectively y_true, the ground truth target labels -> True for label==1, and False for label==0. This is set in
@@ -146,7 +150,7 @@ def score(top_ind, qcd_ind, discriminant, sample_weight = None):
     
     return cut, accuracy, precision, recall, f1
     
-def general_roc(data, discriminant, bins = 2000, inverse=False, name="", signal_eff=1.0, bkg_eff=1.0, variables = [], params=[], weights=[], tagger_file='', train_file = '', algorithm = '', data_train = [], discriminant_train = [], weight_validation = False, tx_weight_validation = False):
+def general_roc(data, discriminant, bins = 2000, inverse=False, name="", signal_eff=1.0, bkg_eff=1.0, variables = [], params=[], weights_list=[], tagger_file='', train_file = '', algorithm = '', data_train = [], discriminant_train = [], weight_validation = False, tx_weight_validation = False):
 	top = data[:]['label']
 
         train_avail = len(data_train) > 0
@@ -158,10 +162,24 @@ def general_roc(data, discriminant, bins = 2000, inverse=False, name="", signal_
 	top_ind = data[:]['label'] == 1
 	qcd_ind = data[:]['label'] == 0
 
-        w_string = 'weight_train' if tx_weight_validation else 'weight'
-        weights = data[:][w_string] if weight_validation else None # if we want to test with the transformed weights, then this needs to be "weight_train"
-
-        
+        if tx_weight_validation and 'weight_train' in data[:].dtype.names:
+            weights = data[:]['weight_train'] if weight_validation else None # if we want to test with the transformed weights, then this needs to be "weight_train"
+        elif tx_weight_validation and weight_validation:
+            weights = data[:]['weight']# if weight_validation else None 
+            # now transform the weights
+            # all signal events have weight 1, all bkg events have weight 1/arctan(weight)
+            print 'transforming weights'
+            for idx in xrange(0, weights.shape[0]):
+                if data[idx]['label'] == 1:
+                    weights[idx] = 1.0
+                else:
+                    weights[idx] = 1.0/np.arctan(weights[idx])
+            print 'done transforming weights'
+        else:
+            weights = data[:]['weight'] if weight_validation else None 
+        print 'weight_validation ' + str(weight_validation)
+        print 'tx_weight_validation ' + str(tx_weight_validation)
+        print weights
         discriminant_bins = np.linspace(np.min(discriminant), np.max(discriminant), bins)
         if train_avail:
             top_ind_tr = data_train[:]['label'] == 1

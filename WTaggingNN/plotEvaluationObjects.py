@@ -178,43 +178,43 @@ def collectResults(recreate_csv = False, key = 'df', files = []):
         
         df = pd.read_csv(fname)
 
-        # now we want to be able to the dataframe sort on a number of criteria and create meaningful stats
-        # easiest to run in interactive mode first.
-        grouped = df.groupby(['test_id']) # this combines all of the cv folds
-        # get the mean scores
-        gmean = grouped.mean()
-        gstd = grouped.std()
-
-        # sort the groups based on bkg rej power at 50%
-        srt_bkg = gmean.sort('bkg_rej_test',ascending=False)
-        
-        # before writing to csv, format it to only use 3 sig digits
-        to_round = ['momentum','regularize','learning','accuracy_test','bkg_rej_test']
-        for r in to_round:
-            try:
-                srt_bkg[r] = srt_bkg[r].map(lambda x: round(x, -int(floor(log10(x)))+2) )
-            except:
-                print 'encountered math error'
-        # make sure the epochs are ints
-        srt_bkg[['uepochs','sepochs']] = srt_bkg[['uepochs','sepochs']].astype(int)
+    # now we want to be able to the dataframe sort on a number of criteria and create meaningful stats
+    # easiest to run in interactive mode first.
+    grouped = df.groupby(['test_id']) # this combines all of the cv folds
+    # get the mean scores
+    gmean = grouped.mean()
+    gstd = grouped.std()
     
-        srt_bkg.to_csv('data_'+key+'_sortedresults.txt',columns=['momentum','regularize','learning','uepochs','sepochs','accuracy_test','bkg_rej_test'])#,float_format='%2.2f')
-
-        # get the index
-        idx = gmean.index
-        '''
-        # get the levels - this stores the keys for the different groupby objects
-        lvls = idx.levels
-        # lrate is lvls[0], n_est is 1, max_depth is 2
-        # lvls is a FrozenList with each element being a Frozen64Index
-        lrates = lvls[0].values
-        n_est = lvls[1].values
-        md = lvls[2].values
-        training_points = np.zeros(len(md))
-        training_std = np.zeros(len(md))
-        testing_points = np.zeros(len(md))
-        testing_std = np.zeros(len(md))
-        # now we can get the scores for the different max_depths
+    # sort the groups based on bkg rej power at 50%
+    srt_bkg = gmean.sort('bkg_rej_test',ascending=False)
+    
+    # before writing to csv, format it to only use 3 sig digits
+    to_round = ['momentum','regularize','learning','accuracy_test','bkg_rej_test']
+    for r in to_round:
+        try:
+            srt_bkg[r] = srt_bkg[r].map(lambda x: round(x, -int(floor(log10(x)))+2) )
+        except:
+            print 'encountered math error'
+    # make sure the epochs are ints
+    srt_bkg[['uepochs','sepochs']] = srt_bkg[['uepochs','sepochs']].astype(int)
+    
+    srt_bkg.to_csv('data_'+key+'_sortedresults.txt',columns=['momentum','regularize','learning','uepochs','sepochs','accuracy_test','bkg_rej_test'])#,float_format='%2.2f')
+    
+    # get the index
+    idx = gmean.index
+    '''
+    # get the levels - this stores the keys for the different groupby objects
+    lvls = idx.levels
+    # lrate is lvls[0], n_est is 1, max_depth is 2
+    # lvls is a FrozenList with each element being a Frozen64Index
+    lrates = lvls[0].values
+    n_est = lvls[1].values
+    md = lvls[2].values
+    training_points = np.zeros(len(md))
+    training_std = np.zeros(len(md))
+    testing_points = np.zeros(len(md))
+    testing_std = np.zeros(len(md))
+    # now we can get the scores for the different max_depths
         
     for lr in lrates:
         for n in n_est:
@@ -256,4 +256,4 @@ def main(args):
 
 
 if __name__=='__main__':
-    main(sys.args)
+    main(sys.argv)

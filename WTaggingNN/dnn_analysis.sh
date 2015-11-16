@@ -7,16 +7,20 @@ python create_folds.py true false --key=jz5 --algorithm=AntiKt10LCTopoTrimmedPtF
 
 # to test on another dataset
 # can change the name of the files if needed
-#for x in `ls *CHANGEME` ; do copyfile="${x/CHANGEME/NEWNAME}" ; cp $x $copyfile ; done
+#for x in `ls *CHANGEME*` ; do copyfile="${x/CHANGEME/NEWNAME}" ; cp $x $copyfile ; done
 cp -r trained/*mc15_jz5_bkg_v2* trained_full/
 cd trained_full
 
+# create the training files for this -> just copy the old ones and give them a new name
+for x in `ls output_config/*v2.1*` ; do copyfile="${x/v2.1/v2.4}" ; cp $x $copyfile ; done
 
 # edit full_config to have the correct testing filename, the correct sigeff and the correct bkgeff
 # the signal and bkg eff come from the dataset that is being tested.
 # extra settings that have now been included in the config files:
 # weight_validation = 0 or 1 -> This is if we want to weight the samples we're testing on
 # transform_weight_validation 0 or 1 -> This is if we want to apply the same transformation when running the testing samples as we did when training.  If false, then just use the standard weights in the file
+# need to change `weight: weight` in the config file to `weight: weight_train` for the transformed weights.
+# need to change the output_config file to that above
 
 # next edit the findbests.py file and change the file_id to match the key used above and f_out to something descriptive of the sample
 # then run

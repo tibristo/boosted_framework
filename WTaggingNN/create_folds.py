@@ -76,6 +76,7 @@ def scaleSample(scaler_filename, filename='/Disk/ecdf-nfs-ppe/atlas/users/tibris
     import pickle
     # check that the scaler pickle file exists
     if not os.path.isfile(prefix+scaler_filename):
+        print scaler_filename
         print 'Scaler file does not exist'
         return
     
@@ -531,6 +532,8 @@ def main(args):
                 # get the scalerNN object for the train sample
                 # scalerNN saves the values we used to do the standardisation
                 scaler_fname = f[0].replace('.root', '_scaler.pkl')
+                # remove the full path
+                scaler_fname = scaler_fname[scaler_fname.rfind('/'):]
                 # find out which cv split we're on
                 cv_split = f[0][f[0].find('cv'):f[0].find('.root')]
                 # apply the standardisation to the dataset

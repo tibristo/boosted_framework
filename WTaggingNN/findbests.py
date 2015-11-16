@@ -51,4 +51,4 @@ def main(args):
     f_out.close()
     
 if __name__=='__main__':
-    main(sys.args)
+    main(sys.argv)
