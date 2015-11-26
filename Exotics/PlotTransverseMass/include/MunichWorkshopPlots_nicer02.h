@@ -383,6 +383,11 @@ std::vector<std::vector<float> *> var_ECF2_2_vec;
 std::vector<std::vector<float> *> var_ECF3_2_vec;
 std::vector<std::vector<float> *> var_Mu12_vec;
 
+// only want parent_index for the groomed jet
+std::vector<std::vector<float> *> var_Parent_index_vec;
+// only want nTracks for the ungroomed topo parent jet
+std::vector<std::vector<float> *> var_nTracks_vec;
+
 
 std::vector<TLorentzVector> * var_ca12_tlv_vec;
 std::vector<float> * var_ca12_pt_vec;
@@ -476,6 +481,7 @@ Float_t var_ca12topo_eta;
 Float_t var_ca12topo_phi;
 Float_t var_ca12topo_m;
 Float_t var_YFilt; // only for groomed
+Int_t var_nTracks; // Only storing the number of tracks of the parent ungroomed jet
 
 // leptons out
 std::vector<TLorentzVector> var_leptons;

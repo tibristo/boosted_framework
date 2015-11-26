@@ -204,9 +204,9 @@ def runCV():
               {'momentum':[0.7],'log_regularize':[-7],'log_learning':[-4],'uepochs':[20],'sepochs':[40]}]
     # key to look for in the filenames
     #key = 'matchedM_loose_v2_200_1000_mw'
-    key = 'mc15_v3'
+    key = '13tev_mc15_jz5_v2'
     # output file id
-    file_id = 'mc15_v3.1_bkg_v1'
+    file_id = 'mc15_jz5_v3_bkg_v1'
     folder ='/Disk/ecdf-nfs-ppe/atlas/users/tibristo/boosted_framework/WTaggingNN/'
     # we need the files to be the output of what we would normally get back from
     # the cross_validation method from create_folds.py
@@ -224,16 +224,19 @@ def runCV():
     # cv folds
     filenames = map(lambda x: [folder+'folds/'+x, folder+'folds/'+x.replace('train','test')], train_files)
     
-
+    print filenames
     config = '/Disk/ecdf-nfs-ppe/atlas/users/tibristo/boosted_framework/WTaggingNN/tim-config_full.yaml'
     # training on mc15 with variables: aplanarity, eec_c2_1, split12, tauwta2tauwta1, eec_d2_1, zcut12, planarflow. However, zcut12 and split12 are highly
     # correlated and planarflow and sphericity are actually higher than eec_d2_1 when looking at the bdt feature importances!
     # for mc15_jz5_v1
     #formula= 'label~*-thrustmin-thrustmaj-yfilt-angularity-foxwolfram20-pt-m-eta-phi-mu12-sphericity-tauwta2-tauwta1| weight' # tau2, tau1, tau21 not in mc15
-    # for mc15_jz5_v2
-    formula= 'label~*-thrustmin-thrustmaj-yfilt-angularity-foxwolfram20-pt-m-eta-phi-mu12-tauwta2-tauwta1-zcut12-weight| weight_train' # tau2, tau1, tau21 not in mc15
+    # for mc15_jz5_v2 and v3
+    #formula= 'label~*-thrustmin-thrustmaj-yfilt-angularity-foxwolfram20-pt-m-eta-phi-mu12-tauwta2-tauwta1-zcut12-weight| weight_train' # tau2, tau1, tau21 not in mc15
+    # for mc15_blah_v4 -> v4 is NO WEIGHTS USED FOR TRAINING
+    formula= 'label~*-thrustmin-thrustmaj-yfilt-angularity-foxwolfram20-pt-m-eta-phi-mu12-tauwta2-tauwta1-zcut12-weight-weight_train' # tau2, tau1, tau21 not in mc15
     #formula= 'label~*-thrustmin-thrustmaj-yfilt-angularity-foxwolfram20-tau21-pt-m-eta-phi-tauwta2-tauwta1-tau2-tau1| weight'
-    algorithm = 'AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_mc15_v3_400_1600_mw'
+    #algorithm = 'AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_mc15_v3_400_1600_mw'
+    algorithm = 'AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_mc15_jz5_v2_800_1200_mw'
 
     #allparms, alltasks = grid_search(
     #    lb_view, folder, filenames, params, config, algorithm, id_tag=file_id, formula=formula)

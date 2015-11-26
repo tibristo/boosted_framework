@@ -626,8 +626,11 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
 	  double mass = 0;
 	  for (long n = 0; n < entries; n++)
 	    {
-	      //if (n > 50000)
-	      //continue;
+
+	      #ifdef TESTRUN
+	      if (n > 50000)
+		continue;
+	      #endif
 	      // get next event
 	      inputTChain[tchainIdx]->GetEntry(n);
 
@@ -868,6 +871,9 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
 		{
 		  continue;	      
 		}
+
+	      // set the topo jet index by using the parent_index variable from the groomed jet
+	      chosenLeadTopoJetIndex = (int)(*var_Parent_index_vec[jetType::GROOMED])[chosenLeadGroomedIndex];
 
 	      truthJetCount++;
 
@@ -1213,6 +1219,7 @@ vector<std::pair<std::string,bool> > getListOfJetBranches(std::string &algorithm
   branchmap["nVertices"] = true;
   branchmap["averageIntPerXing"] = true;
   branchmap["mc_event_weight"] = true;
+  
   // 16/04/2015 Adding this in because even though they are not used for selection, they are used for the binning when finding the taggers.
   branchmap["CamKt12TruthJets"] = true; // this is a tlv that is used in some of the xAODs instead of pt, eta, phi, m
   branchmap["jet_CamKt12Truth_pt"] = true;
@@ -1249,6 +1256,7 @@ vector<std::pair<std::string,bool> > getListOfJetBranches(std::string &algorithm
   branchmap["mu_ptcone20"] = true;
   branchmap["mu_etcone20"] = true;
   branchmap["mu_charge"] = true;
+  
   in.close();
 
 
@@ -1517,6 +1525,10 @@ void eraseJet(int jet)
     var_Tau2_vec[i]->erase(var_Tau2_vec[i]->begin()+jet);
   if (var_SPLIT12_vec[i] != NULL && var_SPLIT12_vec[i]->size() > jet)
     var_SPLIT12_vec[i]->erase(var_SPLIT12_vec[i]->begin()+jet);
+  if (var_Parent_index_vec[i] != NULL && var_Parent_index_vec[i]->size() > jet)
+    var_Parent_index_vec[i]->erase(var_Parent_index_vec[i]->begin()+jet);
+  if (var_nTracks_vec[i] != NULL && var_nTracks_vec[i]->size() > jet)
+    var_nTracks_vec[i]->erase(var_nTracks_vec[i]->begin()+jet);
 
   if (var_Dip12_vec[i] != NULL && var_Dip12_vec[i]->size() > jet)
     var_Dip12_vec[i]->erase(var_Dip12_vec[i]->begin()+jet);
@@ -1949,6 +1961,12 @@ void setJetsBranches(TChain * tree, std::string &groomalgo,  std::string & groom
       if ((i==jetType::TOPO && ca12Algo) || !setVector(tree, brancharray, var_phi_vec.at(i), std::string(jetString+"phi") ))
 	floatvec(var_phi_vec[i]);
 
+      if (!setVector(tree, brancharray, var_Parent_index_vec.at(i), std::string(jetString+"Parent_index") ))
+	floatvec(var_Parent_index_vec[i]);
+      
+      if (!setVector(tree, brancharray, var_nTracks_vec.at(i), std::string(jetString+"nTracks") ))
+	floatvec(var_nTracks_vec[i]);
+      
       if (!setVector(tree, brancharray, var_emfrac_vec.at(i), std::string(jetString+"emfrac") ))
 	floatvec(var_emfrac_vec[i]);
 
@@ -2271,6 +2289,8 @@ void initVectors()
       var_eta_vec.push_back(0);
       var_phi_vec.push_back(0);
       var_emfrac_vec.push_back(0);
+      var_Parent_index_vec.push_back(0);
+      var_nTracks_vec.push_back(0);
       var_constit_index.push_back(0);
       var_constit_n.push_back(0);
       var_Tau1_vec.push_back(0);
@@ -2451,6 +2471,13 @@ void setOutputVariables( int jet_idx_truth, int jet_idx_topo, int jet_idx_groome
   EventNumberOut = EventNumber;
   nvtxOut = nvtxIn;
 
+  // check if the topo jet index has been set, then check if the parent of the leading
+  // groomed jet was actually stored
+  if (jet_idx_topo != -99 && var_nTracks_vec[jetType::TOPO]->size() > jet_idx_topo)
+    var_nTracks = (int)(*var_nTracks_vec[jetType::TOPO])[jet_idx_topo];
+  else
+    var_nTracks = -99;
+    
   scale1fbOut = scale1fb;
 
   bool addLC = false; // some algorithms have "LC" in their name
@@ -2658,6 +2685,7 @@ void clearOutputVariables()
 
   var_leadingJetPt = 0;
   var_YFilt = 0;
+  var_nTracks = 0;
 
   // response values
   response_E = 0;
@@ -2842,6 +2870,7 @@ void setOutputBranches(TTree * tree, std::string & groomalgo, std::string & groo
   tree->Branch("vxp_nTracks", &vxp_nTracks_out, "vxp_nTracks/I");
   tree->Branch("averageIntPerXing",&avgIntpXingOut,"averageIntPerXing/F");
   tree->Branch("scale1fb",&scale1fbOut, "scale1fb/F");
+  tree->Branch("nTracks",&var_nTracks, "nTracks/I");
 
   // add the ca12 truth jets
   tree->Branch("jet_CamKt12Truth_pt",&var_ca12_pt, "jet_CamKt12Truth_pt/F");
