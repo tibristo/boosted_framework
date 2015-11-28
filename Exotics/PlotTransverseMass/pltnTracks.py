@@ -14,8 +14,9 @@ f = rt.TFile.Open(file_in_name)
 tree = f.Get('outputTree')
 
 # draw the nTracks vs parentID plots
+tcanv = rt.TCanvas('canv1')
 if signal:
-    tcanv = rt.TCanvas('canv1')
+
     histw = 'hist_w'
     tree.Draw("nTracks>>"+histw,"(truth_id==24)")
     histw = rt.gDirectory.Get(histw)
