@@ -2474,15 +2474,17 @@ void setOutputVariables( int jet_idx_truth, int jet_idx_topo, int jet_idx_groome
   // check if the topo jet index has been set, then check if the parent of the leading
   // groomed jet was actually stored
   if (jet_idx_topo != -99 && var_nTracks_vec[jetType::TOPO]->size() > jet_idx_topo)
-    var_nTracks = (int)(*var_nTracks_vec[jetType::TOPO])[jet_idx_topo];
+    var_nTracks = (int)(*var_nTracks_vec[jetType::TOPO])[jet_idx_topo];      
   else
-    var_nTracks = -99;
+    {
+      var_nTracks = -99;
+      // also set jet_idx_topo to -99 as we're obviously missing parents
+      jet_idx_topo = -99;
+    }
     
   scale1fbOut = scale1fb;
 
   bool addLC = false; // some algorithms have "LC" in their name
-
-
   if (!recluster) // if we're not doing reclustering
     addLC = true; // just add the LC to the name
 
@@ -2535,11 +2537,15 @@ void setOutputVariables( int jet_idx_truth, int jet_idx_topo, int jet_idx_groome
       if (!keepTopo && x == jetType::TOPO)
 	continue;
 
+      // check to see that we're within range
+      if ((*var_E_vec[x]).size() <= jet_idx)
+	continue;
+      
       if (jet_idx == -99) // mostly just topo jets
 	continue;
       
-      // all of the _vec variables have a default value that is not null.
-      var_E[x]=(*var_E_vec[x])[jet_idx];
+      // all of the _vec variables have a default value that is not null
+      var_E[x]=(*var_E_vec[x]).at(jet_idx);
       // if running over a camk12 algorithm the topo pt, eta, m and phi have already been assigned to that vector, so make 
       // sure we set it correctly here.
       if (ca12Algo && x == jetType::TOPO)
