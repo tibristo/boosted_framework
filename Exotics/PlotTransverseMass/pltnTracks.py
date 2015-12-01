@@ -2,6 +2,7 @@ import ROOT as rt
 import sys
 
 rt.gROOT.SetBatch(True)
+rt.gStyle.SetOptFit(1111)
 
 file_in_name = sys.argv[1]
 signal = False
@@ -23,7 +24,7 @@ if signal:
     histw.SetTitle("nTracks for W boson parents")
     histw.GetXaxis().SetTitle("nTracks")
     histw.Draw()
-    tcanv.SaveAs(file_in_name.replace('.root','_w.png'))
+    tcanv.SaveAs(file_in_name.replace('.root','_w_ca12.png'))
     
     histz = 'hist_z'
     tree.Draw("nTracks>>"+histz,"(truth_id==23)")
@@ -31,7 +32,7 @@ if signal:
     histz.SetTitle("nTracks for Z boson parents")
     histz.GetXaxis().SetTitle("nTracks")
     histz.Draw()
-    tcanv.SaveAs(file_in_name.replace('.root','_z.png'))
+    tcanv.SaveAs(file_in_name.replace('.root','_z_ca12.png'))
 
 else:
     histjz = 'hist_qcd'
@@ -40,7 +41,7 @@ else:
     histjz.SetTitle("nTracks for QCD boson parents")
     histjz.GetXaxis().SetTitle("nTracks")
     histjz.Draw()
-    tcanv.SaveAs(file_in_name.replace('.root','_qcd.png'))
+    tcanv.SaveAs(file_in_name.replace('.root','_qcd_ca12.png'))
 
 # draw 2D plot with nTracks on x-axis, pT on y-axis
 entries = tree.GetEntries()
@@ -57,22 +58,38 @@ m_nTrk = rt.TH2F("m_nTrk","m_nTrk",100,0,1000,100,0,150)
 m_nTrk.GetYaxis().SetTitle("nTracks")
 m_nTrk.GetXaxis().SetTitle("Topo Jet Mass")
 
+gr_topo = rt.TH2F("groomed_vs_topo","groomed_vs_topo",100,150,2000,100,150,2000)
+gr_topo.GetYaxis().SetTitle("Groomed pT")
+gr_topo.GetXaxis().SetTitle("Topo pT")
+
+
+
 for n in range(entries):
     tree.GetEntry(n)
     nTrk_pt.Fill(tree.nTracks[0], tree.topo_pt[0])
     nTrk_m.Fill(tree.nTracks[0], tree.topo_m[0])
     pt_nTrk.Fill(tree.topo_pt[0], tree.nTracks[0])
     m_nTrk.Fill(tree.topo_m[0], tree.nTracks[0])
+    gr_topo.Fill(tree.topo_pt[0], tree.groomed_pt[0])
 
 # draw and save
+nTrk_pt.Fit("pol1")
 nTrk_pt.Draw()
-tcanv.SaveAs(file_in_name.replace('.root','_ntrk_pt.png'))
-nTrk_m.Draw()
-tcanv.SaveAs(file_in_name.replace('.root','_ntrk_m.png'))
+tcanv.SaveAs(file_in_name.replace('.root','_ntrk_pt_ca12.png'))
 
+nTrk_m.Fit("pol1")
+nTrk_m.Draw()
+tcanv.SaveAs(file_in_name.replace('.root','_ntrk_m_ca12.png'))
+
+pt_nTrk.Fit("pol1")
 pt_nTrk.Draw()
-tcanv.SaveAs(file_in_name.replace('.root','_pt_ntrk.png'))
+tcanv.SaveAs(file_in_name.replace('.root','_pt_ntrk_ca12.png'))
+m_nTrk.Fit("pol1")
 m_nTrk.Draw()
-tcanv.SaveAs(file_in_name.replace('.root','_m_ntrk.png'))
+tcanv.SaveAs(file_in_name.replace('.root','_m_ntrk_ca12.png'))
+
+gr_topo.Fit("pol1")
+gr_topo.Draw()
+tcanv.SaveAs(file_in_name.replace('.root','_pt_comp_ca12.png'))
 
 f.Close()

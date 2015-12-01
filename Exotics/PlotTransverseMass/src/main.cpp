@@ -2477,7 +2477,9 @@ void setOutputVariables( int jet_idx_truth, int jet_idx_topo, int jet_idx_groome
     var_nTracks = (int)(*var_nTracks_vec[jetType::TOPO])[jet_idx_topo];      
   else
     {
-      var_nTracks = -99;
+      // try to set this from the predictnTracks() method
+      var_nTracks = predictnTracks(mc_channel_number, algorithm, (*var_m_vec[jetType::GROOMED])[jet_idx_groomed]/1000.0);
+      
       // also set jet_idx_topo to -99 as we're obviously missing parents
       jet_idx_topo = -99;
     }
@@ -3954,3 +3956,95 @@ void SignalHandlerMapAccess(int signal)
   throw "!Access Violation!";
 
 }
+
+/*
+ * Predict the number of tracks for a jet if the value is missing in the ntuple.  The number of tracks is dependent on the 
+ * parent / the jet mass.  I have done a bunch of fits to see how this changes.  They are all pretty much linearly dependent, however
+ * that dependence changes on the mc channel we're looking at, ie. the mass of the parent boson, and on the jet algorithm used.  This
+ * is quite possibly due to the missing jet calibration for some jet algorithms.  Note I've only looked at AK10 and CA12!
+
+ * The results from my fits are stored in local files.  Given a mc channel and algorithm, we can get an estimate on the number of tracks
+ * for the jet.
+
+ * Jet mass and ntrack have a linear relation: mass = p0+p1*ntracks, or ntracks=(mass-p0)/p1.
+ * Need to get p0 and p1 though. These change for mc channel and jet algorithm.
+
+
+ @param mc_channel The channel number of the mc
+ @param algorithm The algorithm - either AK10 based or CA12 based
+ @param mass The mass of the input jet in GeV.
+
+ @returns nTracks number of tracks
+ */
+int predictnTracks(int mc_channel, string algorithm, float mass)
+{
+  int nTracks = -99; // default
+  bool signal = true;
+  if (mc_channel > 361000)
+    signal = false;
+  // mass points for the mc_channel number
+  float masspoint = getMassPoint(mc_channel_number);
+  // get p0 for the fit:
+  //ak10
+  double sig_p0 = 1;
+  double sig_p1 = 1;
+  double bkg_p0 = 1;
+  double bkg_p1 = 1;
+
+  if (algorithm.find("AntiKt10") != std::string::npos)
+    {
+      sig_p0 = 0.01*masspoint+80;
+      sig_p1 = 0.00038*masspoint+0.78;
+      bkg_p0 = 13.69*masspoint + 41;
+      bkg_p1 = 0.6*masspoint + 0.51;
+    }
+  else if (algorithm.find("CamKt12") != std::string::npos) //ca12
+    {
+      sig_p0 = 3.4e-6*masspoint*masspoint - 0.01*mass + 78;
+      sig_p1 = 0.000063*masspoint+1.41;
+      bkg_p0 = 18.66*masspoint + 16.2;
+      bkg_p1 = 0.59*masspoint + 1.32;
+    }
+  if (signal)
+    nTracks = (int)(mass-sig_p0)/sig_p1;
+  else
+    nTracks = (int)(mass-bkg_p0)/bkg_p1;
+  
+  return nTracks;
+}// predictnTracks
+
+
+/*
+ * Get the mass point for the mc_channel_number
+*/
+float getMassPoint(int mc_channel_number)
+{
+  if (mass_points.empty())
+    {
+      // if we haven't read in the file
+      ifstream mpoints ("masspoints.csv");
+      // file has mc_channel_number,masspoint on each line
+      string line;
+      while (getline(mpoints, line))
+	{
+	  trim(line); // remove trailing whitespace
+	  std::vector<std::string> strs; // going tos plit on comma, use this to hold split
+	  boost::split(strs, line, boost::is_any_of(","));
+	  if (strs.size() != 2)
+	    continue;
+	  mass_points[std::stol(strs.at(0))] = std::stof(strs.at(1));
+	}
+      mpoints.close();
+      mass_points[361023] = 1;
+      mass_points[361024] = 2;
+      mass_points[361025] = 3;
+      mass_points[361026] = 4;
+      mass_points[361027] = 5;
+      mass_points[361028] = 6;
+    }
+  if (mass_points.find(mc_channel_number) != mass_points.end())    
+    return mass_points[mc_channel_number];
+  else
+    return 0;
+  
+}//getmassPoint

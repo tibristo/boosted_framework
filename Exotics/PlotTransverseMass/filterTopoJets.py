@@ -25,6 +25,11 @@ b_topo_eta = rt.std.vector(float)()
 b_topo_phi = rt.std.vector(float)()
 b_topo_m = rt.std.vector(float)()
 
+b_groomed_pt = rt.std.vector(float)()
+b_groomed_eta = rt.std.vector(float)()
+b_groomed_phi = rt.std.vector(float)()
+b_groomed_m = rt.std.vector(float)()
+
 b_truth_pt = rt.std.vector(float)()
 b_truth_eta = rt.std.vector(float)()
 b_truth_phi = rt.std.vector(float)()
@@ -41,13 +46,17 @@ tree = file_in.Get('outputTree')
 
 entries = tree.GetEntries()
 
-file_out = rt.TFile(file_out_name+'.root','RECREATE')
+file_out = rt.TFile(file_out_name+'_ak10.root','RECREATE')
 tree_out = rt.TTree('outputTree','outputTree')
 
 tree_out.Branch('topo_pt', b_topo_pt)
 tree_out.Branch('topo_eta', b_topo_eta)
 tree_out.Branch('topo_phi', b_topo_phi)
 tree_out.Branch('topo_m', b_topo_m)
+tree_out.Branch('groomed_pt', b_groomed_pt)
+tree_out.Branch('groomed_eta', b_groomed_eta)
+tree_out.Branch('groomed_phi', b_groomed_phi)
+tree_out.Branch('groomed_m', b_groomed_m)
 tree_out.Branch('truth_pt', b_truth_pt)
 tree_out.Branch('truth_eta', b_truth_eta)
 tree_out.Branch('truth_phi', b_truth_phi)
@@ -56,8 +65,8 @@ tree_out.Branch('truth_id', b_truth_id)
 tree_out.Branch('nTracks', b_nTracks)
 tree_out.Branch('mc_channel_number', b_mc_channel_number)
 
-csv_out = open(file_out_name+'.csv','write')
-csv_out.write('topo_pt,topo_eta,topo_phi,topo_m,truth_pt,truth_eta,truth_phi,truth_m,truth_id,nTracks,mc_channel_number\n')
+csv_out = open(file_out_name+'_ak10.csv','write')
+csv_out.write('topo_pt,topo_eta,topo_phi,topo_m,groomed_pt,groomed_eta,groomed_phi,groomed_m,truth_pt,truth_eta,truth_phi,truth_m,truth_id,nTracks,mc_channel_number\n')
 
 for i in range(entries):
     tree.GetEntry(i)
@@ -68,6 +77,10 @@ for i in range(entries):
     b_topo_eta.clear()
     b_topo_phi.clear()
     b_topo_m.clear()
+    b_groomed_pt.clear()
+    b_groomed_eta.clear()
+    b_groomed_phi.clear()
+    b_groomed_m.clear()
     b_truth_pt.clear()
     b_truth_eta.clear()
     b_truth_phi.clear()
@@ -90,7 +103,24 @@ for i in range(entries):
     topo_phi = tree.jet_AntiKt10LCTopo_phi[max_idx]
     topo_m = tree.jet_AntiKt10LCTopo_m[max_idx]/1000.0
     nTracks = int(tree.jet_AntiKt10LCTopo_nTracks[max_idx])
-    # match this with a truth boson parent
+
+    # leading groomed jet
+    g_idx = 0
+    g_pt = 0
+    if tree.jet_AntiKt10LCTopoTrimmedPtFrac5SmallR20_pt.size() == 0:
+        continue
+    for x, p in enumerate(tree.jet_AntiKt10LCTopoTrimmedPtFrac5SmallR20_pt):
+        if p > g_pt:
+            g_pt = p
+            g_idx = x
+    #CamKt12LCTopoBDRSFilteredMU100Y4
+    #AntiKt10LCTopoTrimmedPtFrac5SmallR20
+    groomed_pt = tree.jet_AntiKt10LCTopoTrimmedPtFrac5SmallR20_pt[g_idx]/1000.0
+    groomed_eta = tree.jet_AntiKt10LCTopoTrimmedPtFrac5SmallR20_eta[g_idx]
+    groomed_phi = tree.jet_AntiKt10LCTopoTrimmedPtFrac5SmallR20_phi[g_idx]
+    groomed_m = tree.jet_AntiKt10LCTopoTrimmedPtFrac5SmallR20_m[g_idx]/1000.0
+    
+    # match the topo jet with a truth boson parent
     # truth boson info is a 4vec
     truth_id = 99
     truth_pt = -99
@@ -129,10 +159,15 @@ for i in range(entries):
     b_topo_m.push_back(topo_m)
     b_nTracks.push_back(nTracks)
 
+    b_groomed_pt.push_back(groomed_pt)
+    b_groomed_eta.push_back(groomed_eta)
+    b_groomed_phi.push_back(groomed_phi)
+    b_groomed_m.push_back(groomed_m)
+    
     b_mc_channel_number.push_back(tree.mc_channel_number)
     
     tree_out.Fill()
-    csv_out.write(str(topo_pt)+','+str(topo_eta)+','+str(topo_phi)+','+str(topo_m)+','+str(truth_pt)+','+str(truth_eta)+','+str(truth_phi)+','+str(truth_m)+','+str(truth_id)+','+str(nTracks)+','+str(tree.mc_channel_number)+'\n')
+    csv_out.write(str(topo_pt)+','+str(topo_eta)+','+str(topo_phi)+','+str(topo_m)+','+str(groomed_pt)+','+str(groomed_eta)+','+str(groomed_phi)+','+str(groomed_m)+','+str(truth_pt)+','+str(truth_eta)+','+str(truth_phi)+','+str(truth_m)+','+str(truth_id)+','+str(nTracks)+','+str(tree.mc_channel_number)+'\n')
     
 csv_out.close()
 tree_out.Write()

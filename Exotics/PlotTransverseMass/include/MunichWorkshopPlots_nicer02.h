@@ -117,7 +117,8 @@ std::unordered_map<std::string,bool> createBranchMap(TObjArray *& arr);
 void SignalHandlerMapAccess(int signal);
 void calculateResponseValues();
 void setCa12Vectors(bool truth, bool topo);
-
+int predictnTracks(int mc_channel, string algorithm, float mass);
+float getMassPoint(int mc_channel_number);
 // typedef for the exception when accessing a missing element from a map
 typedef void (*SignalHandlerPointer)(int);
 
@@ -348,6 +349,7 @@ std::unordered_map<long, float> k_factors;
 std::unordered_map<long, float> filt_eff;
 std::unordered_map<long, float> xs;
 std::unordered_map<long, int> runNumber_map;
+std::unordered_map<long, float> mass_points;
 
 // variables used for reading in from tree.
 // the double vector is to store the variable for truth, topo and groomed
