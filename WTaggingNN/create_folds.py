@@ -219,7 +219,7 @@ def cross_validation(data,iterations, name='data', scale=True, pt_rw = True, tra
     # remove the ones we do not want to standardise
     variables.remove('label')
     # remove the variables that are "observers", ie that do not get used for training, or weights, since those must not be scaled.
-    observers = ['mc_event_weight','jet_antikt10truthtrimmedptfrac5smallr20_pt','jet_antikt10truthtrimmedptfrac5smallr20_eta','m','pt','eta','phi','evt_xsec','evt_filtereff','evt_nevts','weight','jet_camkt12truth_pt','jet_camkt12truth_eta','jet_camkt12truth_phi','jet_camkt12truth_m','jet_camkt12lctopo_pt','jet_camkt12lctopo_eta','jet_camkt12lctopo_phi','jet_camkt12lctopo_m','eff','averageintperxing']
+    observers = ['mc_event_weight','jet_antikt10truthtrimmedptfrac5smallr20_pt','jet_antikt10truthtrimmedptfrac5smallr20_eta','m','pt','eta','phi','evt_xsec','evt_filtereff','evt_nevts','weight','jet_camkt12truth_pt','jet_camkt12truth_eta','jet_camkt12truth_phi','jet_camkt12truth_m','jet_camkt12lctopo_pt','jet_camkt12lctopo_eta','jet_camkt12lctopo_phi','jet_camkt12lctopo_m','eff','averageintperxing','nTracks']
 
     # variables in the mc15 samples
     #mc_event_weight,jet_AntiKt10TruthTrimmedPtFrac5SmallR20_pt,jet_AntiKt10TruthTrimmedPtFrac5SmallR20_eta,EEC_D2_1,Aplanarity,m,FoxWolfram20,ThrustMaj,TauWTA2,EEC_C2_1,Angularity,ThrustMin,pt,PlanarFlow,Dip12,Mu12,YFilt,TauWTA1,phi,EEC_D2_2,SPLIT12,Sphericity,ZCUT12,eta,TauWTA2TauWTA1,EEC_C2_2,averageIntPerXing,evt_xsec,evt_filtereff,evt_nEvts,jet_CamKt12Truth_pt,jet_CamKt12Truth_eta,jet_CamKt12Truth_phi,jet_CamKt12Truth_m,jet_CamKt12LCTopo_pt,jet_CamKt12LCTopo_eta,jet_CamKt12LCTopo_phi,jet_CamKt12LCTopo_m,weight,eff,label
@@ -585,8 +585,8 @@ def main(args):
         #variables = ['aplanarity','eec_c2_1', 'eec_c2_2', 'split12','eec_d2_1', 'eec_d2_2', 'tauwta2tauwta1','zcut12','sphericity','mu12','planarflow']
         # mc15
         variables = ['aplanarity','eec_c2_1', 'split12','eec_d2_1', 'tauwta2tauwta1','zcut12','sphericity','mu12','planarflow']
-        plot_dict = {'tauwta2tauwta1':"#tau^{WTA}_{2}/#tau^{WTA}_{1}",'eec_c2_1':"C^{(#beta=1)}_{2}",'eec_c2_2':"C^{(#beta=2)}_{2}",'eec_d2_1':"D^{(#beta=1)}_{2}",'eec_d2_2':"D^{(#beta=2)}_{2}", 'split12':"#sqrt{d_{12}}",'aplanarity':"#it{A}",'zcut12':"#sqrt{z_{12}}",'sphericity':"#it{S}",'planarflow':"#it{P}"}
-        tex_dict = {'tauwta2tauwta1':r"$\tau^{WTA}_{2}/\tau^{WTA}_{1}$",'eec_c2_1':r"$C^{(\beta=1)}_{2}$",'eec_c2_2':r"$C^{(\beta=2)}_{2}$",'eec_d2_1':r"$D^{(\beta=1)}_{2}$",'eec_d2_2':r"$D^{(\beta=2)}_{2}$", 'split12':r"$\sqrt{d_{12}}$",'aplanarity':r"$\textit{A}$",'zcut12':r"$\sqrt{z_{12}}$",'sphericity':r"$\textit{S}$",'planarflow':r"$\textit{P}$"}
+        plot_dict = {'tauwta2tauwta1':"#tau^{WTA}_{2}/#tau^{WTA}_{1}",'eec_c2_1':"C^{(#beta=1)}_{2}",'eec_c2_2':"C^{(#beta=2)}_{2}",'eec_d2_1':"D^{(#beta=1)}_{2}",'eec_d2_2':"D^{(#beta=2)}_{2}", 'split12':"#sqrt{d_{12}}",'aplanarity':"#it{A}",'zcut12':"#sqrt{z_{12}}",'sphericity':"#it{S}",'planarflow':"#it{P}",'ntracks':"nTrk"}
+        tex_dict = {'tauwta2tauwta1':r"$\tau^{WTA}_{2}/\tau^{WTA}_{1}$",'eec_c2_1':r"$C^{(\beta=1)}_{2}$",'eec_c2_2':r"$C^{(\beta=2)}_{2}$",'eec_d2_1':r"$D^{(\beta=1)}_{2}$",'eec_d2_2':r"$D^{(\beta=2)}_{2}$", 'split12':r"$\sqrt{d_{12}}$",'aplanarity':r"$\textit{A}$",'zcut12':r"$\sqrt{z_{12}}$",'sphericity':r"$\textit{S}$",'planarflow':r"$\textit{P}$",'ntracks':"nTrk"}
         weight = True if args.weight.lower() == 'true' else False
 
         plotFiles(filenames, variables, key, weight_plots=weight, plot_dict = plot_dict, tex_dict = tex_dict)

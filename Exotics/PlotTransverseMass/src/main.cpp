@@ -2474,12 +2474,15 @@ void setOutputVariables( int jet_idx_truth, int jet_idx_topo, int jet_idx_groome
   // check if the topo jet index has been set, then check if the parent of the leading
   // groomed jet was actually stored
   if (jet_idx_topo != -99 && var_nTracks_vec[jetType::TOPO]->size() > jet_idx_topo)
-    var_nTracks = (int)(*var_nTracks_vec[jetType::TOPO])[jet_idx_topo];      
+    {
+      var_nTracks = (int)(*var_nTracks_vec[jetType::TOPO])[jet_idx_topo];
+      var_nTracks_raw = (int)(*var_nTracks_vec[jetType::TOPO])[jet_idx_topo];
+    }
   else
     {
       // try to set this from the predictnTracks() method
       var_nTracks = predictnTracks(mc_channel_number, algorithm, (*var_m_vec[jetType::GROOMED])[jet_idx_groomed]/1000.0);
-      
+      var_nTracks_raw = -99;
       // also set jet_idx_topo to -99 as we're obviously missing parents
       jet_idx_topo = -99;
     }
@@ -2694,6 +2697,7 @@ void clearOutputVariables()
   var_leadingJetPt = 0;
   var_YFilt = 0;
   var_nTracks = 0;
+  var_nTracks_raw = 0;
 
   // response values
   response_E = 0;
@@ -2879,6 +2883,8 @@ void setOutputBranches(TTree * tree, std::string & groomalgo, std::string & groo
   tree->Branch("averageIntPerXing",&avgIntpXingOut,"averageIntPerXing/F");
   tree->Branch("scale1fb",&scale1fbOut, "scale1fb/F");
   tree->Branch("nTracks",&var_nTracks, "nTracks/I");
+  tree->Branch("nTracks_raw",&var_nTracks_raw, "nTracks_raw/I");
+  
 
   // add the ca12 truth jets
   tree->Branch("jet_CamKt12Truth_pt",&var_ca12_pt, "jet_CamKt12Truth_pt/F");
@@ -3990,26 +3996,29 @@ int predictnTracks(int mc_channel, string algorithm, float mass)
   double sig_p1 = 1;
   double bkg_p0 = 1;
   double bkg_p1 = 1;
-
+  //std::cout << algorithm <<  std::endl;
   if (algorithm.find("AntiKt10") != std::string::npos)
     {
-      sig_p0 = 0.01*masspoint+80;
-      sig_p1 = 0.00038*masspoint+0.78;
-      bkg_p0 = 13.69*masspoint + 41;
-      bkg_p1 = 0.6*masspoint + 0.51;
+      //std::cout << "AK10" <<  std::endl;
+      //sig_p0 = 0.0096*masspoint+80;
+      sig_p1 = 0.00055*masspoint+2.07;
+      //bkg_p0 = 13.69*masspoint + 41;
+      bkg_p1 = 0.75*masspoint + 1.17;
     }
   else if (algorithm.find("CamKt12") != std::string::npos) //ca12
     {
-      sig_p0 = 3.4e-6*masspoint*masspoint - 0.01*mass + 78;
-      sig_p1 = 0.000063*masspoint+1.41;
-      bkg_p0 = 18.66*masspoint + 16.2;
-      bkg_p1 = 0.59*masspoint + 1.32;
+      //sig_p0 = 3.4e-6*masspoint*masspoint - 0.01*mass + 78;
+      sig_p1 = 0.000067*masspoint+2.36;
+      //bkg_p0 = 18.66*masspoint + 16.2;
+      bkg_p1 = 0.8*masspoint + 1.56;
     }
+
   if (signal)
-    nTracks = (int)(mass-sig_p0)/sig_p1;
+    nTracks = (int)((mass)/sig_p1);
   else
-    nTracks = (int)(mass-bkg_p0)/bkg_p1;
-  
+    nTracks = (int)((mass)/bkg_p1);
+  //cout << "mass: " << mass <<endl;
+  //cout << nTracks << endl;
   return nTracks;
 }// predictnTracks
 

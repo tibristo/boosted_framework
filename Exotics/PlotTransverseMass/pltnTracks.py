@@ -4,6 +4,7 @@ import sys
 rt.gROOT.SetBatch(True)
 rt.gStyle.SetOptFit(1111)
 
+
 file_in_name = sys.argv[1]
 signal = False
 
@@ -62,34 +63,52 @@ gr_topo = rt.TH2F("groomed_vs_topo","groomed_vs_topo",100,150,2000,100,150,2000)
 gr_topo.GetYaxis().SetTitle("Groomed pT")
 gr_topo.GetXaxis().SetTitle("Topo pT")
 
-
+mc_channel_number = 0
 
 for n in range(entries):
     tree.GetEntry(n)
+    mc_channel_number = tree.mc_channel_number[0]
     nTrk_pt.Fill(tree.nTracks[0], tree.topo_pt[0])
     nTrk_m.Fill(tree.nTracks[0], tree.topo_m[0])
     pt_nTrk.Fill(tree.topo_pt[0], tree.nTracks[0])
     m_nTrk.Fill(tree.topo_m[0], tree.nTracks[0])
     gr_topo.Fill(tree.topo_pt[0], tree.groomed_pt[0])
 
-# draw and save
-nTrk_pt.Fit("pol1")
-nTrk_pt.Draw()
-tcanv.SaveAs(file_in_name.replace('.root','_ntrk_pt_ca12.png'))
 
-nTrk_m.Fit("pol1")
+
+
+#create a linear function with set parameters - always want it to start at origin
+
+
+f2 = rt.TF1("f2","[0]+[1]*x",0,150)#,0,1000)
+f2.FixParameter(0,0)
+
+#mc_channel_number
+
+# draw and save
+#nTrk_pt.Fit("pol1")
+#nTrk_pt.Draw()
+#tcanv.SaveAs(file_in_name.replace('.root','_ntrk_pt_ca12.png'))
+
+nTrk_m.Fit("f2")
+with open('nTrk_m_fitparams_ca12.csv','a') as fits:
+    fits.write(str(mc_channel_number) + ',' + str(f2.GetParameter(1))+'\n')
 nTrk_m.Draw()
 tcanv.SaveAs(file_in_name.replace('.root','_ntrk_m_ca12.png'))
 
-pt_nTrk.Fit("pol1")
-pt_nTrk.Draw()
-tcanv.SaveAs(file_in_name.replace('.root','_pt_ntrk_ca12.png'))
-m_nTrk.Fit("pol1")
+#pt_nTrk.Fit("pol1")
+#pt_nTrk.Draw()
+#tcanv.SaveAs(file_in_name.replace('.root','_pt_ntrk_ca12.png'))
+m_nTrk.Fit("f2")
+with open('m_nTrk_fitparams_ca12.csv','a') as fits:
+    fits.write(str(mc_channel_number) + ',' + str(f2.GetParameter(1))+'\n')
 m_nTrk.Draw()
 tcanv.SaveAs(file_in_name.replace('.root','_m_ntrk_ca12.png'))
 
 gr_topo.Fit("pol1")
+with open('gr_topo_pt_fitparams_ca12.csv','a') as fits:
+    fits.write(str(mc_channel_number) + ',' + str(gr_topo.GetFunction("pol1").GetParameter(1))+'\n')
 gr_topo.Draw()
 tcanv.SaveAs(file_in_name.replace('.root','_pt_comp_ca12.png'))
-
+#fits.close()
 f.Close()

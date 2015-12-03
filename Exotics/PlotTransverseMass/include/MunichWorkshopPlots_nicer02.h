@@ -484,6 +484,7 @@ Float_t var_ca12topo_phi;
 Float_t var_ca12topo_m;
 Float_t var_YFilt; // only for groomed
 Int_t var_nTracks; // Only storing the number of tracks of the parent ungroomed jet
+Int_t var_nTracks_raw;
 
 // leptons out
 std::vector<TLorentzVector> var_leptons;
