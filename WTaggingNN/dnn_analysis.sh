@@ -5,12 +5,16 @@ python create_folds.py false true --key=mc15_jz5_bkg_v2 --algorithm=AntiKt10LCTo
 # creating folds
 python create_folds.py true false --key=jz5 --algorithm=AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_mc15_jz5_v1_800_1200_mw_merged --fulldataset=AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_mc15_jz5_notcleaned_v1_800_1200_mw_merged.csv
 
+# run the training
+python opt.py
+
 # to test on another dataset
 # can change the name of the files if needed
 #for x in `ls *CHANGEME*` ; do copyfile="${x/CHANGEME/NEWNAME}" ; cp $x $copyfile ; done
 cp -r trained/*mc15_jz5_bkg_v2* trained_full/
 cd trained_full
 
+# if running over another dataset and they names need to be different:
 # create the training files for this -> just copy the old ones and give them a new name
 for x in `ls output_config/*v2.1*` ; do copyfile="${x/v2.1/v2.4}" ; cp $x $copyfile ; done
 
