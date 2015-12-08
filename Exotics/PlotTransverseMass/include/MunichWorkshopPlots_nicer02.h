@@ -84,8 +84,8 @@ std::string returnJetType(std::string & samplePrefix, std::string & groomalgo, b
 std::string returnSubJetType(std::string & samplePrefix, std::string & groomalgo, bool addLC);
 void clearVectors();
 void clearOutputVariables();
-void setOutputVariables(int idx1, int idx2, int idx3, int idxca, int idxcatopo, int subidx, std::string & algorithm, std::string & groomalgo, std::string & groomIdx);
-void setOutputBranches(TTree* tree, std::string & algorithm, std::string & groomIdx);
+void setOutputVariables(int idx1, int idx2, int idx3, int idxca, int idxcatopo, int subidx, std::string & algorithm, std::string & groomalgo, std::string & groomIdx, int sample_type);
+void setOutputBranches(TTree* tree, std::string & algorithm, std::string & groomIdx, int sample_type);
 void resetOutputVariables();
 void setAddress(TChain * tree, std::string  name, std::vector<Float_t> * var_vec);
 void readWeights();
@@ -248,7 +248,7 @@ int nqjets = 25;
 
 
 
-TChain *inputTChain[2];
+TChain *inputTChain[3]; // signal, bkg and data
 
 // histograms
 TH1F * pt_reweight_arr[2];

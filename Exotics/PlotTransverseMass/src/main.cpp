@@ -182,6 +182,17 @@ int main( int argc, char * argv[] ) {
 	cout << "No background files!" << std::endl;
 	return 0;
       }
+    
+    if (vm.count("data-file"))
+      {
+	cout << "Background files are: " 
+	     << vm["data-file"].as< vector<string> >() << "\n";
+      }
+    else
+      {
+	cout << "No data files!" << std::endl;
+	return 0;
+      }
 	
     if (vm.count("algorithm"))
       {
@@ -238,6 +249,7 @@ int main( int argc, char * argv[] ) {
 
   vector<string> inputBkgFiles = vm["background-file"].as<vector<string> > ();
   vector<string> inputSigFiles = vm["signal-file"].as<vector<string> > ();
+  vector<string> inputDataFiles = vm["data-file"].as<vector<string> > ();
 
   // shuffle the file order to increase efficiency when running multiple instances of this at once
   //std::random_shuffle(inputBkgFiles.begin(), inputBkgFiles.end());
@@ -247,12 +259,15 @@ int main( int argc, char * argv[] ) {
   std::string alg_in = vm["algorithm"].as<string>();
   std::string alg_in_orig = vm["algorithm"].as<string>();
 
-  // set up the TChains for the signal and background files.
+  // set up the TChains for the signal, background and data files.
+  // keep a record of what datatypes we have
+  std::vector<int> samplesToProcess;
   inputTChain[sampleType::BACKGROUND] = new TChain(treeName.c_str());
   for (vector<string>::iterator it = inputBkgFiles.begin(); it != inputBkgFiles.end(); it++)
     {
       inputTChain[sampleType::BACKGROUND]->Add((*it).c_str());
       std::cout << "bkg file added: " << (*it) << std::endl;
+      samplesToProcess.push_back(sampleType::BACKGROUND);
     }
 
   inputTChain[sampleType::SIGNAL] = new TChain(treeName.c_str());
@@ -260,8 +275,18 @@ int main( int argc, char * argv[] ) {
     {
       inputTChain[sampleType::SIGNAL]->Add((*it).c_str());
       std::cout << "sig file added: " << (*it) << std::endl;
+      samplesToProcess.push_back(sampleType::SIGNAL);
     }
 
+  inputTChain[sampleType::DATA] = new TChain(treeName.c_str());
+  for (vector<string>::iterator it = inputDataFiles.begin(); it != inputDataFiles.end(); it++)
+    {
+      inputTChain[sampleType::DATA]->Add((*it).c_str());
+      std::cout << "data file added: " << (*it) << std::endl;
+      samplesToProcess.push_back(sampleType::DATA);
+    }
+
+  
   // create a lower case version of the algorithm name
   std::transform(alg_in.begin(), alg_in.end(), alg_in.begin(), ::tolower);
   std::cout << alg_in_orig << std::endl;
@@ -279,7 +304,7 @@ int main( int argc, char * argv[] ) {
   defineStrings(pTbins, finePtBins);
 
   // make an output file
-  makeMassWindowFile(applyMassWindowFlag, alg_in_orig);
+  makeMassWindowFile(applyMassWindowFlag, alg_in_orig, samplesToProcess);
 
   return 0;
 }
@@ -432,7 +457,7 @@ vector<TLorentzVector> Recluster(vector<TLorentzVector> small_jets, double PTcut
  * @param applyMassWindow Flag if any mass window cuts should be applied.
  * @param algorithm The name of the algorithm being run.
  */
-void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
+void makeMassWindowFile(bool applyMassWindow,std::string & algorithm, std::vector<int> & samplesToProcess)
 {
   std::cout << "starting make mass window output files " << std::endl;
   // set inital mass window values
@@ -440,6 +465,8 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
   double mass_min = 0.0;
   // is this background or signal?
   bool signal = false;
+  // is it data?
+  bool data = false;
 
   // need branches for specific algorithms because otherwise we end up with a million branches that we don't need
   vector<std::pair<std::string,bool> > branches;
@@ -460,28 +487,7 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
   setRadius(prefix);
   std::cout << "RADIUS" << radius <<endl;
 
-  // get an initial list of branches from one of the input files
-  TObjArray * brancharray = inputTChain[0]->GetListOfBranches();
-  // create an unordered map from this to be used for lookups.
-  // tobjarray.findobject() returns a tvirtualobject which is slow
-  std::unordered_map<string, bool> brancharray_initial = createBranchMap(brancharray);
   
-  // read in the list of branches we want to use
-  if (branchesFile != "")
-    {
-      std::cout << "branchesFile: " << branchesFile << std::endl;
-      branches = getListOfJetBranches(branchesFile, brancharray_initial);
-    }
-  else
-    {
-      std::cout << "branchesFile not defined" << std::endl;
-      branches = getListOfJetBranches(algorithmName, brancharray_initial);
-    }
-  
-  // loop through the different pt bins. j == 0 is the inclusive one
-    for (int j=0; j<1; j++){//nPtBins; j++){
-      // set signal to false, so running background
-      signal = false;
       
       // set up a stringstream to use for file names that can easily have integers added to it
       std::stringstream ss;
@@ -495,11 +501,31 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
       int truthJetCount = 0;
       int massCount = 0;
 
-      // loop through background and signal
-      for (int k = 0; k < 2; k++)
+      // loop through all the datasets we have: signal / bkg / data
+      for (vector<int>::iterator sampleIter = samplesToProcess.begin(); sampleIter!= samplesToProcess.end() ; sampleIter++)
 	{
-	  // if k = 1 we are running signal
-	  signal = k == 1? false : true;
+	  branches.clear();
+
+	  // get an initial list of branches from one of the input files
+	  TObjArray * brancharray = inputTChain[(*sampleIter)]->GetListOfBranches();
+	  // create an unordered map from this to be used for lookups.
+	  // tobjarray.findobject() returns a tvirtualobject which is slow
+	  std::unordered_map<string, bool> brancharray_initial = createBranchMap(brancharray);
+	  
+	  // read in the list of branches we want to use
+	  if (branchesFile != "")
+	    {
+	      std::cout << "branchesFile: " << branchesFile << std::endl;
+	      branches = getListOfJetBranches(branchesFile, brancharray_initial);
+	    }
+	  else
+	    {
+	      std::cout << "branchesFile not defined" << std::endl;
+	      branches = getListOfJetBranches(algorithmName, brancharray_initial);
+	    }
+  
+
+	  
 	  // Initialise all the vectors to.. something 
 	  initVectors();
 
@@ -507,10 +533,29 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
 	  mass_max = 300*GEV;//TopEdgeMassWindow[j];
 	  mass_min = 0;//BottomEdgeMassWindow[j];
 	  
+	  // suffix string.  A switch statement is overkill for this, but I'm coding it like this
+	  // so that it's easier to make more changes later.
+	  switch ((*it))
+	    {
+	    case sampleType::SIGNAL:
+	      signal = true;
+	      data = false;
+	      bkg = "sig";
+	      break;
+	    case sampleType::BACKGROUND:
+	      signal = data = false;
+	      bkg = "bkg";
+	      break;
+	    case sampleType::DATA:
+	      signal = false;
+	      data = true;
+	      bkg = "data";
+	      break;
+	    }
 	  // set the tchain pointer to the signal or background sample
-	  int tchainIdx = signal ? sampleType::SIGNAL : sampleType::BACKGROUND;
+	  int tchainIdx = (*sampleIter);//signal ? sampleType::SIGNAL : sampleType::BACKGROUND;
 	  std::stringstream ss_fname; // store the name of the output file and include the i and j indices!
-	  std::string bkg = signal ? "sig": "bkg";
+	  
 	  // create the output file name
 	  ss_fname << ss.str() << "_" << bkg << ".root";
 
@@ -547,8 +592,8 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
 	  // If using TObjArray::FindObject() it will return a virtual TObject*, which will then run a comparison if testing for
 	  // existence.  A solution is to add all of the names of the objects in the tree to a map, which will have faster 
 	  // lookup, because no comparisons are run.
-	  brancharray = 0;
-	  brancharray = inputTChain[tchainIdx]->GetListOfBranches();
+	  //brancharray = 0;
+	  //brancharray = inputTChain[tchainIdx]->GetListOfBranches();
 	  // unordered map for the current tree - this changes on iteration over k and j
 	  std::unordered_map<std::string,bool> current_branchmap = createBranchMap(brancharray);
 
@@ -595,7 +640,7 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
 	  // reset all of the output variables so that they have default values
 	  resetOutputVariables();
 	  // set up all of the branches for the output tree
-	  setOutputBranches(outTree, algorithmName, algorithm);
+	  setOutputBranches(outTree, algorithmName, algorithm, (*sampleIter));
 
 	  // if we are going to add the subjet branches we set them up here
 	  if (subjetscalc || subjetspre)
@@ -678,24 +723,26 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
 		setCa12Vectors(ca12TLV, ca12topoTLV);
 
 
-	      // find the leading ca12 truth jet
+	      // find the leading ca12 truth jet, but not for Data!
 	      int leadingCA12TruthIndex = -1;
 	      float ca12max = -1;
 	      int c = 0;
-	      for (vector<float>::iterator it = (*var_ca12_pt_vec).begin(); it != (*var_ca12_pt_vec).end() ; it++)	      
+	      if (!data)
 		{
-		  if ((*it) > ca12max)
+		  for (vector<float>::iterator it = (*var_ca12_pt_vec).begin(); it != (*var_ca12_pt_vec).end() ; it++)	      
 		    {
-		      ca12max = (*it);
-		      leadingCA12TruthIndex = c;
+		      if ((*it) > ca12max)
+			{
+			  ca12max = (*it);
+			  leadingCA12TruthIndex = c;
+			}
+		      c++; // awww yeah
 		    }
-		  c++; // awww yeah
+		  
+		  // check that the leading ca12truth has pT > 50 GeV and within |eta| < 1.2
+		  if (leadingCA12TruthIndex < 0 || (*var_ca12_pt_vec)[leadingCA12TruthIndex] <= 50*1000.0 || fabs((*var_ca12_eta_vec)[leadingCA12TruthIndex]) > 1.2)
+		    continue;
 		}
-
-	      // check that the leading ca12truth has pT > 50 GeV and within |eta| < 1.2
-	      if (leadingCA12TruthIndex < 0 || (*var_ca12_pt_vec)[leadingCA12TruthIndex] <= 50*1000.0 || fabs((*var_ca12_eta_vec)[leadingCA12TruthIndex]) > 1.2)
-	      	continue;
-
 	      ca12jetCount++;
 
 	      // find the leading ca12lctopo jet
@@ -714,8 +761,8 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
 	      //std::cout << (*var_ca12topo_pt_vec).size() << " " << (*var_ca12_pt_vec).size() << std::endl;
 	      // try to match the (ungroomed) leading ca12 truth and leading ca12 reco
 	      // if they match then we can use this event for pt reweighting
-	      
-	      if (leadingCA12TopoIndex != -1 && DeltaR(var_ca12_eta_vec->at(leadingCA12TruthIndex), var_ca12_phi_vec->at(leadingCA12TruthIndex), var_ca12topo_eta_vec->at(leadingCA12TopoIndex), var_ca12topo_phi_vec->at(leadingCA12TopoIndex)) < (0.75*1.2) && fabs(var_ca12topo_eta_vec->at(leadingCA12TopoIndex)) < 4.5) 
+	      // do not rw data
+	      if (!data && leadingCA12TopoIndex != -1 && DeltaR(var_ca12_eta_vec->at(leadingCA12TruthIndex), var_ca12_phi_vec->at(leadingCA12TruthIndex), var_ca12topo_eta_vec->at(leadingCA12TopoIndex), var_ca12topo_phi_vec->at(leadingCA12TopoIndex)) < (0.75*1.2) && fabs(var_ca12topo_eta_vec->at(leadingCA12TopoIndex)) < 4.5) 
 		{
 		  // fill pt reweighting histogram with leading truth jet
 		  // apply the xs weight and the mc event weight.
@@ -785,7 +832,7 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
 	      bool hasZ = false;
 
 	      // 18/03/2015: Previously we were looking for a match on the truth jet here, not the groomed jet.
-	      if (truthBosonMatching && signal)
+	      if (truthBosonMatching && signal && !data)
 		{
 
 		  // if the truthBoson_pt,_eta,_phi variables were not available, but the 4 vector was,
@@ -854,22 +901,26 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
 	      chosenLeadTruthJetIndex = -99;//algorithmType.find("truthmatch") != std::string::npos ? chosenLeadTruthJetIndex : 0;
 	      float tr_pt = -999;
 	      float closestTruth = 100000;
-	      for (int jet_i=0; jet_i<(*var_pt_vec[jetType::TRUTH]).size(); jet_i++)
+	      // we do not do this for data
+	      if (!data)
 		{
-
-		  float dr = DeltaR((*var_eta_vec[jetType::TRUTH])[jet_i],(*var_phi_vec[jetType::TRUTH])[jet_i],(*var_eta_vec[jetType::GROOMED])[chosenLeadGroomedIndex],(*var_phi_vec[jetType::GROOMED])[chosenLeadGroomedIndex]);
-		  if (dr<(0.75*radius) && fabs((*var_eta_vec[jetType::TRUTH])[jet_i])<4.5)// && tr_pt < (*var_pt_vec[jetType::TRUTH])[jet_i])dr < closestTruth && 
+		  for (int jet_i=0; jet_i<(*var_pt_vec[jetType::TRUTH]).size(); jet_i++)
 		    {
-		      closestTruth = dr;
-		      tr_pt = (*var_pt_vec[jetType::TRUTH])[jet_i];
-		      chosenLeadTruthJetIndex=jet_i;
-		    }     
-		} // end loop over var_pt_vec[jetType::GROOMED]
-	      
-
-	      if (chosenLeadTruthJetIndex < 0) // failed selection
-		{
-		  continue;	      
+		      
+		      float dr = DeltaR((*var_eta_vec[jetType::TRUTH])[jet_i],(*var_phi_vec[jetType::TRUTH])[jet_i],(*var_eta_vec[jetType::GROOMED])[chosenLeadGroomedIndex],(*var_phi_vec[jetType::GROOMED])[chosenLeadGroomedIndex]);
+		      if (dr<(0.75*radius) && fabs((*var_eta_vec[jetType::TRUTH])[jet_i])<4.5)// && tr_pt < (*var_pt_vec[jetType::TRUTH])[jet_i])dr < closestTruth && 
+			{
+			  closestTruth = dr;
+			  tr_pt = (*var_pt_vec[jetType::TRUTH])[jet_i];
+			  chosenLeadTruthJetIndex=jet_i;
+			}     
+		    } // end loop over var_pt_vec[jetType::GROOMED]
+		  
+		  
+		  if (chosenLeadTruthJetIndex < 0) // failed selection
+		    {
+		      continue;	      
+		    }
 		}
 
 	      // set the topo jet index by using the parent_index variable from the groomed jet
@@ -951,8 +1002,12 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
 		}
 
 	      // tau21 for truth, topo and groomed
-	      var_Tau21[jetType::TRUTH]=(*var_Tau2_vec[jetType::TRUTH])[chosenLeadTruthJetIndex]/(*var_Tau1_vec[jetType::TRUTH])[chosenLeadTruthJetIndex];
-	      var_Tau21[1]=(*var_Tau2_vec[1])[chosenLeadTopoJetIndex]/(*var_Tau1_vec[1])[chosenLeadTopoJetIndex];
+	      if (!data)
+		{
+		  var_Tau21[jetType::TRUTH]=(*var_Tau2_vec[jetType::TRUTH])[chosenLeadTruthJetIndex]/(*var_Tau1_vec[jetType::TRUTH])[chosenLeadTruthJetIndex];
+		  if (addResponse)
+		    var_Tau21[1]=(*var_Tau2_vec[1])[chosenLeadTopoJetIndex]/(*var_Tau1_vec[1])[chosenLeadTopoJetIndex];
+		}
 	      var_Tau21[jetType::GROOMED]=(*var_Tau2_vec[jetType::GROOMED])[chosenLeadGroomedIndex]/(*var_Tau1_vec[jetType::GROOMED])[chosenLeadGroomedIndex];
 	      
 	    
@@ -960,7 +1015,7 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
 	      if (calcTauWTA21)//useBranch(string("TauWTA2TauWTA1"),true) && useBranch(string("TauWTA2"), true) && useBranch(string("TauWTA1"), true) )
 		{
 		  // tauwta21 for truth, topo and groomed
-		  if ((*var_TauWTA1_vec[jetType::TRUTH])[chosenLeadTruthJetIndex] != 0)// && (*var_TauWTA2_vec[0])[chosenLeadTruthJetIndex] > 0)
+		  if (!data && (*var_TauWTA1_vec[jetType::TRUTH])[chosenLeadTruthJetIndex] != 0)// && (*var_TauWTA2_vec[0])[chosenLeadTruthJetIndex] > 0)
 		    var_TauWTA2TauWTA1[jetType::TRUTH]=(*var_TauWTA2_vec[jetType::TRUTH])[chosenLeadTruthJetIndex]/(*var_TauWTA1_vec[jetType::TRUTH])[chosenLeadTruthJetIndex];
 		  else
 		    var_TauWTA2TauWTA1[jetType::TRUTH]=0;
@@ -976,8 +1031,8 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
 		    var_TauWTA2TauWTA1[1]=(*var_TauWTA2_vec[1])[chosenLeadTopoJetIndex]/(*var_TauWTA1_vec[1])[chosenLeadTopoJetIndex];
 		  else
 		    var_TauWTA2TauWTA1[1]=0;
-
-		  response_TauWTA2TauWTA1 = var_TauWTA2TauWTA1[jetType::GROOMED]/var_TauWTA2TauWTA1[jetType::TRUTH];
+		  if (addResponse)
+		    response_TauWTA2TauWTA1 = var_TauWTA2TauWTA1[jetType::GROOMED]/var_TauWTA2TauWTA1[jetType::TRUTH];
 		}
 		
 
@@ -1025,7 +1080,7 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
 
 		  } // calcEEC
 	      // if we have the ECF variables the calculations for EEC are much simpler
-	      else if (preCalcEEC)
+	      else if (preCalcEEC && !data)
 		{
 		  // set for truth and groomed
 		  setEEC(jetType::TRUTH, chosenLeadTruthJetIndex);
@@ -1033,7 +1088,7 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
 	      
 	      setEEC(jetType::GROOMED, chosenLeadGroomedIndex);
 	      // if we have the truth eec values we can calculate the response
-	      if (preCalcEEC)
+	      if (preCalcEEC && !data)
 		{
 		  response_EEC_C2_1 = var_EEC_C2_1[jetType::GROOMED]/var_EEC_C2_1[jetType::TRUTH];
 		  response_EEC_C2_2 = var_EEC_C2_2[jetType::GROOMED]/var_EEC_C2_2[jetType::TRUTH];
@@ -1042,7 +1097,7 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
 		}
 
 	      // make sure all of the other output variables have their values set
-	      setOutputVariables(chosenLeadTruthJetIndex, chosenLeadTopoJetIndex, chosenLeadGroomedIndex, leadingCA12TruthIndex, leadingCA12TopoIndex, lead_subjet, algorithm, algorithmName , prefix);
+	      setOutputVariables(chosenLeadTruthJetIndex, chosenLeadTopoJetIndex, chosenLeadGroomedIndex, leadingCA12TruthIndex, leadingCA12TopoIndex, lead_subjet, algorithm, algorithmName , prefix, (*sampleIter));
 	      
 	      // count how many entries have passed selection
 	      passed_counter += 1;
@@ -1067,9 +1122,8 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
 	  outTree->GetCurrentFile()->Close();
 
 	  std::stringstream ss2; // store the name of the output file and include the i and j indices!
-	  std::string bkg2 = signal ? "sig": "bkg";
 	  // add all of the file name elements
-	  ss2 << algorithm << fileid_global << "/" << ss.str() << "_" << bkg2 << ".nevents";
+	  ss2 << algorithm << fileid_global << "/" << ss.str() << "_" << bkg << ".nevents";
 	  // open the output file
 	  ofstream ev_out(ss2.str());
 	  // write out the weighted events to a text file
@@ -1101,7 +1155,7 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
 
 	} // end loop of datatype
 
-    } // end loop over pt bins
+      //    } // end loop over pt bins
 
 } // makeMassWindowFile()
 
@@ -2436,8 +2490,9 @@ void setLeptonVectors()
  * @param subjet_idx The index of the groomed jet within the subjet collection.
  * @param groomalgo The abbreviated name of the algorithm.
  * @param samplePrefix If it has "LC" in the name of the algorithm
+ * @param sample_type The type of sample: sampleType::SIGNAL, BACKGROUND or DATA
  */
-void setOutputVariables( int jet_idx_truth, int jet_idx_topo, int jet_idx_groomed, int jet_idx_ca12, int jet_idx_ca12topo, int subjet_idx, std::string & algorithm, std::string & groomalgo, std::string &  samplePrefix)
+void setOutputVariables( int jet_idx_truth, int jet_idx_topo, int jet_idx_groomed, int jet_idx_ca12, int jet_idx_ca12topo, int subjet_idx, std::string & algorithm, std::string & groomalgo, std::string &  samplePrefix, int sample_type)
 {
   // There is the issue that when running over a CamKt12 algorithm the Topo jets get read in twice -> once for the pt rw and once for the rest.  So we check if we are running over
   // this type of algorithm, then we can set the output variables accordingly
@@ -2481,7 +2536,11 @@ void setOutputVariables( int jet_idx_truth, int jet_idx_topo, int jet_idx_groome
   else
     {
       // try to set this from the predictnTracks() method
-      var_nTracks = predictnTracks(mc_channel_number, algorithm, (*var_m_vec[jetType::GROOMED])[jet_idx_groomed]/1000.0);
+      // don't predict for data
+      if (sample_type != sampleType::DATA)
+	var_nTracks = predictnTracks(mc_channel_number, algorithm, (*var_m_vec[jetType::GROOMED])[jet_idx_groomed]/1000.0);
+      else
+	var_nTracks = -99;
       var_nTracks_raw = -99;
       // also set jet_idx_topo to -99 as we're obviously missing parents
       jet_idx_topo = -99;
@@ -2510,10 +2569,13 @@ void setOutputVariables( int jet_idx_truth, int jet_idx_topo, int jet_idx_groome
 
 
   // set the ca12 truth jets
-  var_ca12_pt = (*var_ca12_pt_vec)[jet_idx_ca12];
-  var_ca12_m = (*var_ca12_m_vec)[jet_idx_ca12];
-  var_ca12_phi = (*var_ca12_phi_vec)[jet_idx_ca12];
-  var_ca12_eta = (*var_ca12_eta_vec)[jet_idx_ca12];
+  if (sample_type != sampleType::DATA)
+    {
+      var_ca12_pt = (*var_ca12_pt_vec)[jet_idx_ca12];
+      var_ca12_m = (*var_ca12_m_vec)[jet_idx_ca12];
+      var_ca12_phi = (*var_ca12_phi_vec)[jet_idx_ca12];
+      var_ca12_eta = (*var_ca12_eta_vec)[jet_idx_ca12];
+    }
   // set the ca12 topo jets. sometimes the event can have 0 topo jets, so 
   // we need to check for this.
   if (jet_idx_ca12topo != -1)
@@ -2531,6 +2593,8 @@ void setOutputVariables( int jet_idx_truth, int jet_idx_topo, int jet_idx_groome
 	{
 	case jetType::TRUTH:
 	  jet_idx = jet_idx_truth;
+	  if (sample_type == sampleType::DATA)
+	    continue;
 	  break;
 	case jetType::TOPO:
 	  jet_idx = jet_idx_topo;
@@ -2614,16 +2678,19 @@ void setOutputVariables( int jet_idx_truth, int jet_idx_topo, int jet_idx_groome
       var_YFilt=sqrt(calcyfilt);
 
     }
-  if (addResponse)
+  if (addResponse && sample_type != sampleType::DATA)
     calculateResponseValues();
 
   // store cluster info
   if (clusterTLV)
     {
-      var_clusters_truth = (*var_clusters_truth_vec)[jet_idx_truth];
+      if (sample_type != sampleType::DATA)
+	{
+	  var_clusters_truth = (*var_clusters_truth_vec)[jet_idx_truth];
+	  var_subjets_truth = (*var_subjets_truth_vec)[jet_idx_truth];
+	}
       var_clusters_groomed = (*var_clusters_groomed_vec)[jet_idx_groomed];
       var_clusters_ca12 = (*var_clusters_ca12_vec)[jet_idx_ca12];
-      var_subjets_truth = (*var_subjets_truth_vec)[jet_idx_truth];
       var_subjets_groomed = (*var_subjets_groomed_vec)[jet_idx_groomed];
       var_subjets_ca12 = (*var_subjets_ca12_vec)[jet_idx_ca12];
     }
@@ -2864,8 +2931,9 @@ void resetOutputVariables()
  * @param tree A pointer to the output TTree.
  * @param groomalgo The shortened version of the grooming algorithm.
  * @param groomIdx The full grooming algorithm name, used as a key in the algorithms maps.
+ * @param sample_type If the sample is SIGNAL, BACKGROUND or DATA.  sampleType:: enum
 e */
-void setOutputBranches(TTree * tree, std::string & groomalgo, std::string & groomIdx)
+void setOutputBranches(TTree * tree, std::string & groomalgo, std::string & groomIdx, int sample_type)
 {
 
   std::string samplePrefix = ""; // AntiKt10 for example
@@ -2886,11 +2954,14 @@ void setOutputBranches(TTree * tree, std::string & groomalgo, std::string & groo
   tree->Branch("nTracks_raw",&var_nTracks_raw, "nTracks_raw/I");
   
 
-  // add the ca12 truth jets
-  tree->Branch("jet_CamKt12Truth_pt",&var_ca12_pt, "jet_CamKt12Truth_pt/F");
-  tree->Branch("jet_CamKt12Truth_m",&var_ca12_m, "jet_CamKt12Truth_m/F");
-  tree->Branch("jet_CamKt12Truth_phi",&var_ca12_phi, "jet_CamKt12Truth_phi/F");
-  tree->Branch("jet_CamKt12Truth_eta",&var_ca12_eta, "jet_CamKt12Truth_eta/F");
+  // add the ca12 truth jets, but only if MC
+  if (sample_type != sampleType::DATA)
+    {
+      tree->Branch("jet_CamKt12Truth_pt",&var_ca12_pt, "jet_CamKt12Truth_pt/F");
+      tree->Branch("jet_CamKt12Truth_m",&var_ca12_m, "jet_CamKt12Truth_m/F");
+      tree->Branch("jet_CamKt12Truth_phi",&var_ca12_phi, "jet_CamKt12Truth_phi/F");
+      tree->Branch("jet_CamKt12Truth_eta",&var_ca12_eta, "jet_CamKt12Truth_eta/F");
+    }
   // add the ca12 topo jets
   tree->Branch("jet_CamKt12LCTopo_pt",&var_ca12topo_pt, "jet_CamKt12LCTopo_pt/F");
   tree->Branch("jet_CamKt12LCTopo_m",&var_ca12topo_m, "jet_CamKt12LCTopo_m/F");
@@ -2914,6 +2985,8 @@ void setOutputBranches(TTree * tree, std::string & groomalgo, std::string & groo
       if (i!=0)
 	addResponse = false;
       if (!keepTopo && i == jetType::TOPO)
+	continue;
+      if (sample_type == sampleType::DATA && i == jetType::TRUTH)
 	continue;
 
       std::string jetString = returnJetType(samplePrefix, groomalgo, addLC,i); //set to truth/ topo/ groomed
@@ -3170,6 +3243,8 @@ void setOutputBranches(TTree * tree, std::string & groomalgo, std::string & groo
     }
   for (int wta_idx = 0; wta_idx < jetType::MAX; wta_idx++)
     {
+      if (sample_type == sampleType::DATA && wta_idx == jetType::TRUTH) // not for data
+	continue;
       string jetstring = returnJetType(samplePrefix, groomalgo, addLC, wta_idx);
       bool addResponse = wta_idx == 0 ? true : false;
       if (useBranch(string(jetstring+"TauWTA2TauWTA1")))
@@ -3186,6 +3261,8 @@ void setOutputBranches(TTree * tree, std::string & groomalgo, std::string & groo
   // add a calculated variable Tau2/Tau1
   for (int tau_idx = 0 ; tau_idx < jetType::MAX; tau_idx++)
     {
+      if (sample_type == sampleType::DATA && tau_idx == jetType::TRUTH) // not for data
+	continue;
       string jetstring = returnJetType(samplePrefix, groomalgo, addLC,tau_idx);
       bool addResponse = tau_idx == 0 ? true : false;
       if (useBranch(string(jetstring+"Tau21")))
@@ -3201,8 +3278,11 @@ void setOutputBranches(TTree * tree, std::string & groomalgo, std::string & groo
 
   if (clusterTLV)
     {
-      tree->Branch(std::string(returnJetType(samplePrefix, groomalgo, addLC,jetType::TRUTH, false)+"Jets_Clusters").c_str(), &var_clusters_truth);
-      tree->Branch(std::string(returnJetType(samplePrefix, groomalgo, addLC,jetType::TRUTH, false)+"Jets_Kt2Subjets").c_str(), &var_subjets_truth);
+      if (sample_type != sampleType::DATA)
+	{
+	  tree->Branch(std::string(returnJetType(samplePrefix, groomalgo, addLC,jetType::TRUTH, false)+"Jets_Clusters").c_str(), &var_clusters_truth);
+	  tree->Branch(std::string(returnJetType(samplePrefix, groomalgo, addLC,jetType::TRUTH, false)+"Jets_Kt2Subjets").c_str(), &var_subjets_truth);
+	}
       tree->Branch(std::string(returnJetType(samplePrefix, groomalgo, addLC,jetType::GROOMED, false)+"Jets_Clusters").c_str(), &var_clusters_groomed);
       tree->Branch(std::string(returnJetType(samplePrefix, groomalgo, addLC,jetType::GROOMED, false)+"Jets_Kt2Subjets").c_str(), &var_subjets_groomed);
       tree->Branch("jet_CamKt12TruthJets_Clusters", &var_clusters_ca12);
