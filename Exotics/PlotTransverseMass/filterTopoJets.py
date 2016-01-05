@@ -18,7 +18,11 @@ signal = False
 if len(sys.argv) == 4:
     if sys.argv[3].lower() == 'signal':
         signal = True
+jet_alg = 'ca12'
+if len(sys.argv) == 5:
+    jet_alg = sys.argv[4].lower()
 
+        
 # define the branches we're going to write out
 b_topo_pt = rt.std.vector(float)()
 b_topo_eta = rt.std.vector(float)()
@@ -46,7 +50,7 @@ tree = file_in.Get('outputTree')
 
 entries = tree.GetEntries()
 
-file_out = rt.TFile(file_out_name+'_ak10.root','RECREATE')
+file_out = rt.TFile(file_out_name+'_'+jet_alg+'.root','RECREATE')
 tree_out = rt.TTree('outputTree','outputTree')
 
 tree_out.Branch('topo_pt', b_topo_pt)
@@ -65,7 +69,7 @@ tree_out.Branch('truth_id', b_truth_id)
 tree_out.Branch('nTracks', b_nTracks)
 tree_out.Branch('mc_channel_number', b_mc_channel_number)
 
-csv_out = open(file_out_name+'_ak10.csv','write')
+csv_out = open(file_out_name+'_'+jet_alg+'.csv','write')
 csv_out.write('topo_pt,topo_eta,topo_phi,topo_m,groomed_pt,groomed_eta,groomed_phi,groomed_m,truth_pt,truth_eta,truth_phi,truth_m,truth_id,nTracks,mc_channel_number\n')
 
 for i in range(entries):
@@ -92,19 +96,31 @@ for i in range(entries):
     # find the leading topo jet
     max_pt = 0
     max_idx = 0
+    #if tree.jet_CamKt12LCTopo_pt.size() == 0:
     if tree.jet_AntiKt10LCTopo_pt.size() == 0:
         continue
+    #for x, p in enumerate(tree.jet_CamKt12LCTopo_pt):
     for x, p in enumerate(tree.jet_AntiKt10LCTopo_pt):
         if p > max_pt:
             max_pt = p
             max_idx = x
+    '''
+    topo_pt = tree.jet_CamKt12LCTopo_pt[max_idx]/1000.0
+    topo_eta = tree.jet_CamKt12LCTopo_eta[max_idx]
+    topo_phi = tree.jet_CamKt12LCTopo_phi[max_idx]
+    topo_m = tree.jet_CamKt12LCTopo_m[max_idx]/1000.0
+    nTracks = int(tree.jet_CamKt12LCTopo_NumTrkPt500[max_idx])
+    '''
     topo_pt = tree.jet_AntiKt10LCTopo_pt[max_idx]/1000.0
     topo_eta = tree.jet_AntiKt10LCTopo_eta[max_idx]
     topo_phi = tree.jet_AntiKt10LCTopo_phi[max_idx]
     topo_m = tree.jet_AntiKt10LCTopo_m[max_idx]/1000.0
-    nTracks = int(tree.jet_AntiKt10LCTopo_nTracks[max_idx])
+    nTracks = int(tree.jet_AntiKt10LCTopo_NumTrkPt500[max_idx])
 
     # leading groomed jet
+    #CamKt12LCTopoBDRSFilteredMU100Y4
+    #AntiKt10LCTopoTrimmedPtFrac5SmallR20
+    
     g_idx = 0
     g_pt = 0
     if tree.jet_AntiKt10LCTopoTrimmedPtFrac5SmallR20_pt.size() == 0:
@@ -113,8 +129,7 @@ for i in range(entries):
         if p > g_pt:
             g_pt = p
             g_idx = x
-    #CamKt12LCTopoBDRSFilteredMU100Y4
-    #AntiKt10LCTopoTrimmedPtFrac5SmallR20
+
     groomed_pt = tree.jet_AntiKt10LCTopoTrimmedPtFrac5SmallR20_pt[g_idx]/1000.0
     groomed_eta = tree.jet_AntiKt10LCTopoTrimmedPtFrac5SmallR20_eta[g_idx]
     groomed_phi = tree.jet_AntiKt10LCTopoTrimmedPtFrac5SmallR20_phi[g_idx]

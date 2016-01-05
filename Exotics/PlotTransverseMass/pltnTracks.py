@@ -15,34 +15,39 @@ f = rt.TFile.Open(file_in_name)
 
 tree = f.Get('outputTree')
 
+jet_alg = 'ca12'
+if len(sys.argv) == 4:
+    if sys.argv[3].lower() != 'ca12':
+        jet_alg = 'ak10'
+
 # draw the nTracks vs parentID plots
 tcanv = rt.TCanvas('canv1')
 if signal:
 
     histw = 'hist_w'
-    tree.Draw("nTracks>>"+histw,"(truth_id==24)")
+    tree.Draw("nTracks>>"+histw,"(truth_id==24)*(nTracks!=-99)")#
     histw = rt.gDirectory.Get(histw)
     histw.SetTitle("nTracks for W boson parents")
     histw.GetXaxis().SetTitle("nTracks")
     histw.Draw()
-    tcanv.SaveAs(file_in_name.replace('.root','_w_ca12.png'))
+    tcanv.SaveAs(file_in_name.replace('.root','_w_'+jet_alg+'.png'))
     
     histz = 'hist_z'
-    tree.Draw("nTracks>>"+histz,"(truth_id==23)")
+    tree.Draw("nTracks>>"+histz,"(truth_id==23)*(nTracks!=-99)") #
     histz = rt.gDirectory.Get(histz)
     histz.SetTitle("nTracks for Z boson parents")
     histz.GetXaxis().SetTitle("nTracks")
     histz.Draw()
-    tcanv.SaveAs(file_in_name.replace('.root','_z_ca12.png'))
+    tcanv.SaveAs(file_in_name.replace('.root','_z_'+jet_alg+'.png'))
 
 else:
     histjz = 'hist_qcd'
-    tree.Draw("nTracks>>"+histjz,"(truth_id==99)")
+    tree.Draw("nTracks>>"+histjz,"(truth_id==99)*(nTracks!=-99)")#
     histjz = rt.gDirectory.Get(histjz)
     histjz.SetTitle("nTracks for QCD boson parents")
     histjz.GetXaxis().SetTitle("nTracks")
     histjz.Draw()
-    tcanv.SaveAs(file_in_name.replace('.root','_qcd_ca12.png'))
+    tcanv.SaveAs(file_in_name.replace('.root','_qcd_'+jet_alg+'.png'))
 
 # draw 2D plot with nTracks on x-axis, pT on y-axis
 entries = tree.GetEntries()
@@ -88,27 +93,27 @@ f2.FixParameter(0,0)
 # draw and save
 #nTrk_pt.Fit("pol1")
 #nTrk_pt.Draw()
-#tcanv.SaveAs(file_in_name.replace('.root','_ntrk_pt_ca12.png'))
+#tcanv.SaveAs(file_in_name.replace('.root','_ntrk_pt_'+jet_alg+'.png'))
 
 nTrk_m.Fit("f2")
-with open('nTrk_m_fitparams_ca12.csv','a') as fits:
+with open('nTrk_m_fitparams_'+jet_alg+'.csv','a') as fits:
     fits.write(str(mc_channel_number) + ',' + str(f2.GetParameter(1))+'\n')
 nTrk_m.Draw()
-tcanv.SaveAs(file_in_name.replace('.root','_ntrk_m_ca12.png'))
+tcanv.SaveAs(file_in_name.replace('.root','_ntrk_m_'+jet_alg+'.png'))
 
 #pt_nTrk.Fit("pol1")
 #pt_nTrk.Draw()
-#tcanv.SaveAs(file_in_name.replace('.root','_pt_ntrk_ca12.png'))
+#tcanv.SaveAs(file_in_name.replace('.root','_pt_ntrk_'+jet_alg+'.png'))
 m_nTrk.Fit("f2")
-with open('m_nTrk_fitparams_ca12.csv','a') as fits:
+with open('m_nTrk_fitparams_'+jet_alg+'.csv','a') as fits:
     fits.write(str(mc_channel_number) + ',' + str(f2.GetParameter(1))+'\n')
 m_nTrk.Draw()
-tcanv.SaveAs(file_in_name.replace('.root','_m_ntrk_ca12.png'))
+tcanv.SaveAs(file_in_name.replace('.root','_m_ntrk_'+jet_alg+'.png'))
 
 gr_topo.Fit("pol1")
-with open('gr_topo_pt_fitparams_ca12.csv','a') as fits:
+with open('gr_topo_pt_fitparams_'+jet_alg+'.csv','a') as fits:
     fits.write(str(mc_channel_number) + ',' + str(gr_topo.GetFunction("pol1").GetParameter(1))+'\n')
 gr_topo.Draw()
-tcanv.SaveAs(file_in_name.replace('.root','_pt_comp_ca12.png'))
+tcanv.SaveAs(file_in_name.replace('.root','_pt_comp_'+jet_alg+'.png'))
 #fits.close()
 f.Close()

@@ -694,7 +694,9 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
 
 	      // check that the leading ca12truth has pT > 50 GeV and within |eta| < 1.2
 	      if (leadingCA12TruthIndex < 0 || (*var_ca12_pt_vec)[leadingCA12TruthIndex] <= 50*1000.0 || fabs((*var_ca12_eta_vec)[leadingCA12TruthIndex]) > 1.2)
-	      	continue;
+		{
+		  continue;
+		}
 
 	      ca12jetCount++;
 
@@ -775,7 +777,9 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
 	      
 	      // veto the event if we have no good jets.
 	      if (chosenLeadGroomedIndex < 0)
-		continue;
+		{
+		  continue;
+		}
 
 	      groomedJetCount ++;
 
@@ -783,6 +787,7 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
 	      // truth boson matching done on the leading truth jet (signal only) to check if it is a Z or W boson.
 	      int truthBosonIndex = -1;
 	      bool hasZ = false;
+	      bool hasW = false;
 
 	      // 18/03/2015: Previously we were looking for a match on the truth jet here, not the groomed jet.
 	      if (truthBosonMatching && signal)
@@ -813,13 +818,14 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
 			  // if there is a Z boson within this radius, regardless of whether or not there is also a W, we veto the event
 			  if (abs((*var_truthboson_ID_vec)[jet_i]) == 24)
 			    {
+			      hasW = true;
 			      truthBosonIndex = count;
 			    }
-			  /*else if (abs((*var_truthboson_ID_vec)[jet_i]) == 23)
+			  else if (abs((*var_truthboson_ID_vec)[jet_i]) == 23)
 			    {
 			      hasZ = true;
 			      passedTruthBoson = false;
-			      }*/
+			    }
 			}
 		      count++;
 		    }
@@ -832,20 +838,25 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
 		      //continue;
 		    }
 		  // check that the parent is a W
-		  else if (abs((*var_truthboson_ID_vec)[truthBosonIndex]) != 24 || hasZ)
+		  /*else if (abs((*var_truthboson_ID_vec)[truthBosonIndex]) != 24 || hasZ)
 		    {
 		      //std::cout << "Truth boson parent is not a W, vetoing event." << std::endl;
 		      passedTruthBoson = false;
 		      //continue;
-		    }
+		      }*/
 		  else
 		    {
 		      passedTruthBoson = true;
 		    }
 		} // truth boson matching done
 
+	      //if (hasZ && hasW)
+	      //std::cout << "FAILED DUE TO Z BOSON CONTAMINATION" << std::endl;
+	      
 	      if (truthBosonMatching && !passedTruthBoson)
-		continue;
+		{
+		  continue;
+		}
 
 	      truthBosonCount ++;
 	      // find truth jets /////groomed jets
@@ -1964,7 +1975,7 @@ void setJetsBranches(TChain * tree, std::string &groomalgo,  std::string & groom
       if (!setVector(tree, brancharray, var_Parent_index_vec.at(i), std::string(jetString+"Parent_index") ))
 	floatvec(var_Parent_index_vec[i]);
       
-      if (!setVector(tree, brancharray, var_nTracks_vec.at(i), std::string(jetString+"nTracks") ))
+      if (!setVector(tree, brancharray, var_nTracks_vec.at(i), std::string(jetString+"NumTrkPt500") ))
 	floatvec(var_nTracks_vec[i]);
       
       if (!setVector(tree, brancharray, var_emfrac_vec.at(i), std::string(jetString+"emfrac") ))
@@ -2481,7 +2492,7 @@ void setOutputVariables( int jet_idx_truth, int jet_idx_topo, int jet_idx_groome
   else
     {
       // try to set this from the predictnTracks() method
-      var_nTracks = predictnTracks(mc_channel_number, algorithm, (*var_m_vec[jetType::GROOMED])[jet_idx_groomed]/1000.0);
+      var_nTracks = -99;//predictnTracks(mc_channel_number, algorithm, (*var_m_vec[jetType::GROOMED])[jet_idx_groomed]/1000.0);
       var_nTracks_raw = -99;
       // also set jet_idx_topo to -99 as we're obviously missing parents
       jet_idx_topo = -99;
