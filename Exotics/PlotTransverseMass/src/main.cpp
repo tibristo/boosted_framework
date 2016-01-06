@@ -4012,16 +4012,24 @@ int predictnTracks(int mc_channel, string algorithm, float mass)
     {
       //std::cout << "AK10" <<  std::endl;
       //sig_p0 = 0.0096*masspoint+80;
-      sig_p1 = 0.00055*masspoint+2.07;
+      // incorrect ntracks
+      //sig_p1 = 0.00055*masspoint+2.07;
       //bkg_p0 = 13.69*masspoint + 41;
-      bkg_p1 = 0.75*masspoint + 1.17;
+      //bkg_p1 = 0.75*masspoint + 1.17;
+      // NumTrkPt500
+      sig_p1 = 0.000124*masspoint+4.97;
+      bkg_p1 = 1.2*masspoint + 3.1;
     }
   else if (algorithm.find("CamKt12") != std::string::npos) //ca12
     {
+      // incorrect nTracks
       //sig_p0 = 3.4e-6*masspoint*masspoint - 0.01*mass + 78;
-      sig_p1 = 0.000067*masspoint+2.36;
+      //sig_p1 = 0.000067*masspoint+2.36;
       //bkg_p0 = 18.66*masspoint + 16.2;
-      bkg_p1 = 0.8*masspoint + 1.56;
+      //bkg_p1 = 0.8*masspoint + 1.56;
+      // NumTrkPt500      
+      sig_p1 = 0.00164*masspoint+6.13;
+      bkg_p1 = 0.87*masspoint + 5.09;
     }
 
   if (signal)
