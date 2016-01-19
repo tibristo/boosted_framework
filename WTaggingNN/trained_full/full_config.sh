@@ -8,7 +8,7 @@ for x in `ls *mc15_nTrk_v1*.yaml` ; do l=`grep cv $x | head -1`; cv=${l:(-6):1};
 #for x in `ls *bdt*.yaml` ; do sed -i 's/notcleaned/loose/g' $x ; done
 
 # change the signal eff
-for x in `ls *mc15_nTrk_v1*.yaml` ; do sed -i '/sigeff/c\sigeff: 0.7039' $x ; done
+for x in `ls *mc15_nTrk_v1*.yaml` ; do sed -i '/sigeff/c\sigeff: 0.7291' $x ; done
 # change the background eff
 for x in `ls *mc15_nTrk_v1*.yaml` ; do sed -i '/bkgeff/c\bkgeff: 0.1195' $x ; done
 

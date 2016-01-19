@@ -68,7 +68,7 @@ def weightedStd(X, w, u):
 
     return math.sqrt(variance)
 
-def scaleSample(scaler_filename, filename='/Disk/ecdf-nfs-ppe/atlas/users/tibristo/BosonTagging/csv/AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_matchedM_loose_v2_200_1000_mw_merged.csv', prefix='folds/', name='data'):
+def scaleSample(scaler_filename, filename='/Disk/ds-sopa-group/PPE/atlas/users/tibristo/BosonTagging/csv/AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_matchedM_loose_v2_200_1000_mw_merged.csv', prefix='folds/', name='data'):
     '''
     Method to standardise an input file with the mean and std from the training data (this is stored in the scaler file).
     '''
@@ -492,7 +492,7 @@ def main(args):
         sys.exit(0)
 
     # this is the default path
-    path = '/Disk/ecdf-nfs-ppe/atlas/users/tibristo/BosonTagging/csv/'
+    path = '/Disk/ds-sopa-group/PPE/atlas/users/tibristo/BosonTagging/csv/'
 
     name = args.algorithm+'scale' # use this if we want to name the output file something different
     # set up the cols which get used for creating a dataframe from csv
@@ -516,7 +516,7 @@ def main(args):
         scale = True
         # the cross validation method will call the persists_cv method and create the folds
         filenames = cross_validation(data, 4, name, scale, pt_rw = args.ptrw, transform_weights = args.txweights)
-        #full_dataset = '/Disk/ecdf-nfs-ppe/atlas/users/tibristo/BosonTagging/csv/AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_matchedM_loose_v2_200_1000_mw_merged.csv'
+        #full_dataset = '/Disk/ds-sopa-group/PPE/atlas/users/tibristo/BosonTagging/csv/AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_matchedM_loose_v2_200_1000_mw_merged.csv'
         # name of the full dataset which is used for the cv splits
         if args.fulldataset == 'DEFAULT':
             full_dataset = path+args.algorithm.replace('loose','notcleaned')+'.csv'

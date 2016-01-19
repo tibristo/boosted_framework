@@ -6,6 +6,7 @@
 ///v whatevs 
 ///
 
+
 #include "MunichWorkshopPlots_nicer02.h"
 #include <string>
 #include <utility>
@@ -2492,7 +2493,7 @@ void setOutputVariables( int jet_idx_truth, int jet_idx_topo, int jet_idx_groome
   else
     {
       // try to set this from the predictnTracks() method
-      var_nTracks = -99;//predictnTracks(mc_channel_number, algorithm, (*var_m_vec[jetType::GROOMED])[jet_idx_groomed]/1000.0);
+      var_nTracks = predictnTracks(mc_channel_number, algorithm, (*var_m_vec[jetType::GROOMED])[jet_idx_groomed]/1000.0);
       var_nTracks_raw = -99;
       // also set jet_idx_topo to -99 as we're obviously missing parents
       jet_idx_topo = -99;

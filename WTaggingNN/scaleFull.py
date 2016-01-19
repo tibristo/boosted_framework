@@ -9,9 +9,9 @@ import pickle
 #import create_folds.scalerNN
 
 #training_files = ['folds/'+f for f in os.listdir('folds') if f.find('train')!=-1]
-training_files = ['/Disk/ecdf-nfs-ppe/atlas/users/tibristo/BosonTagging/csv/AntiKt10LCTopoTrimmedPtFrac5SmallR30_13tev_matchedM_loose_v2_200_1000_mw_merged.root']
+training_files = ['/Disk/ds-sopa-group/PPE/atlas/users/tibristo/BosonTagging/csv/AntiKt10LCTopoTrimmedPtFrac5SmallR30_13tev_matchedM_loose_v2_200_1000_mw_merged.root']
 cols = np.linspace(1,44,44,dtype=int)
-filename = '/Disk/ecdf-nfs-ppe/atlas/users/tibristo/BosonTagging/csv/AntiKt10LCTopoTrimmedPtFrac5SmallR30_13tev_matchedM_notcleaned_v2_200_1000_mw_merged.csv'
+filename = '/Disk/ds-sopa-group/PPE/atlas/users/tibristo/BosonTagging/csv/AntiKt10LCTopoTrimmedPtFrac5SmallR30_13tev_matchedM_notcleaned_v2_200_1000_mw_merged.csv'
 
 for f in training_files:
     #tfile = rt.TFile.Open(f)

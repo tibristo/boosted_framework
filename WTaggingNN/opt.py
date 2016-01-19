@@ -9,11 +9,11 @@ def logFinished(result):
 
 def createOutYaml(config_out, job_id, filename_test, filename_train, algorithm, params={}):
     import os
-    if not os.path.exists('/Disk/ecdf-nfs-ppe/atlas/users/tibristo/boosted_framework/WTaggingNN/trained/'):
-        os.makedirs('/Disk/ecdf-nfs-ppe/atlas/users/tibristo/boosted_framework/WTaggingNN/trained/')
-    outName = '/Disk/ecdf-nfs-ppe/atlas/users/tibristo/boosted_framework/WTaggingNN/trained/config-trained-'+str(job_id)+'.yaml'
+    if not os.path.exists('/Disk/ds-sopa-group/PPE/atlas/users/tibristo/boosted_framework/WTaggingNN/trained/'):
+        os.makedirs('/Disk/ds-sopa-group/PPE/atlas/users/tibristo/boosted_framework/WTaggingNN/trained/')
+    outName = '/Disk/ds-sopa-group/PPE/atlas/users/tibristo/boosted_framework/WTaggingNN/trained/config-trained-'+str(job_id)+'.yaml'
     f_out = open(outName,'w')
-    f_in = open('/Disk/ecdf-nfs-ppe/atlas/users/tibristo/boosted_framework/WTaggingNN/template.yaml','r')
+    f_in = open('/Disk/ds-sopa-group/PPE/atlas/users/tibristo/boosted_framework/WTaggingNN/template.yaml','r')
     file_holder = '  file: '+filename_test
     
     for l in f_in:
@@ -45,10 +45,10 @@ def objective(filename_train, filename_test, tree, config, learning, momentum, r
     import os
     formula_out = '--formula='+formula+''
     print formula_out
-    if not os.path.exists('/Disk/ecdf-nfs-ppe/atlas/users/tibristo/boosted_framework/WTaggingNN/output_config'):
-        os.makedirs('/Disk/ecdf-nfs-ppe/atlas/users/tibristo/boosted_framework/WTaggingNN/output_config')
-    save = '/Disk/ecdf-nfs-ppe/atlas/users/tibristo/boosted_framework/WTaggingNN/output_config/config-output-'+str(job_id)+'.yaml'
-    args = ['/Disk/ecdf-nfs-ppe/atlas/users/tibristo/AGILEPack/AGILEPackTrainer','--file='+filename_train,'--tree='+tree,'--shuffle','--save='+str(save),'--config='+config,'--learning='+str(learning),'--momentum='+str(momentum),'--regularize='+str(regularize),'--uepochs='+str(uepochs),'--sepochs='+str(sepochs),'--batch=1',formula_out]
+    if not os.path.exists('/Disk/ds-sopa-group/PPE/atlas/users/tibristo/boosted_framework/WTaggingNN/output_config'):
+        os.makedirs('/Disk/ds-sopa-group/PPE/atlas/users/tibristo/boosted_framework/WTaggingNN/output_config')
+    save = '/Disk/ds-sopa-group/PPE/atlas/users/tibristo/boosted_framework/WTaggingNN/output_config/config-output-'+str(job_id)+'.yaml'
+    args = ['/Disk/ds-sopa-group/PPE/atlas/users/tibristo/AGILEPack/AGILEPackTrainer','--file='+filename_train,'--tree='+tree,'--shuffle','--save='+str(save),'--config='+config,'--learning='+str(learning),'--momentum='+str(momentum),'--regularize='+str(regularize),'--uepochs='+str(uepochs),'--sepochs='+str(sepochs),'--batch=1',formula_out]
     popen = subprocess.Popen(args, stdout=subprocess.PIPE)
     lines_iter = iter(popen.stdout.readline,b"")
     for line in lines_iter:
@@ -139,8 +139,8 @@ def printProgress(tasks):
 
 def main(job_id, params):
     from math import exp
-    filename ='/Disk/ecdf-nfs-ppe/atlas/users/tibristo/boosted_framework/WTaggingNN/'
-    #filename = '/Disk/ecdf-nfs-ppe/atlas/users/tibristo/BosonTagging/'
+    filename ='/Disk/ds-sopa-group/PPE/atlas/users/tibristo/boosted_framework/WTaggingNN/'
+    #filename = '/Disk/ds-sopa-group/PPE/atlas/users/tibristo/BosonTagging/'
     # these are the files used for the mva. Use one for training and one for testing.
     #persist/data_features_l_2_10__000.root
     #    persist/data_features_l_2_10__001.root
@@ -151,10 +151,10 @@ def main(job_id, params):
 
     filename_test=filename+'folds/AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_matchedM_loose_v2_200_1000_mw_mergedtest_cv_001.root'
     filename_train=filename+'folds/AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_matchedM_loose_v2_200_1000_mw_mergedtrain_cv_001.root'
-    #filename_train = '/Disk/ecdf-nfs-ppe/atlas/users/tibristo/nnbosontagging/folds/AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_matchedL_ranged_v2_1000_1500_nomw_mergedtrain_cv_001.root'
-    #filename_test = '/Disk/ecdf-nfs-ppe/atlas/users/tibristo/nnbosontagging/folds/AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_matchedL_ranged_v2_1000_1500_nomw_mergedtest_cv_001.root'
-    #config = '/Disk/ecdf-nfs-ppe/atlas/users/tibristo/nnbosontagging/tim-config.yaml'
-    config = '/Disk/ecdf-nfs-ppe/atlas/users/tibristo/boosted_framework/WTaggingNN/tim-config_full.yaml'
+    #filename_train = '/Disk/ds-sopa-group/PPE/atlas/users/tibristo/nnbosontagging/folds/AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_matchedL_ranged_v2_1000_1500_nomw_mergedtrain_cv_001.root'
+    #filename_test = '/Disk/ds-sopa-group/PPE/atlas/users/tibristo/nnbosontagging/folds/AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_matchedL_ranged_v2_1000_1500_nomw_mergedtest_cv_001.root'
+    #config = '/Disk/ds-sopa-group/PPE/atlas/users/tibristo/nnbosontagging/tim-config.yaml'
+    config = '/Disk/ds-sopa-group/PPE/atlas/users/tibristo/boosted_framework/WTaggingNN/tim-config_full.yaml'
     formula= 'label~*-thrustmin-thrustmaj-yfilt-angularity-foxwolfram20-pt-m-eta-phi-mu12-zcut12-planarflow-tauwta1-tau2-tau1-sphericity-eec_d2_1-tauwta2tauwta1| weight' #-tau21-tau1-tau2 <- these are not in mc15
     #formula= 'label~*-ThrustMin-ThrustMaj-YFilt-Tau21-Dip12|weight'
     algorithm = 'AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_matchedM_loose_v2_200_1000_mw'
@@ -207,7 +207,7 @@ def runCV():
     key = '13tev_mc15_nTrk_v1'
     # output file id
     file_id = 'mc15_nTrk_v1_bkg_v1'
-    folder ='/Disk/ecdf-nfs-ppe/atlas/users/tibristo/boosted_framework/WTaggingNN/'
+    folder ='/Disk/ds-sopa-group/PPE/atlas/users/tibristo/boosted_framework/WTaggingNN/'
     # we need the files to be the output of what we would normally get back from
     # the cross_validation method from create_folds.py
     all_files = [f for f in os.listdir('folds/') if f.find(key) != -1 and f.endswith('.root')]
@@ -225,7 +225,7 @@ def runCV():
     filenames = map(lambda x: [folder+'folds/'+x, folder+'folds/'+x.replace('train','test')], train_files)
     
     print filenames
-    config = '/Disk/ecdf-nfs-ppe/atlas/users/tibristo/boosted_framework/WTaggingNN/tim-config-nTrk.yaml'
+    config = '/Disk/ds-sopa-group/PPE/atlas/users/tibristo/boosted_framework/WTaggingNN/tim-config-nTrk.yaml'
     # training on mc15 with variables: aplanarity, eec_c2_1, split12, tauwta2tauwta1, eec_d2_1, zcut12, planarflow. However, zcut12 and split12 are highly
     # correlated and planarflow and sphericity are actually higher than eec_d2_1 when looking at the bdt feature importances!
     # for mc15_jz5_v1
