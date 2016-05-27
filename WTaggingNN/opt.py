@@ -136,35 +136,6 @@ def printProgress(tasks):
     print 'finished: ' + str(finished)
     return float(finished/total)
 
-
-def main(job_id, params):
-    from math import exp
-    filename ='/Disk/ds-sopa-group/PPE/atlas/users/tibristo/boosted_framework/WTaggingNN/'
-    #filename = '/Disk/ds-sopa-group/PPE/atlas/users/tibristo/BosonTagging/'
-    # these are the files used for the mva. Use one for training and one for testing.
-    #persist/data_features_l_2_10__000.root
-    #    persist/data_features_l_2_10__001.root
-    #        persist/data_features_l_2_10__002.root
-
-    #filename_test = filename+'persist/datatest_testroot_001.root'
-    #filename_train = filename+'persist/datatrain_testroot_001.root'
-
-    filename_test=filename+'folds/AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_matchedM_loose_v2_200_1000_mw_mergedtest_cv_001.root'
-    filename_train=filename+'folds/AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_matchedM_loose_v2_200_1000_mw_mergedtrain_cv_001.root'
-    #filename_train = '/Disk/ds-sopa-group/PPE/atlas/users/tibristo/nnbosontagging/folds/AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_matchedL_ranged_v2_1000_1500_nomw_mergedtrain_cv_001.root'
-    #filename_test = '/Disk/ds-sopa-group/PPE/atlas/users/tibristo/nnbosontagging/folds/AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_matchedL_ranged_v2_1000_1500_nomw_mergedtest_cv_001.root'
-    #config = '/Disk/ds-sopa-group/PPE/atlas/users/tibristo/nnbosontagging/tim-config.yaml'
-    config = '/Disk/ds-sopa-group/PPE/atlas/users/tibristo/boosted_framework/WTaggingNN/tim-config_full.yaml'
-    formula= 'label~*-thrustmin-thrustmaj-yfilt-angularity-foxwolfram20-pt-m-eta-phi-mu12-zcut12-planarflow-tauwta1-tau2-tau1-sphericity-eec_d2_1-tauwta2tauwta1| weight' #-tau21-tau1-tau2 <- these are not in mc15
-    #formula= 'label~*-ThrustMin-ThrustMaj-YFilt-Tau21-Dip12|weight'
-    algorithm = 'AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_matchedM_loose_v2_200_1000_mw'
-    auc = objective(filename_train, filename_test, 'outputTree', config, exp(params['log_learning'][0]), params['momentum'][0], exp(params['log_regularize'][0]), params['uepochs'][0], params['sepochs'][0], formula, job_id, algorithm)
-    print 'Job_id %d' % job_id
-    print params
-    print auc
-    return auc
-
-
 def runCV():
 
     from pprint import pprint
@@ -204,9 +175,13 @@ def runCV():
               {'momentum':[0.7],'log_regularize':[-7],'log_learning':[-4],'uepochs':[20],'sepochs':[40]}]
     # key to look for in the filenames
     #key = 'matchedM_loose_v2_200_1000_mw'
-    key = '13tev_mc15_nTrk_v1'
+    #key = '13tev_mc15_nTrk_reduced_v1'
+    #key = '13tev_mc15_jz5_nTrk_v1'
+    key = '13tev_mc15_jz6_nTrk_v1'
     # output file id
-    file_id = 'mc15_nTrk_v1_bkg_v1'
+    #file_id = 'mc15_nTrk_reduced_v1_bkg_v1'
+    #file_id = 'mc15_jz5_nTrk_v1_bkg_v4'
+    file_id = 'mc15_jz6_nTrk_v1_bkg_v1'
     folder ='/Disk/ds-sopa-group/PPE/atlas/users/tibristo/boosted_framework/WTaggingNN/'
     # we need the files to be the output of what we would normally get back from
     # the cross_validation method from create_folds.py
@@ -234,11 +209,15 @@ def runCV():
     #formula= 'label~*-thrustmin-thrustmaj-yfilt-angularity-foxwolfram20-pt-m-eta-phi-mu12-tauwta2-tauwta1-zcut12-weight| weight_train' # tau2, tau1, tau21 not in mc15
     # for mc15 with nTrack variable
     formula= 'label~*-thrustmin-thrustmaj-yfilt-angularity-foxwolfram20-pt-m-eta-phi-mu12-tauwta2-tauwta1-zcut12-weight| weight_train' # tau2, tau1, tau21 not in mc15
+    # for mc15 with nTrack variable and removing sphericity and aplanarity
+    #formula= 'label~*-thrustmin-thrustmaj-yfilt-angularity-foxwolfram20-pt-m-eta-phi-mu12-tauwta2-tauwta1-zcut12-weight-sphericity-aplanarity| weight_train' # tau2, tau1, tau21 not in mc15
     # for mc15_blah_v4 -> v4 is NO WEIGHTS USED FOR TRAINING
     #formula= 'label~*-thrustmin-thrustmaj-yfilt-angularity-foxwolfram20-pt-m-eta-phi-mu12-tauwta2-tauwta1-zcut12-weight-weight_train' # tau2, tau1, tau21 not in mc15
     #formula= 'label~*-thrustmin-thrustmaj-yfilt-angularity-foxwolfram20-tau21-pt-m-eta-phi-tauwta2-tauwta1-tau2-tau1| weight'
     #algorithm = 'AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_mc15_v3_400_1600_mw'
-    algorithm = 'AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_mc15_nTrk_v1_800_1200_mw'
+    #algorithm = 'AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_mc15_nTrk_reduced_v1_400_1600_mw'
+    #algorithm = 'AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_mc15_jz5_nTrk_v1_800_1200_mw'
+    algorithm = 'AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_mc15_jz6_nTrk_v1_1300_1800_mw'
 
     #allparms, alltasks = grid_search(
     #    lb_view, folder, filenames, params, config, algorithm, id_tag=file_id, formula=formula)

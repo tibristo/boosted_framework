@@ -152,6 +152,13 @@ class modelEvaluation:
         max_y = max(hist_sig.GetMaximum(), hist_bkg.GetMaximum())
         hist_sig.SetMaximum(max_y*1.2)
         hist_bkg.SetMaximum(max_y*1.2)
+
+        hist_sig.GetXaxis().SetTitle("Signal Probability")
+        hist_sig.GetYaxis().SetTitle("Normalised Entries")
+
+        hist_bkg.GetXaxis().SetTitle("Signal Probability")
+        hist_bkg.GetYaxis().SetTitle("Normalised Entries")
+
         hist_sig.Draw('hist')
         hist_bkg.Draw('histsame')
         c.Write()

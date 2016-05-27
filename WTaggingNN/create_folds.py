@@ -237,8 +237,9 @@ def cross_validation(data,iterations, name='data', scale=True, pt_rw = True, tra
     # sometimes the weights need to be adjusted.
 
     w = data['weight']
+    max_weight = w.max()
     w_tmp = data[['weight','label']]
-    print type(w_tmp)
+    #print type(w_tmp)
     # variables that are not standardised
 
     #observer_data = data[observers]
@@ -256,7 +257,8 @@ def cross_validation(data,iterations, name='data', scale=True, pt_rw = True, tra
         # arg none of that works so annoying
         for idx in xrange(0, w_tmp.shape[0]):
             if w_tmp['label'][idx] == 0:
-                w_tmp['weight'][idx] = np.arctan(1./w_tmp['weight'][idx])
+                # FOR JZ6 ONLY!!!!!
+                w_tmp['weight'][idx] = w_tmp['weight'][idx]/0.009#np.arctan(1./w_tmp['weight'][idx])
 
         #observer_data = nf.append_fields(data[observers], names='weight_train', data=copy.deepcopy(weights_tx), dtypes=np.float, usemask=False)
         #observer_data['weight_train'][data['label']==0] =
@@ -268,7 +270,7 @@ def cross_validation(data,iterations, name='data', scale=True, pt_rw = True, tra
     return filenames
 
 
-def plotFiles(filenames, variables, key, weight_plots = False, plot_dict = {}, tex_dict = {}):
+def plotFiles(filenames, variables, key, weight_plots = False, weight_plots_tx = True, plot_dict = {}, tex_dict = {}):
     # plot a bunch of files and get stats of variables
 
     ROOT.gROOT.SetBatch(True)
@@ -292,10 +294,15 @@ def plotFiles(filenames, variables, key, weight_plots = False, plot_dict = {}, t
     event_counts['Full'] = {}
 
     # add this to the end of the filenames to differentiate between weighted and not weighted
-    weight_id = '_weighted' if weight_plots else ''
+    weight_id = '_weighted' if weight_plots or weight_plots_tx else ''
     
     for i, f in enumerate(filenames):
-        print f
+        pt4_16 = False
+        pt8_12 = False
+        if f.find('400_1600') != -1 or f.find('4_16') != -1:
+            pt4_16 = True
+        elif f.find('800_1200') != -1 or f.find('8_12') != -1:
+            pt8_12 = True
         # is this a test or train file?
         file_type = "Full"
         if f.lower().find('train') != -1:
@@ -310,7 +317,7 @@ def plotFiles(filenames, variables, key, weight_plots = False, plot_dict = {}, t
         # open the file and get the tree
         f_open = ROOT.TFile.Open('folds/'+f)
         tree = f_open.Get('outputTree')
-        leg = ROOT.TLegend(0.7,0.55,0.9,0.75);leg.SetFillColor(ROOT.kWhite)
+        leg = ROOT.TLegend(0.7,0.60,0.9,0.50);leg.SetFillColor(ROOT.kWhite)
         c = ROOT.TCanvas(f)
 
         total_events = tree.GetEntries()
@@ -329,26 +336,68 @@ def plotFiles(filenames, variables, key, weight_plots = False, plot_dict = {}, t
 
         for v in variables:
             # set up the names for the different histograms
+            ispt = False
+            if v.find('pt') != -1:
+                ispt = True
             hist_full_name = v
             hist_sig_name = 'sig_'+v
             hist_bkg_name = 'bkg_'+v
 
             # first get the full histogram to get an idea of the combined mean and rms
-            tree.Draw(v+'>>'+v)
+            if ispt:
+                tree.Draw(v+'/1000>>'+v)
+            else:
+                tree.Draw(v+'>>'+v)
             # pull from the global space
             hist_full = ROOT.gDirectory.Get(hist_full_name).Clone()
             mean = '{0:.4f}'.format(float(hist_full.GetMean()))
             std = '{0:.4f}'.format(float(hist_full.GetRMS()))
-            
+
+
+            # for some of the variables the labels overlap with the distributions.  Visually inspecting this it doesn't
+            # look like there is an easy fix.  I think maybe the best is to rebook the histogram and change the limits to
+            # something higher on the x axis....
+            # eec c2
+            #
+
             # set up the variable expression that gets used in the Draw function
-            varexp = v+">>"+hist_sig_name
+            if not ispt:
+                varexp = v+">>"+hist_sig_name
+            else:
+                varexp = v+"/1000>>"+hist_sig_name
+
             # cut string to select signal only.  An additional string can be added here to apply the weights.
-            cutstring = '(label==1)'#*(weight)
-            if weight_plots:
-                cutstring += '*weight'
+            cutstring = '(label==1)'#*(weight)'
+            #if weight_plots:
+                #cutstring += ('*atan(1/weight)')
+            cutstring += '*(weight)'
             # create the signal histogram and retrieve it
             tree.Draw(varexp, cutstring)
-            hist_sig = ROOT.gDirectory.Get(hist_sig_name).Clone()
+            mult = 1.0
+            xmax = -1
+            addBins = 0
+            if v.find('eec_c2_1') != -1 or v.find('mu12') != -1 or v.find('planarflow') != -1 or v.find('tauwta2tauwta1') != -1 or v.find('zcut12') != -1 or ispt:
+                hist_sig_tmp = ROOT.gDirectory.Get(hist_sig_name).Clone()
+                xmax = hist_sig_tmp.GetXaxis().GetXmax()
+                width = float(hist_sig_tmp.GetXaxis().GetBinWidth(1))
+
+                # tauwta21 and planarflow need more than 1.2...
+                if v.find('tauwta2tauwta1') != -1:
+                    mult = 1.65
+                elif v.find('planarflow') != -1:
+                    mult = 1.9
+                elif ispt and pt4_16:
+                    mult = 1.35
+                else:
+                    mult = 1.2
+                addBins = float((xmax*mult - xmax))/width
+                hist_sig = ROOT.TH1F('hist_sig','hist_sig',int(hist_sig_tmp.GetNbinsX()+addBins), hist_sig_tmp.GetXaxis().GetXmin(), xmax*mult)# how many bins? :(
+                #fill it
+                for n in xrange(1, hist_sig_tmp.GetNbinsX()+1):
+                    hist_sig.SetBinContent(n, hist_sig_tmp.GetBinContent(n))
+            else:
+                hist_sig = ROOT.gDirectory.Get(hist_sig_name).Clone()
+            
             # stats
             sig_mean = '{0:.4f}'.format(float(hist_sig.GetMean()))
             sig_std = '{0:.4f}'.format(float(hist_sig.GetRMS()))
@@ -360,11 +409,22 @@ def plotFiles(filenames, variables, key, weight_plots = False, plot_dict = {}, t
             hist_sig.SetTitle('Signal')
             hist_sig.GetXaxis().SetTitle(v)
             # now get the background histogram
-            tree.Draw(varexp.replace('sig','bkg'),cutstring.replace('1','0'))
-            hist_bkg = ROOT.gDirectory.Get(hist_bkg_name).Clone() # pull from global
-            # stats
-            bkg_mean = '{0:.4f}'.format(float(hist_sig.GetMean()))
-            bkg_std = '{0:.4f}'.format(float(hist_sig.GetRMS()))
+            cutstring = cutstring.replace('==1','==0')
+            #cutstring += ('*(weight)')
+            #if weight_plots_tx:
+            #    cutstring = cutstring.replace('*weight','*atan(1/weight)')
+            tree.Draw(varexp.replace('sig','bkg'),cutstring)
+
+            if v.find('eec_c2_1') != -1 or v.find('mu12') != -1 or v.find('planarflow') != -1 or v.find('tauwta2tauwta1') != -1 or v.find('zcut12') != -1 or ispt:
+                hist_bkg_tmp = ROOT.gDirectory.Get(hist_bkg_name).Clone() # pull from global
+                hist_bkg = ROOT.TH1F('hist_bkg','hist_bkg',int(hist_sig.GetNbinsX()), hist_sig.GetXaxis().GetXmin(), xmax*mult)
+                for n in xrange(1, hist_bkg_tmp.GetNbinsX()+1):
+                    hist_bkg.SetBinContent(n, hist_bkg_tmp.GetBinContent(n))
+            else:
+                hist_bkg = ROOT.gDirectory.Get(hist_bkg_name).Clone() # pull from global
+                    # stats
+            bkg_mean = '{0:.4f}'.format(float(hist_bkg.GetMean()))
+            bkg_std = '{0:.4f}'.format(float(hist_bkg.GetRMS()))
             # normalise
             if hist_bkg.Integral()!=0:
                 hist_bkg.Scale(1/hist_bkg.Integral())
@@ -385,6 +445,8 @@ def plotFiles(filenames, variables, key, weight_plots = False, plot_dict = {}, t
             hist_sig.SetMaximum(max_val*1.1)
             hist_bkg.SetMaximum(max_val*1.1)
 
+
+
             if v.strip() in plot_dict.keys():
                 hist_sig.GetXaxis().SetTitle(plot_dict[v])
                 hist_bkg.GetXaxis().SetTitle(plot_dict[v])
@@ -396,10 +458,47 @@ def plotFiles(filenames, variables, key, weight_plots = False, plot_dict = {}, t
             hist_bkg.Draw('same')
 
             leg.Draw('same')
+
+            
+            # add the grooming algorithm too
+            galg = ROOT.TLatex();galg.SetNDC();galg.SetTextFont(42);galg.SetTextSize(0.03);galg.SetTextColor(ROOT.kBlack)
+            galg.DrawLatex(0.7,0.71, "#splitline{anti-k_{t} R=1.0 jets}{#splitline{Trimmed}{f_{cut}=5%,R_{sub}=0.2}}")
+
+            scl = ROOT.TLatex();scl.SetNDC();scl.SetTextFont(42);scl.SetTextSize(0.03);scl.SetTextColor(ROOT.kBlack)
+            scl.DrawLatex(0.7,0.61, "Standardised")
+
+            e = ROOT.TLatex();e.SetNDC();e.SetTextFont(42);e.SetTextSize(0.035);e.SetTextColor(ROOT.kBlack)
+            e.DrawLatex(0.7,0.88, "#sqrt{s}=13 TeV")
+
+            m = ROOT.TLatex();m.SetNDC();m.SetTextFont(42);m.SetTextSize(0.035);m.SetTextColor(ROOT.kBlack)
+            m.DrawLatex(0.7,0.78,"68% mass window")
+            # need to put the pt range on here....
+            # okay, so this is nasty and poor form, but I'm super stressed and running out of time
+            # to finish my thesis, so whatever.  The algorithm name should have the pt range in it in gev
+            # At this point things are narrowed down to the point where we are only considering two
+            # pt ranges: 400-1600 GeV or 800-1200 GeV, so just look for those.
+            ptrange = ''
+            if pt4_16:
+                ptrange = '400<p_{T}^{Truth}<1600 GeV'
+            elif pt8_12:
+                ptrange = '800<p_{T}^{Truth}<1200 GeV'
+
+        
+            if ptrange != '':
+                # draw it
+                ptl = ROOT.TLatex()
+                ptl.SetNDC()
+                ptl.SetTextFont(42)
+                ptl.SetTextSize(0.035)
+                ptl.SetTextColor(ROOT.kBlack)
+                ptl.DrawLatex(0.7,0.83,ptrange);#"Internal Simulation");
+
+
+            
             if cv_num == '':
-                c.SaveAs('fold_plots/'+key+'_Full_'+v+weight_id+'.png')
+                c.SaveAs('fold_plots/'+key+'_Full_'+v+weight_id+'.pdf')
             else:
-                c.SaveAs('fold_plots/'+key+'_Full_'+v+weight_id+'.png')
+                c.SaveAs('fold_plots/'+key+'_Full_'+cv_num+'_'+v+weight_id+'.pdf')
             # write the means and std to the stats file
             result = '{0:15}: {1:10} {2:10} {3:10} {4:10} {5:10} {6:10}'.format(file_type+' '+cv_num,str(mean),str(std),str(sig_mean),str(sig_std),str(bkg_mean),str(bkg_std))
             # check that this variable has a dictionary entry
@@ -423,9 +522,9 @@ def plotFiles(filenames, variables, key, weight_plots = False, plot_dict = {}, t
     combined_stats.write('\n'+'\n')
     # now start doing the variables
     combined_stats.write('\n{0:15}: {1:10} {2:10} {3:10} {4:10} {5:10} {6:10}'.format('Variable','Mean','Std','Mean Sig','Std Sig','Mean Bkg','Std Bkg')+'\n\n')
-    print stats['Full'].keys()
-    print stats.keys()
-    print stats['cv_000']['Train'].keys()
+    print 'stats full keys', stats['Full'].keys()
+    print 'stats keys', stats.keys()
+    print 'stats train keys', stats['cv_000']['Train'].keys()
     for v in variables:
         print v
         v = v.strip()
@@ -437,7 +536,6 @@ def plotFiles(filenames, variables, key, weight_plots = False, plot_dict = {}, t
             combined_stats.write(v+'\n')
         combined_stats.write(stats['Full'][v]+'\n')
         for c in cv_nums:
-            print c
             combined_stats.write(str(stats[c]['Train'][v])+'\n')
             combined_stats.write(str(stats[c]['Valid'][v])+'\n')
         combined_stats.write('\n')
@@ -486,7 +584,7 @@ def main(args):
     parser.set_defaults(scale=False)
     # parse args
     args = parser.parse_args()
-    
+   
     if not args.folds or not args.plot:
         print 'need to set if folds should be created! usage: python create_folds.py folds(true/false) plot(true/false) [--key=key] [--weight=true/false] [--algorithm=alg] [--fulldataset=fullset] [--ptrw=true/false]'
         sys.exit(0)
@@ -520,11 +618,14 @@ def main(args):
         # name of the full dataset which is used for the cv splits
         if args.fulldataset == 'DEFAULT':
             full_dataset = path+args.algorithm.replace('loose','notcleaned')+'.csv'
-            if not os.path.isfile(full_dataset):
-                print 'full dataset does not exist!' + full_dataset
         else:
             full_dataset = path + args.fulldataset
+        if not os.path.isfile(full_dataset):
+            print 'full dataset does not exist!' + full_dataset
+            full_dataset = ''
 
+        print 'full dataset',full_dataset
+        
         if scale:
             # create the full datasets scaled according to the different training samples:
             for f in filenames:
@@ -581,15 +682,19 @@ def main(args):
         else:
             print 'Filenames were defined, converting to a 1D list'
             filenames = [item for sublist in filenames for item in sublist]
+        # add the full dataset to the filenames list!
+        if os.path.isfile('folds/'+args.fulldataset):
+            filenames.append(args.fulldataset)
         # the variables we're interested in                  dc14
         #variables = ['aplanarity','eec_c2_1', 'eec_c2_2', 'split12','eec_d2_1', 'eec_d2_2', 'tauwta2tauwta1','zcut12','sphericity','mu12','planarflow']
         # mc15
-        variables = ['aplanarity','eec_c2_1', 'split12','eec_d2_1', 'tauwta2tauwta1','zcut12','sphericity','mu12','planarflow']
-        plot_dict = {'tauwta2tauwta1':"#tau^{WTA}_{2}/#tau^{WTA}_{1}",'eec_c2_1':"C^{(#beta=1)}_{2}",'eec_c2_2':"C^{(#beta=2)}_{2}",'eec_d2_1':"D^{(#beta=1)}_{2}",'eec_d2_2':"D^{(#beta=2)}_{2}", 'split12':"#sqrt{d_{12}}",'aplanarity':"#it{A}",'zcut12':"#sqrt{z_{12}}",'sphericity':"#it{S}",'planarflow':"#it{P}",'ntracks':"nTrk"}
-        tex_dict = {'tauwta2tauwta1':r"$\tau^{WTA}_{2}/\tau^{WTA}_{1}$",'eec_c2_1':r"$C^{(\beta=1)}_{2}$",'eec_c2_2':r"$C^{(\beta=2)}_{2}$",'eec_d2_1':r"$D^{(\beta=1)}_{2}$",'eec_d2_2':r"$D^{(\beta=2)}_{2}$", 'split12':r"$\sqrt{d_{12}}$",'aplanarity':r"$\textit{A}$",'zcut12':r"$\sqrt{z_{12}}$",'sphericity':r"$\textit{S}$",'planarflow':r"$\textit{P}$",'ntracks':"nTrk"}
+        #variables = ['aplanarity','eec_c2_1', 'split12','eec_d2_1', 'tauwta2tauwta1','zcut12','sphericity','mu12','planarflow','pt','ntracks']
+        variables = ['pt']
+        plot_dict = {'tauwta2tauwta1':"#tau^{WTA}_{2}/#tau^{WTA}_{1}",'eec_c2_1':"C^{(#beta=1)}_{2}",'eec_c2_2':"C^{(#beta=2)}_{2}",'eec_d2_1':"D^{(#beta=1)}_{2}",'eec_d2_2':"D^{(#beta=2)}_{2}", 'split12':"#sqrt{d_{12}}",'aplanarity':"#it{A}",'zcut12':"#sqrt{z_{12}}",'sphericity':"#it{S}",'planarflow':"#it{P}",'ntracks':"nTrk",'pt':'p_{T} (GeV)'}
+        tex_dict = {'tauwta2tauwta1':r"$\tau^{WTA}_{2}/\tau^{WTA}_{1}$",'eec_c2_1':r"$C^{(\beta=1)}_{2}$",'eec_c2_2':r"$C^{(\beta=2)}_{2}$",'eec_d2_1':r"$D^{(\beta=1)}_{2}$",'eec_d2_2':r"$D^{(\beta=2)}_{2}$", 'split12':r"$\sqrt{d_{12}}$",'aplanarity':r"$\textit{A}$",'zcut12':r"$\sqrt{z_{12}}$",'sphericity':r"$\textit{S}$",'planarflow':r"$\textit{P}$",'ntracks':"nTrk",'pt':r"$p_T$"}
         weight = True if args.weight.lower() == 'true' else False
 
-        plotFiles(filenames, variables, key, weight_plots=weight, plot_dict = plot_dict, tex_dict = tex_dict)
+        plotFiles(filenames, variables, key, weight_plots=weight, weight_plots_tx=True, plot_dict = plot_dict, tex_dict = tex_dict)
         
 if __name__ == "__main__":
     print ' running main '

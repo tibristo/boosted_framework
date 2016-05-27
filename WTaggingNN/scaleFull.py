@@ -9,9 +9,11 @@ import pickle
 #import create_folds.scalerNN
 
 #training_files = ['folds/'+f for f in os.listdir('folds') if f.find('train')!=-1]
-training_files = ['/Disk/ds-sopa-group/PPE/atlas/users/tibristo/BosonTagging/csv/AntiKt10LCTopoTrimmedPtFrac5SmallR30_13tev_matchedM_loose_v2_200_1000_mw_merged.root']
-cols = np.linspace(1,44,44,dtype=int)
-filename = '/Disk/ds-sopa-group/PPE/atlas/users/tibristo/BosonTagging/csv/AntiKt10LCTopoTrimmedPtFrac5SmallR30_13tev_matchedM_notcleaned_v2_200_1000_mw_merged.csv'
+training_files = ['/Disk/ds-sopa-group/PPE/atlas/users/tibristo/BosonTagging/csv/AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_mc15_jz6_nTrk_v1_1300_1800_mw_merged.root']
+#training_files = ['/Disk/ds-sopa-group/PPE/atlas/users/tibristo/BosonTagging/csv/AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_mc15_jz5_nTrk_v1_800_1200_mw_merged.root']
+cols = np.linspace(1,42,42,dtype=int)
+filename = '/Disk/ds-sopa-group/PPE/atlas/users/tibristo/BosonTagging/csv/AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_mc15_jz6_nTrk_v1_1300_1800_mw_merged.csv'
+#filename = '/Disk/ds-sopa-group/PPE/atlas/users/tibristo/BosonTagging/csv/AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_mc15_jz5_nTrk_v1_800_1200_mw_merged.csv'
 
 for f in training_files:
     #tfile = rt.TFile.Open(f)
@@ -69,8 +71,8 @@ for f in training_files:
         std = curr_std[i]
         v_low = v.lower()
         X_full[v_low] = (X_full[v_low]-mean)/std
-
-    full_file = os.path.abspath('folds/AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_matchedM_notcleaned_v2_200_1000_mw_mergedscalefull.root')
+    full_file = os.path.abspath('folds/AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_mc15_jz6_nTrk_v1_1300_1800_mw_mergedscalefull.root')
+    #full_file = os.path.abspath('folds/AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_mc15_jz5_nTrk_v1_800_1200_mw_mergedscalefull.root')
     rn.array2root(X_full, full_file, 'outputTree','recreate')
     #raw_input()
 
