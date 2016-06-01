@@ -5,7 +5,7 @@ sample:
   step: 1
 weightfiles: false
 weight-validation: True
-transform-weight-validation: True
+transform-weight-validation: False
 weight: weight_train
 signal: "$W'"
 sigeff: 1.0

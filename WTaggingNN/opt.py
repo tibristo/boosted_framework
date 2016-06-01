@@ -177,11 +177,11 @@ def runCV():
     #key = 'matchedM_loose_v2_200_1000_mw'
     #key = '13tev_mc15_nTrk_reduced_v1'
     #key = '13tev_mc15_jz5_nTrk_v1'
-    key = '13tev_mc15_jz6_nTrk_v1'
+    key = '13tev_mc15_nTrk_v10'
     # output file id
     #file_id = 'mc15_nTrk_reduced_v1_bkg_v1'
     #file_id = 'mc15_jz5_nTrk_v1_bkg_v4'
-    file_id = 'mc15_jz6_nTrk_v1_bkg_v1'
+    file_id = 'mc15_nTrk_v10_bkg_v1'
     folder ='/Disk/ds-sopa-group/PPE/atlas/users/tibristo/boosted_framework/WTaggingNN/'
     # we need the files to be the output of what we would normally get back from
     # the cross_validation method from create_folds.py
@@ -216,8 +216,8 @@ def runCV():
     #formula= 'label~*-thrustmin-thrustmaj-yfilt-angularity-foxwolfram20-tau21-pt-m-eta-phi-tauwta2-tauwta1-tau2-tau1| weight'
     #algorithm = 'AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_mc15_v3_400_1600_mw'
     #algorithm = 'AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_mc15_nTrk_reduced_v1_400_1600_mw'
-    #algorithm = 'AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_mc15_jz5_nTrk_v1_800_1200_mw'
-    algorithm = 'AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_mc15_jz6_nTrk_v1_1300_1800_mw'
+    algorithm = 'AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_mc15_nTrk_v10_400_1200_mw'
+    #algorithm = 'AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_mc15_jz6_nTrk_v1_1300_1800_mw'
 
     #allparms, alltasks = grid_search(
     #    lb_view, folder, filenames, params, config, algorithm, id_tag=file_id, formula=formula)

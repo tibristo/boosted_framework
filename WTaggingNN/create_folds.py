@@ -543,6 +543,7 @@ def plotFiles(filenames, variables, key, weight_plots = False, weight_plots_tx =
     
     # write the stats for each cv fold
     for cv in cv_nums:
+        print cv
         stats_file = open('fold_stats/'+key+'_'+cv+weight_id+'.txt','w')
         stats_file.write('{0:15}  {1:10} {2:14}{3:10}'.format('Sample','Signal','Background','Total')+'\n')
         stats_file.write(str(event_counts['Full'])+'\n')
@@ -613,7 +614,7 @@ def main(args):
         # are we standardising the data?
         scale = True
         # the cross validation method will call the persists_cv method and create the folds
-        filenames = cross_validation(data, 4, name, scale, pt_rw = args.ptrw, transform_weights = args.txweights)
+        filenames = cross_validation(data, 10, name, scale, pt_rw = args.ptrw, transform_weights = args.txweights)
         #full_dataset = '/Disk/ds-sopa-group/PPE/atlas/users/tibristo/BosonTagging/csv/AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_matchedM_loose_v2_200_1000_mw_merged.csv'
         # name of the full dataset which is used for the cv splits
         if args.fulldataset == 'DEFAULT':
@@ -688,8 +689,8 @@ def main(args):
         # the variables we're interested in                  dc14
         #variables = ['aplanarity','eec_c2_1', 'eec_c2_2', 'split12','eec_d2_1', 'eec_d2_2', 'tauwta2tauwta1','zcut12','sphericity','mu12','planarflow']
         # mc15
-        #variables = ['aplanarity','eec_c2_1', 'split12','eec_d2_1', 'tauwta2tauwta1','zcut12','sphericity','mu12','planarflow','pt','ntracks']
-        variables = ['pt']
+        variables = ['aplanarity','eec_c2_1', 'split12','eec_d2_1', 'tauwta2tauwta1','zcut12','sphericity','mu12','planarflow','ntracks']
+        #variables = ['pt']
         plot_dict = {'tauwta2tauwta1':"#tau^{WTA}_{2}/#tau^{WTA}_{1}",'eec_c2_1':"C^{(#beta=1)}_{2}",'eec_c2_2':"C^{(#beta=2)}_{2}",'eec_d2_1':"D^{(#beta=1)}_{2}",'eec_d2_2':"D^{(#beta=2)}_{2}", 'split12':"#sqrt{d_{12}}",'aplanarity':"#it{A}",'zcut12':"#sqrt{z_{12}}",'sphericity':"#it{S}",'planarflow':"#it{P}",'ntracks':"nTrk",'pt':'p_{T} (GeV)'}
         tex_dict = {'tauwta2tauwta1':r"$\tau^{WTA}_{2}/\tau^{WTA}_{1}$",'eec_c2_1':r"$C^{(\beta=1)}_{2}$",'eec_c2_2':r"$C^{(\beta=2)}_{2}$",'eec_d2_1':r"$D^{(\beta=1)}_{2}$",'eec_d2_2':r"$D^{(\beta=2)}_{2}$", 'split12':r"$\sqrt{d_{12}}$",'aplanarity':r"$\textit{A}$",'zcut12':r"$\sqrt{z_{12}}$",'sphericity':r"$\textit{S}$",'planarflow':r"$\textit{P}$",'ntracks':"nTrk",'pt':r"$p_T$"}
         weight = True if args.weight.lower() == 'true' else False
