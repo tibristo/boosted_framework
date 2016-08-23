@@ -237,6 +237,7 @@ bool clusterTLV = false;
 bool ca12TLV = false;
 bool ca12topoTLV = false;
 bool keepTopo = true;
+bool checkTruthJets = true;
 
 bool xAODJets = false;
 //bool xAODemfrac = false;

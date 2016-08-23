@@ -614,7 +614,7 @@ def main(args):
         # are we standardising the data?
         scale = True
         # the cross validation method will call the persists_cv method and create the folds
-        filenames = cross_validation(data, 10, name, scale, pt_rw = args.ptrw, transform_weights = args.txweights)
+        filenames = cross_validation(data, 5, name, scale, pt_rw = args.ptrw, transform_weights = args.txweights)
         #full_dataset = '/Disk/ds-sopa-group/PPE/atlas/users/tibristo/BosonTagging/csv/AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_matchedM_loose_v2_200_1000_mw_merged.csv'
         # name of the full dataset which is used for the cv splits
         if args.fulldataset == 'DEFAULT':

@@ -150,7 +150,7 @@ def runCV():
     #    ('uepochs',np.linspace(20, 60, 4, dtype=np.int)),
     #    ('sepochs',np.linspace(40, 80, 4, dtype=np.int))
     #])
-    '''
+    
     params = OrderedDict([
         ('log_learning', np.linspace(-10, -2, 5, dtype=int)),
         ('momentum', np.linspace(0.7, 0.85, 2)),
@@ -158,7 +158,7 @@ def runCV():
         ('uepochs',np.linspace(20, 60, 2, dtype=np.int)),
         ('sepochs',np.linspace(40, 80, 2, dtype=np.int))
     ])
-    '''
+    
     # params for the best 5 that we got using mc15 on jz5 background WITHOUT weighting the validation sample
     '''
     params = [{'momentum':[0.85],'log_regularize':[-10],'log_learning':[-4],'uepochs':[60],'sepochs':[80]},
@@ -166,22 +166,23 @@ def runCV():
               {'momentum':[0.7],'log_regularize':[-10],'log_learning':[-4],'uepochs':[60],'sepochs':[80]},
               {'momentum':[0.7],'log_regularize':[-10],'log_learning':[-4],'uepochs':[20],'sepochs':[80]},
               {'momentum':[0.85],'log_regularize':[-10],'log_learning':[-4],'uepochs':[20],'sepochs':[80]}]
-    '''
+    
     # params for the best 5 that we got using mc15 on jz5 background WITH weighting the validation sample
     params = [{'momentum':[0.85],'log_regularize':[-7],'log_learning':[-6],'uepochs':[20],'sepochs':[80]},
               {'momentum':[0.85],'log_regularize':[-7],'log_learning':[-6],'uepochs':[60],'sepochs':[80]},
               {'momentum':[0.85],'log_regularize':[-7],'log_learning':[-6],'uepochs':[60],'sepochs':[40]},
               {'momentum':[0.85],'log_regularize':[-7],'log_learning':[-6],'uepochs':[20],'sepochs':[40]},
               {'momentum':[0.7],'log_regularize':[-7],'log_learning':[-4],'uepochs':[20],'sepochs':[40]}]
+    '''
     # key to look for in the filenames
     #key = 'matchedM_loose_v2_200_1000_mw'
     #key = '13tev_mc15_nTrk_reduced_v1'
     #key = '13tev_mc15_jz5_nTrk_v1'
-    key = '13tev_mc15_nTrk_v10'
+    key = '13tev_mc15_nonTrk_v3'
     # output file id
     #file_id = 'mc15_nTrk_reduced_v1_bkg_v1'
     #file_id = 'mc15_jz5_nTrk_v1_bkg_v4'
-    file_id = 'mc15_nTrk_v10_bkg_v1'
+    file_id = 'mc15_nonTrk_v3_bkg_v1'
     folder ='/Disk/ds-sopa-group/PPE/atlas/users/tibristo/boosted_framework/WTaggingNN/'
     # we need the files to be the output of what we would normally get back from
     # the cross_validation method from create_folds.py
@@ -208,7 +209,9 @@ def runCV():
     # for mc15_jz5_v2 and v3
     #formula= 'label~*-thrustmin-thrustmaj-yfilt-angularity-foxwolfram20-pt-m-eta-phi-mu12-tauwta2-tauwta1-zcut12-weight| weight_train' # tau2, tau1, tau21 not in mc15
     # for mc15 with nTrack variable
-    formula= 'label~*-thrustmin-thrustmaj-yfilt-angularity-foxwolfram20-pt-m-eta-phi-mu12-tauwta2-tauwta1-zcut12-weight| weight_train' # tau2, tau1, tau21 not in mc15
+    #formula= 'label~*-thrustmin-thrustmaj-yfilt-angularity-foxwolfram20-pt-m-eta-phi-mu12-tauwta2-tauwta1-zcut12-weight| weight_train' # tau2, tau1, tau21 not in mc15
+    # removing things
+    formula= 'label~*-thrustmin-thrustmaj-yfilt-angularity-foxwolfram20-pt-m-eta-phi-mu12-tauwta2-tauwta1-zcut12-weight-sphericity-ntracks| weight_train' # tau2, tau1, tau21 not in mc15
     # for mc15 with nTrack variable and removing sphericity and aplanarity
     #formula= 'label~*-thrustmin-thrustmaj-yfilt-angularity-foxwolfram20-pt-m-eta-phi-mu12-tauwta2-tauwta1-zcut12-weight-sphericity-aplanarity| weight_train' # tau2, tau1, tau21 not in mc15
     # for mc15_blah_v4 -> v4 is NO WEIGHTS USED FOR TRAINING
@@ -216,7 +219,7 @@ def runCV():
     #formula= 'label~*-thrustmin-thrustmaj-yfilt-angularity-foxwolfram20-tau21-pt-m-eta-phi-tauwta2-tauwta1-tau2-tau1| weight'
     #algorithm = 'AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_mc15_v3_400_1600_mw'
     #algorithm = 'AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_mc15_nTrk_reduced_v1_400_1600_mw'
-    algorithm = 'AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_mc15_nTrk_v10_400_1200_mw'
+    algorithm = 'AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_mc15_nonTrk_v10_400_1200_mw'
     #algorithm = 'AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_mc15_jz6_nTrk_v1_1300_1800_mw'
 
     #allparms, alltasks = grid_search(
@@ -225,7 +228,7 @@ def runCV():
 
     
     # now use multiprocessing.Pool to map these        
-    pool = Pool(4)
+    pool = Pool(8)
     pool_results = []
     for a in alltasks:
         pool_results.append(pool.apply_async(objective, a, callback=logFinished))

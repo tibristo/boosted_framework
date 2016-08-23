@@ -28,7 +28,7 @@ using namespace boost::algorithm;
 using namespace std;
 namespace po = boost::program_options;
 
-// used for controlling cout statements for debugging
+// used for controlling cout statements for debugging 
 #define DEBUG 0
 
 
@@ -113,6 +113,7 @@ int main( int argc, char * argv[] ) {
       ("response", po::value<bool>(&addResponse)->default_value(false),"Add response variables for the branches.")
       ("clusterTLV", po::value<bool>(&clusterTLV)->default_value(false),"Add the cluster TLVs for the xAOD samples.")
       ("keepTopo", po::value<bool>(&keepTopo)->default_value(true),"Keep the ungroomed topo jets.")
+      ("checkTruthGroomed", po::value<bool>(&checkTruthJets)->default_value(true),"Do truth matching on the groomed jets.")
       
       ;
         
@@ -622,9 +623,11 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
 	  truthBosonCount = 0;
 	  truthJetCount = 0;
 	  massCount = 0;
+	  long truthjetfail = 0;
 
 	  // mass variable
 	  double mass = 0;
+	  
 	  for (long n = 0; n < entries; n++)
 	    {
 
@@ -779,6 +782,10 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
 	      // veto the event if we have no good jets.
 	      if (chosenLeadGroomedIndex < 0)
 		{
+		  if (DEBUG)
+		    {
+		      std::cout<<"Failed lead groomed";
+		    }
 		  continue;
 		}
 
@@ -853,9 +860,14 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
 
 	      //if (hasZ && hasW)
 	      //std::cout << "FAILED DUE TO Z BOSON CONTAMINATION" << std::endl;
+
 	      
 	      if (truthBosonMatching && !passedTruthBoson)
 		{
+		  if (DEBUG)
+		    {
+		      std::cout<<"Failed tbm";
+		    }
 		  continue;
 		}
 
@@ -866,22 +878,30 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
 	      chosenLeadTruthJetIndex = -99;//algorithmType.find("truthmatch") != std::string::npos ? chosenLeadTruthJetIndex : 0;
 	      float tr_pt = -999;
 	      float closestTruth = 100000;
-	      for (int jet_i=0; jet_i<(*var_pt_vec[jetType::TRUTH]).size(); jet_i++)
+	      if (checkTruthJets)
 		{
-
-		  float dr = DeltaR((*var_eta_vec[jetType::TRUTH])[jet_i],(*var_phi_vec[jetType::TRUTH])[jet_i],(*var_eta_vec[jetType::GROOMED])[chosenLeadGroomedIndex],(*var_phi_vec[jetType::GROOMED])[chosenLeadGroomedIndex]);
-		  if (dr<(0.75*radius) && fabs((*var_eta_vec[jetType::TRUTH])[jet_i])<4.5)// && tr_pt < (*var_pt_vec[jetType::TRUTH])[jet_i])dr < closestTruth && 
+		  for (int jet_i=0; jet_i<(*var_pt_vec[jetType::TRUTH]).size(); jet_i++)
 		    {
-		      closestTruth = dr;
-		      tr_pt = (*var_pt_vec[jetType::TRUTH])[jet_i];
-		      chosenLeadTruthJetIndex=jet_i;
-		    }     
-		} // end loop over var_pt_vec[jetType::GROOMED]
-	      
 
-	      if (chosenLeadTruthJetIndex < 0) // failed selection
-		{
-		  continue;	      
+		      float dr = DeltaR((*var_eta_vec[jetType::TRUTH])[jet_i],(*var_phi_vec[jetType::TRUTH])[jet_i],(*var_eta_vec[jetType::GROOMED])[chosenLeadGroomedIndex],(*var_phi_vec[jetType::GROOMED])[chosenLeadGroomedIndex]);
+		      if (dr<(0.75*radius) && fabs((*var_eta_vec[jetType::TRUTH])[jet_i])<4.5)// && tr_pt < (*var_pt_vec[jetType::TRUTH])[jet_i])dr < closestTruth && 
+			{
+			  closestTruth = dr;
+			  tr_pt = (*var_pt_vec[jetType::TRUTH])[jet_i];
+			  chosenLeadTruthJetIndex=jet_i;
+			}     
+		    } // end loop over var_pt_vec[jetType::GROOMED]
+		  
+		
+		  if (chosenLeadTruthJetIndex < 0) // failed selection
+		    {
+		      if (DEBUG)
+			{
+			  std::cout<<"Failed lead truth jet index";
+			}
+		      truthjetfail++;
+		      continue;	      
+		    }
 		}
 
 	      // set the topo jet index by using the parent_index variable from the groomed jet
@@ -1099,6 +1119,7 @@ void makeMassWindowFile(bool applyMassWindow,std::string & algorithm)
 	  ev_count << "truthJetCount: " << truthJetCount << endl;
 	  ev_count << "massCount: " << massCount << endl;
 	  ev_count << "passed_counter: " << passed_counter << endl;
+	  ev_count << "truth jet failed: " << truthjetfail << endl;
 	  ev_count.close();
 	 
 	  // close the event/channel number files
