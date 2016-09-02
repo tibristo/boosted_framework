@@ -6,7 +6,7 @@
 
 import numpy as np
 from sklearn.preprocessing import StandardScaler
-from sklearn.cross_validation import ShuffleSplit, StratifiedKFold
+from sklearn.cross_validation import ShuffleSplit, StratifiedKFold, StratifiedShuffleSplit
 import os, sys, time
 import argparse
 import numpy.lib.recfunctions as nf
@@ -115,14 +115,15 @@ def scaleSample(scaler_filename, filename='/Disk/ds-sopa-group/PPE/atlas/users/t
 #import cv_fold
 def persist_cv_splits(X, y, w, variables, observers, n_cv_iter=5, test_size=0.25, name='data', prefix='folds/', suffix="_cv_%03d.root", random_state=None, scale=False):
     import pickle
-    #import scalerNN
+    import os.path
+    from root_numpy import array2root
+    import numpy.lib.recfunctions as nf
+    cv = StratifiedShuffleSplit(y, n_cv_iter, test_size = test_size)#KFold(y,n_cv_iter)
+    
     """Materialize randomized train test splits of a dataset."""
-    cv = StratifiedKFold(y,n_folds=n_cv_iter,shuffle=True)
-    #cv = ShuffleSplit(X.shape[0], n_iter=n_cv_iter,
-    #    test_size=test_size, random_state=random_state)
+    #cv = StratifiedKFold(y,n_folds=n_cv_iter,shuffle=True)
+
     cv_split_filenames = []
-    # normalise the weights, otherwise agilepack doesnt work
-    #observers['weight'] = 1/np.sum(observers['weight'])
 
     for i, (train, test) in enumerate(cv):
         print ("iteration %03d" % i)
@@ -197,18 +198,6 @@ def persist_cv_splits(X, y, w, variables, observers, n_cv_iter=5, test_size=0.25
         rectest = nf.append_fields(merged_test, names='label', data=ytest, dtypes=np.int32,usemask=False)
         array2root(rectest, cv_split_test, 'outputTree', 'recreate')
 
-        # now do the weighted ones
-        '''
-        xtrain_w = [Xtrain_weighted,observers[train]]
-        xtest_w = [Xtest_weighted,observers[test]]
-        merged_train_w = nf.merge_arrays(xtrain_w,flatten=True,usemask=True)
-        merged_test_w = nf.merge_arrays(xtest_w,flatten=True,usemask=True)
-        rectrain_w = nf.append_fields(merged_train_w, names='label', data=ytrain, dtypes=np.int32, usemask=False)#, dtypes=int)#, usemask=False)
-        #rec = nf.append_fields(X[train], 'label', y[train], usemask=False)
-        array2root(rectrain_w, cv_split_train.replace('train','train_w'), 'outputTree', 'recreate')
-        rectest_w = nf.append_fields(merged_test_w, names='label', data=ytest, dtypes=np.int32,usemask=False)#, dtypes=int)#, usemask=False)
-        array2root(rectest_w, cv_split_test.replace('test','test_w'), 'outputTree', 'recreate')
-        '''
 
     return cv_split_filenames
 
@@ -219,7 +208,7 @@ def cross_validation(data,iterations, name='data', scale=True, pt_rw = True, tra
     # remove the ones we do not want to standardise
     variables.remove('label')
     # remove the variables that are "observers", ie that do not get used for training, or weights, since those must not be scaled.
-    observers = ['mc_event_weight','jet_antikt10truthtrimmedptfrac5smallr20_pt','jet_antikt10truthtrimmedptfrac5smallr20_eta','m','pt','eta','phi','evt_xsec','evt_filtereff','evt_nevts','weight','jet_camkt12truth_pt','jet_camkt12truth_eta','jet_camkt12truth_phi','jet_camkt12truth_m','jet_camkt12lctopo_pt','jet_camkt12lctopo_eta','jet_camkt12lctopo_phi','jet_camkt12lctopo_m','eff','averageintperxing','ntracks']
+    observers = ['mc_event_weight','m','pt','eta','phi','evt_xsec','evt_filtereff','evt_nevts','weight','jet_camkt12truth_pt','jet_camkt12truth_eta','jet_camkt12truth_phi','jet_camkt12truth_m','jet_camkt12lctopo_pt','jet_camkt12lctopo_eta','jet_camkt12lctopo_phi','jet_camkt12lctopo_m','eff','averageintperxing','ntracks']#'jet_antikt10truthtrimmedptfrac5smallr20_pt','jet_antikt10truthtrimmedptfrac5smallr20_eta',
 
     # variables in the mc15 samples
     #mc_event_weight,jet_AntiKt10TruthTrimmedPtFrac5SmallR20_pt,jet_AntiKt10TruthTrimmedPtFrac5SmallR20_eta,EEC_D2_1,Aplanarity,m,FoxWolfram20,ThrustMaj,TauWTA2,EEC_C2_1,Angularity,ThrustMin,pt,PlanarFlow,Dip12,Mu12,YFilt,TauWTA1,phi,EEC_D2_2,SPLIT12,Sphericity,ZCUT12,eta,TauWTA2TauWTA1,EEC_C2_2,averageIntPerXing,evt_xsec,evt_filtereff,evt_nEvts,jet_CamKt12Truth_pt,jet_CamKt12Truth_eta,jet_CamKt12Truth_phi,jet_CamKt12Truth_m,jet_CamKt12LCTopo_pt,jet_CamKt12LCTopo_eta,jet_CamKt12LCTopo_phi,jet_CamKt12LCTopo_m,weight,eff,label
@@ -614,7 +603,7 @@ def main(args):
         # are we standardising the data?
         scale = True
         # the cross validation method will call the persists_cv method and create the folds
-        filenames = cross_validation(data, 5, name, scale, pt_rw = args.ptrw, transform_weights = args.txweights)
+        filenames = cross_validation(data, 10, name, scale, pt_rw = args.ptrw, transform_weights = args.txweights)
         #full_dataset = '/Disk/ds-sopa-group/PPE/atlas/users/tibristo/BosonTagging/csv/AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_matchedM_loose_v2_200_1000_mw_merged.csv'
         # name of the full dataset which is used for the cv splits
         if args.fulldataset == 'DEFAULT':
